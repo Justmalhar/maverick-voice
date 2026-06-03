@@ -9,7 +9,8 @@
 //    its raw stdout token protocol (FN_*, RIGHT_OPTION_*, CAPS_*) into the
 //    normalized events based on the configured dictation/instruction keys.
 //  - win32: uiohook-napi (uIOhook, UiohookKey) maps RightCtrl/RightAlt as the
-//    dictation key and RightShift as the instruction key.
+//    dictation key and CapsLock as the instruction key (typematic auto-repeat
+//    keydowns are swallowed so each physical press emits exactly one down).
 //
 // The physical-key → logical-event normalization lives HERE, never in
 // keyboard.ts. See INTERFACES.md "Key vocabulary".
@@ -34,6 +35,9 @@ class KeyListener extends EventEmitter {
   private uiohookStarted = false
   private uiohookKeydownHandler: ((e: { keycode: number }) => void) | null = null
   private uiohookKeyupHandler: ((e: { keycode: number }) => void) | null = null
+  // Physical-down trackers to swallow Windows typematic auto-repeat keydowns.
+  private win32DictationDown = false
+  private win32InstructionDown = false
 
   // ─── Configurable physical-key mapping (platform default applied by main) ───
   private dictationKey: DictationKey = process.platform === 'darwin' ? 'fn' : 'right-ctrl'
@@ -237,22 +241,34 @@ class KeyListener extends EventEmitter {
       const dictationKeycode = (): number =>
         this.dictationKey === 'right-alt' ? UiohookKey.AltRight : UiohookKey.CtrlRight
       // Instruction is Caps Lock (Right Shift was removed — it conflicted with
-      // system shortcuts and fired during Shift+Enter). Unlike darwin's
-      // flagsChanged LED-pair quirk, win32 delivers plain keydown/keyup.
+      // system shortcuts and fired during Shift+Enter).
       const instructionKeycode = (): number => UiohookKey.CapsLock
 
+      // Windows typematic auto-repeat fires keydown REPEATEDLY while a key is
+      // held (first repeat ~500ms, past keyboard.ts's 300ms debounce), which
+      // would toggle sessions on and off mid-hold. Track physical down state
+      // and emit exactly ONE down per press — matching darwin's flagsChanged
+      // semantics (single transition events, never repeats).
       this.uiohookKeydownHandler = (e: { keycode: number }) => {
         if (e.keycode === dictationKeycode()) {
+          if (this.win32DictationDown) return // auto-repeat — swallow
+          this.win32DictationDown = true
           this.emit('key', 'dictation-down' as KeyEvent)
         } else if (e.keycode === instructionKeycode()) {
+          if (this.win32InstructionDown) return // auto-repeat — swallow
+          this.win32InstructionDown = true
           this.emit('key', 'instruction-down' as KeyEvent)
         }
       }
       this.uiohookKeyupHandler = (e: { keycode: number }) => {
         if (e.keycode === dictationKeycode()) {
+          this.win32DictationDown = false
           this.emit('key', 'dictation-up' as KeyEvent)
         } else if (e.keycode === instructionKeycode()) {
-          this.emit('key', 'instruction-up' as KeyEvent)
+          this.win32InstructionDown = false
+          // No 'instruction-up' emit — parity with darwin, where the LED-pair
+          // collapse produces only instruction-down. keyboard.ts toggles on
+          // down exclusively; emitting up here invites platform divergence.
         }
       }
 
@@ -359,6 +375,9 @@ class KeyListener extends EventEmitter {
         if (this.uiohookKeydownHandler) uIOhook.removeListener('keydown', this.uiohookKeydownHandler)
         if (this.uiohookKeyupHandler) uIOhook.removeListener('keyup', this.uiohookKeyupHandler)
         uIOhook.stop()
+        // Clear physical-down trackers — a key may still be held at stop time.
+        this.win32DictationDown = false
+        this.win32InstructionDown = false
       } catch (err) {
         console.error('[keyListener] Error stopping uiohook-napi:', err instanceof Error ? err.message : err)
       }

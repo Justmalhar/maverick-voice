@@ -4,15 +4,16 @@
 
 Maverick Voice is a cross-platform (macOS + Windows) voice dictation and
 voice-driven text-editing desktop app. Press a global hotkey, talk, and clean
-text lands at your cursor in any app. Select some text, hold the instruction
-key, and *tell* it what to do — "make this a bullet list", "translate to
-French", "turn this into a commit message" — and the rewritten text replaces
-your selection.
+text lands at your cursor in any app. Optionally turn on instruction mode,
+select some text, tap the instruction key, and *tell* it what to do — "make
+this a bullet list", "translate to French", "turn this into a commit message" —
+and the rewritten text replaces your selection.
 
 > **Raw by default.** Pure dictation pastes what you said, lightly cleaned in
-> code — it never rewrites or "formats" your words. Formatting and transforms
-> happen *only* on demand, through a spoken instruction. The LLM is touched
-> only when you explicitly instruct it.
+> code — it never rewrites or "formats" your words. Transforms happen *only* on
+> demand, through a spoken instruction. The LLM is touched only when you
+> explicitly instruct it — or when you opt in to the AI auto-format pass, which
+> is off by default.
 
 Maverick Voice is **bring-your-own-key (BYO)** and **provider-agnostic**:
 - **Speech-to-text:** [Groq](https://groq.com) Whisper (`whisper-large-v3-turbo`).
@@ -30,10 +31,21 @@ history live in a local SQLite database on your machine.
 
 - **Dictation** — hold/tap the dictation key, speak, and the transcript is
   pasted at your cursor in any app. Speech-to-text only, no LLM round-trip.
-- **Instruction** — select text anywhere, hold the instruction key, speak a
-  command, and the transformed text replaces your selection.
+- **Instruction** *(opt-in, off by default)* — enable it in **Settings →
+  Advanced**, select text anywhere, tap the instruction key (**Caps Lock**),
+  speak a command, and the transformed text replaces your selection.
 - **Chaining** — dictate, then instruct (or vice-versa) in one continuous flow:
-  speak content, then within the chain window speak an instruction to shape it.
+  speak content, then within the chain window speak an instruction to shape it
+  (requires instruction mode enabled).
+- **AI Auto-Format** *(opt-in, off by default)* — toggle in **Settings** to run
+  a mechanics-only LLM pass (grammar, punctuation, capitalization, paragraphs)
+  over raw dictation before it pastes. Falls back to the unformatted transcript
+  on any LLM failure — it never blocks the paste.
+- **Dictionary** — define spoken-word `from → to` corrections (e.g. "mavrik" →
+  "Maverick"). Applied post-transcription **and** fed to Groq Whisper as a
+  ~200-char vocabulary prompt hint so the STT model biases toward your spellings.
+- **Snippets** — map a spoken `trigger` to a longer expansion (e.g. "my
+  linkedin" → a URL). Case-insensitive, longest-trigger-first, punctuation-tolerant.
 - **Provider-agnostic** — Groq for STT; OpenAI / OpenRouter / any
   OpenAI-compatible endpoint for transforms. Swappable per the registry
   pattern. Point the base URL at a self-hosted endpoint and it just works.
@@ -52,8 +64,10 @@ history live in a local SQLite database on your machine.
 ## How it works
 
 ```
-hotkey press → record mic → transcribe (Groq Whisper) → clean in code → paste at cursor
-                                                         └─ + LLM transform only if you gave an instruction
+hotkey press → record mic → transcribe (Groq Whisper) → clean in code
+  → dictionary replacements → snippet expansion → paste at cursor
+       ├─ + optional AI auto-format pass (if enabled)
+       └─ + LLM transform only if you gave an instruction
 ```
 
 A platform key listener watches the global hotkeys (a compiled Swift helper on
@@ -131,15 +145,15 @@ OPENROUTER_API_KEY=
 | Action | macOS | Windows | Notes |
 |--------|-------|---------|-------|
 | **Dictate** | **Fn (Globe)** *(default)* or **Right Option** | **Right Ctrl** *(default)* or **Right Alt** | Configurable in Settings |
-| **Instruct** | **Right Shift** *(default)* or **Caps Lock** | **Right Shift** | Select text first, then hold and speak the command |
-| **Chain** | dictate → (within the chain window) instruct | same | Speak content, then shape it without releasing the flow |
+| **Instruct** | **Caps Lock** | **Caps Lock** | *Opt-in (off by default)* — enable in Settings → Advanced. Select text first, then tap and speak the command |
+| **Chain** | dictate → (within the chain window) instruct | same | Speak content, then shape it without releasing the flow (requires instruction mode) |
 | **Cancel** | **Escape** | **Escape** | Cancels the current recording / processing |
 
-> On macOS, native **Right Shift** detection requires an optional Swift
-> recompile of the key helper (keyCode 60). If you select Right Shift on macOS
-> without that recompile, the listener logs a warning and falls back to **Caps
-> Lock** as the instruction source. **Caps Lock is the recommended macOS
-> instruction key.** Right Shift works natively on Windows via `uiohook-napi`.
+> **Instruction mode is opt-in and off by default** — turn it on in **Settings
+> → Advanced**. The instruction key is **Caps Lock** on both platforms (Right
+> Shift was removed entirely: it collided with system shortcuts and fired during
+> Shift+Enter). Caps Lock triggers on key-down only — on macOS the LED-toggle
+> pair is collapsed to one event; on Windows typematic auto-repeat is suppressed.
 
 ### Activation modes
 
@@ -187,6 +201,10 @@ Native helpers are compiled by `npm run compile:native`, which runs
 automatically before `dev`/`build`/`dist` (it is a no-op on non-macOS hosts).
 Installers are written to `release/`.
 
+App icons are regenerated with `npm run icons` (`scripts/make-icons.py`), which
+derives every platform size + the menubar glyph from the master at
+`resources/icon-master.png`.
+
 > Cross-compiling is not supported: build the macOS `.dmg` on macOS and the
 > Windows installer on Windows.
 
@@ -217,15 +235,16 @@ electron/              Main process (Node) — the engine
     llm/openai.ts      OpenAI chat/completions
     llm/openrouter.ts  OpenRouter chat/completions
 renderer/              React 19 UI
-  app/                 Main window: App, Onboarding, Settings, History, Privacy, Voice
+  app/                 Main window: App, Onboarding, Settings, History,
+                       Dictionary, Snippets
   widget/              HUD pill: WidgetApp, Widget, Waveform, useAudioRecorder
   styles/              tokens.css (black-glass design tokens) + styles.css
 shared/                Cross-process contract (compiles under both tsconfigs)
   types.ts             All cross-process types + ElectronAPI surface
   ipc.ts               THE single source of truth for IPC channel names
 native/macos/          Swift global-key listener + key poster sources
-resources/             Compiled native binaries + app/menubar icons
-scripts/               Native build scripts (compile:globe / compile:key-poster)
+resources/             Compiled native binaries + app/menubar icons (+ icon-master.png)
+scripts/               Native build (compile:globe / compile:key-poster) + make-icons.py
 build/                 electron-builder resources (entitlements.mac.plist)
 ```
 

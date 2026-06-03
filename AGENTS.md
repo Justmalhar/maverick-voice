@@ -69,8 +69,12 @@ Adding a provider = **one new file + one registry line**. Do not touch
   silently undercounts to `$0`.
 - The LLM body is the **canonical OpenAI-compatible shape** so the `baseUrl`
   override lets any OpenAI-compatible endpoint plug in. Keep it that way.
-- Groq STT **must not send the Whisper `prompt`** — Whisper parrots the prompt
-  text back on silence/noise. Keep the comment explaining why.
+- Groq STT **must not send an arbitrary Whisper `prompt`** — Whisper parrots the
+  prompt text back on silence/noise. The provider passes through `opts.prompt`
+  if the caller supplies one; the **only** sanctioned caller value is the
+  bounded Dictionary vocabulary hint built by `sessionManager.buildSttPromptHint`
+  (distinct `to` values, capped ~200 chars). Do not introduce any other prompt
+  source. Keep the comment explaining the parroting concern.
 
 This is exactly how the stripped local providers (whisper.cpp / faster-whisper /
 local LLM) will return in the future — as just another file + registry entry.
@@ -84,7 +88,9 @@ machine. The single highest-value rule:
   keystroke** — including the newer instruction-key state. A stale field here
   manifests as "the next dictation won't start" or "instruction fires twice".
   When you add any new piece of per-session keyboard state, add it to
-  `resetState()` in the same commit.
+  `resetState()` in the same commit. **Exception:** the persisted
+  `instructionEnabled` flag is NOT per-keystroke state — `resetState()` must
+  **not** clear it (it is restored at boot and via the live IPC setter).
 - `setActivationMode(...)` must reset the dual-tap state (otherwise switching
   modes mid-session leaves the double-tap timer armed).
 - Debounce (`DEBOUNCE_MS = 300`) is **per-logical-key** and gates **START
@@ -92,11 +98,21 @@ machine. The single highest-value rule:
   recording.
 - Constants are load-bearing: `DEBOUNCE_MS=300`, `chainWindowMs=2000`,
   `DUAL_HOLD_MS=400`, `DUAL_DOUBLE_TAP_MS=400`. Don't "tidy" them.
-- Instruction triggers on **`instruction-down` only** (Right Shift is
-  momentary). Ignore `instruction-up`.
+- **Instruction mode is opt-in (default OFF).** When `instructionEnabled` is
+  false, `handleKey` ignores ALL instruction-derived events — including a
+  dictation→instruction chain transition. Dictation and Escape are unaffected.
+  `setInstructionEnabled(false)` also drops any active `instructionActive` flag
+  so a mid-instruction toggle-off can't misroute the next dictation as a chain.
+- Instruction triggers on **`instruction-down` only**. `instruction-up` is
+  **never emitted** on either platform today — it's an explicit no-op kept as a
+  documented landing spot for a future hold-style instruction key. The
+  instruction key is **Caps Lock** on both platforms; the `InstructionKey` type
+  is a single-member union (`'caps-lock'`). Right Shift was removed entirely
+  (system-shortcut + Shift+Enter conflicts) — do not re-add it.
 - `main.ts` resets keyboard state on `onSessionEnded` and `onSessionRejected`
   (the latter resets state but leaves the Escape shortcut registered). Keep this
-  asymmetry.
+  asymmetry. `main.ts restoreSettings()` migrates a persisted `'right-shift'`
+  instructionKey to `'caps-lock'` at boot.
 
 ## 4. `keyListener.ts` is the platform seam — keep `keyboard.ts` unaware
 
@@ -109,8 +125,15 @@ Do not leak platform branching upward out of `keyListener`.
   tokens. The binary is **already in the repo** and the protocol is fixed —
   do not change the protocol.
 - **win32:** `uiohook-napi`. Map `e.keycode` against `UiohookKey` **by NAME**
-  (`UiohookKey.CtrlRight`, `UiohookKey.AltRight`, `UiohookKey.ShiftRight`) —
-  **never raw numeric keycodes** (they differ across keyboards/layouts).
+  (`UiohookKey.CtrlRight`, `UiohookKey.AltRight` for dictation;
+  `UiohookKey.CapsLock` for instruction) — **never raw numeric keycodes** (they
+  differ across keyboards/layouts). **Suppress typematic auto-repeat:** track a
+  physical-down flag per key (`win32DictationDown` / `win32InstructionDown`) and
+  emit exactly ONE `*-down` per press — Windows fires keydown repeatedly while
+  held (first repeat ~500ms, past the 300ms debounce), which would otherwise
+  toggle sessions on and off mid-hold. This matches darwin's single-transition
+  flagsChanged semantics. **Do not emit `instruction-up` on win32** — parity
+  with darwin (the LED-pair collapse there produces only `instruction-down`).
 
 ### globe-listener stdout protocol (darwin — verbatim, do not alter)
 
@@ -125,22 +148,22 @@ PASTE_OK   (ack for stdin "PASTE")     COPY_OK   (ack for stdin "COPY")
 
 - stderr emits `PASTE_ERROR:<msg>` / `COPY_ERROR:<msg>`.
 - stdin commands (newline-terminated): `PASTE`, `COPY`.
-- Key codes inside the helper: `kVK_V=9`, `kVK_C=8`, Right Option = keyCode 61,
-  (optional Right Shift = keyCode 60).
+- Key codes inside the helper: `kVK_V=9`, `kVK_C=8`, Right Option = keyCode 61.
 - **Caps Lock fires on the LED toggle** — BOTH `CAPS_DOWN` and `CAPS_UP` fire
   for a single physical press. Collapse this to a **single** `instruction-down`
-  per press (keyboard.ts triggers on down only, so emit `instruction-down` on
-  the first token of the pair and ignore the rest).
+  per press: a `capsExpectingSecondToken` flag emits `instruction-down` on the
+  first token of the pair and swallows the second (keyboard.ts triggers on down
+  only). No `instruction-up` is ever synthesized.
 - Parse on a **trimmed exact-string match**, with a **manual line buffer that
   keeps the last incomplete line** (stdout can split mid-line across reads).
 - `PASTE_OK` / `COPY_OK` / unknown lines are ignored by the main parser — they
   are handled only inside `sendCommand`.
-- **Right Shift on macOS:** the shipped `globe-listener` does NOT emit a
-  right-shift token. v1 decision: on darwin the instruction source is **Caps
-  Lock**. If the user selects Right Shift on darwin, `keyListener` logs a warning
-  (native Right Shift needs the optional Swift recompile, keyCode 60) and falls
-  back to Caps Lock. The UI may offer both, but **Caps Lock is the macOS
-  default/recommended** instruction key. Right Shift works natively on Windows.
+- **Right Shift is GONE.** It was removed entirely — it collided with system
+  shortcuts and fired during Shift+Enter. The instruction key is **Caps Lock on
+  both platforms** (`InstructionKey = 'caps-lock'`, a single-member union). The
+  shipped `globe-listener` never emitted a right-shift token anyway. Do not
+  re-add a Right Shift binding; a persisted `'right-shift'` is migrated to
+  `'caps-lock'` at boot.
 - Keep the binary-path resolution: 3 candidates (`process.resourcesPath/bin`,
   `app.getAppPath()/resources/bin`, `__dirname/../../resources/bin`),
   `fs.chmodSync(0o755)`, auto-restart only for `code !== 0 && code !== null` with
@@ -209,14 +232,33 @@ execFile('powershell', ['-NoProfile', '-Command',
 6. **Two grace polls for late audio:** no-audio = 20 × 10ms = 200ms;
    instruction-audio = 10 × 50ms = 500ms. These timings are tuned; don't change
    them casually.
-7. **Pure dictation NEVER hits the LLM** — `cleanTranscript` only. This is the
-   speed + "raw by default" guarantee. `quote` flow is `'> ' + selectedText`,
-   also no LLM.
+7. **Pure dictation does NOT hit the LLM by default** — `cleanTranscript` +
+   Dictionary + Snippets only. This is the speed + "raw by default" guarantee.
+   The **one opt-in exception** is AI auto-format (`autoFormat`, default off):
+   when on, `runAutoFormat` runs the `AUTO_FORMAT` LLM pass over the cleaned
+   dictation; on ANY failure (no key, network, timeout, empty/refusal) it
+   returns the unformatted text and fires `OUTPUT_FALLBACK` — it **never blocks
+   the paste**. `quote` flow is `'> ' + selectedText`, also no LLM.
 8. **Pipeline is SEQUENTIAL** — the reference "fast path" is stripped. On LLM
    empty/refusal/error, fall back to the raw transcript with a formatting notice
    (`OUTPUT_FALLBACK`), never fail hard.
 9. Use `maxTokens: 4096` and `timeoutMs: APP_CONFIG.transform.timeout_ms` for
    the LLM call; `REQUEST_TIMEOUT_MS` (15000) for single provider calls.
+10. **Dictation pipeline ORDER is load-bearing:** STT → `cleanTranscript` →
+    **Dictionary** (`applyDictionary`) → **Snippets** (`applySnippets`) →
+    optional **auto-format** LLM pass. Dictionary + Snippets are pure exported
+    functions run on BOTH the dictation and instruction transcripts (before junk
+    detection / flow routing), so every flow sees the corrected vocabulary +
+    expansions. Both are case-insensitive, word-boundary tolerant of adjacent
+    punctuation, regex-escape their `from`/`trigger`, and apply **longest match
+    first**. Keep this order; auto-format runs last and only for the dictation
+    flow.
+11. **Dictionary feeds the STT prompt hint.** `buildSttPromptHint` joins the
+    distinct Dictionary `to` values, capped to ~200 chars, and passes them as
+    `opts.prompt` to `TranscriptionProvider.transcribe` so Groq Whisper biases
+    toward the user's spellings. This is the **one sanctioned Whisper prompt** —
+    bounded by the dictionary, distinct from the silence-parroting concern in §2
+    that bans an arbitrary prompt. The §2 ban still holds for everything else.
 
 ## 8. windowManager / HUD handshake gotchas
 
@@ -233,6 +275,13 @@ execFile('powershell', ['-NoProfile', '-Command',
 - Platform gating lives here: `type:'panel'`, `setVisibleOnAllWorkspaces`,
   `hiddenInset` title bar, `hasShadow:false` are **darwin-only**; win32 omits
   `type:'panel'` and uses a hidden/frameless window.
+- **HUD positioning is BOTTOM-anchored.** `getHUDBounds` computes
+  `y = workArea.y + workArea.height - HUD_HEIGHT - DOCK_CLEARANCE` (80px). The
+  `workArea` already excludes the macOS Dock at any size/side (even
+  auto-hidden), and `DOCK_CLEARANCE` adds breathing room above it. The pill
+  bottom-anchors inside the 520×140 canvas (the area above it is transparent +
+  click-through) and its enter/exit animations rise/sink. `x` is centered or
+  right-aligned (12px inset). Do not move it back to the top of the screen.
 
 ## 9. Stripped subsystems — DO NOT re-introduce
 

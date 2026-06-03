@@ -15,8 +15,9 @@
 
 Maverick Voice is a desktop app for **voice dictation** and **voice-driven text
 editing**. Users press a global hotkey to dictate text directly at their cursor
-in any application, and they can select existing text and *speak an instruction*
-to transform it in place. It is **bring-your-own-key (BYO)** and
+in any application, and — with the opt-in **instruction mode** enabled — they
+can select existing text and *speak an instruction* to transform it in place.
+It is **bring-your-own-key (BYO)** and
 **provider-agnostic**: Groq for speech-to-text, OpenAI / OpenRouter / any
 OpenAI-compatible endpoint for transforms. There is no backend, no account, and
 no telemetry — keys are encrypted with the OS keychain and all history is local.
@@ -45,8 +46,11 @@ A fast, private, monochrome-glass desktop app that:
 ### 2.1 Goals (v1)
 - Sub-2-second pure dictation (STT only, no LLM round-trip).
 - Reliable paste-at-cursor in any focused app on macOS and Windows.
-- Voice instructions that transform selected text in place.
-- Dictation + instruction chaining in one flow.
+- Opt-in voice instructions that transform selected text in place.
+- Dictation + instruction chaining in one flow (when instruction mode is on).
+- Optional AI auto-format pass for raw dictation (off by default).
+- User-defined Dictionary (spoken-word corrections, also bias STT) and Snippets
+  (spoken trigger → expansion).
 - Provider-agnostic STT/LLM via a registry; adding a provider = one file + one
   registry line.
 - Encrypted BYO keys; zero accounts; zero telemetry.
@@ -91,9 +95,9 @@ Escape-to-cancel and undo-cancel safety nets.
   reworded "improved" version.
 - As P3, I want push-to-talk so recording stops the instant I release the key.
 
-**Instruction**
-- As P1, I select a paragraph, hold the instruction key, say "make this a
-  bullet list", and the selection is replaced with the list.
+**Instruction** (opt-in; enable in Settings → Advanced)
+- As P1, I select a paragraph, tap the instruction key (Caps Lock), say "make
+  this a bullet list", and the selection is replaced with the list.
 - As P2, I select a sentence and say "translate to French" and it is replaced.
 - As P1, when no LLM key is set or the LLM fails, I want the raw transcript
   pasted with a clear notice rather than nothing.
@@ -123,19 +127,27 @@ Escape-to-cancel and undo-cancel safety nets.
 1. User presses the dictation key (Fn/Globe or Right Option on macOS; Right Ctrl
    or Right Alt on Windows).
 2. HUD pill appears; mic records (chunked with VAD for long clips).
-3. On stop, audio is transcribed by the STT provider (Groq Whisper).
+3. On stop, audio is transcribed by the STT provider (Groq Whisper). The user's
+   Dictionary `to` values are passed as a ~200-char vocabulary prompt hint to
+   bias recognition toward their spellings.
 4. Transcript is lightly cleaned in code (`cleanTranscript`: trims STT
    hallucinations like "thanks for watching", "please subscribe").
-5. Result is delivered to the cursor via clipboard + synthesized paste.
-6. HUD shows a brief success acknowledgment, then hides.
+5. **Dictionary** replacements then **Snippet** expansions are applied in code.
+6. If **AI auto-format** is enabled, a mechanics-only LLM pass runs (grammar,
+   punctuation, capitalization, paragraphs); on any failure it falls back to the
+   unformatted text and never blocks the paste.
+7. Result is delivered to the cursor via clipboard + synthesized paste.
+8. HUD shows a brief success acknowledgment, then hides.
 
-> Pure dictation **never** hits the LLM — that is the speed and "raw by default"
-> guarantee.
+> Pure dictation **never** hits the LLM **unless** AI auto-format is explicitly
+> enabled — that is the speed and "raw by default" guarantee.
 
-### 5.2 Instruction (selection + voice command → LLM transform)
+### 5.2 Instruction (selection + voice command → LLM transform) — opt-in
+0. User enables **instruction mode** in Settings → Advanced (off by default;
+   while disabled, every instruction-key event is ignored).
 1. User selects text in any app.
-2. User holds the instruction key (Right Shift default; Caps Lock on macOS) and
-   speaks a command.
+2. User taps the instruction key (**Caps Lock** on both platforms) and speaks a
+   command.
 3. App captures the selection (clipboard copy round-trip) **and** transcribes
    the spoken instruction.
 4. `prompts.ts` assembles a system + user message for the appropriate flow
@@ -155,10 +167,29 @@ Escape-to-cancel and undo-cancel safety nets.
 
 ### 5.4 Flow-type determination
 The session manager classifies each session into one of:
-`dictation` (raw, no LLM), `transform`, `context`, `instruction`, `quote`
-(selection wrapped as `> ...`, no LLM) — based on whether a selection was
-captured, whether an instruction was spoken, and the selection role
-(`quote` vs `context`).
+`dictation` (raw, no LLM unless auto-format is on), `transform`, `context`,
+`instruction`, `quote` (selection wrapped as `> ...`, no LLM) — based on whether
+a selection was captured, whether an instruction was spoken, and the selection
+role (`quote` vs `context`).
+
+### 5.5 Dictionary & Snippets (deterministic text-replacement stage)
+Both lists are managed from their own sidebar pages and applied **in code**
+(no LLM) to every transcript after `cleanTranscript`, in order Dictionary →
+Snippets:
+- **Dictionary** — `from → to` corrections; case-insensitive, word-boundary
+  match tolerant of adjacent punctuation, regex specials escaped, longest `from`
+  applied first. The distinct `to` values are also joined (capped ~200 chars)
+  and fed to Groq Whisper as a `prompt` vocabulary hint.
+- **Snippets** — spoken `trigger → content` expansions; case-insensitive,
+  longest `trigger` first, punctuation-tolerant.
+
+### 5.6 AI Auto-Format (opt-in)
+When enabled in Settings (off by default), raw dictation output runs through a
+mechanics-only LLM pass (`AUTO_FORMAT` prompt: grammar, punctuation,
+capitalization, sentence breaks, paragraphing — never changes meaning, never
+adds content). On any failure (no key, network, timeout, empty/refusal) it
+gracefully falls back to the unformatted transcript and fires `OUTPUT_FALLBACK`
+with a notice; tokens are tracked like any other LLM call.
 
 ---
 
@@ -167,11 +198,11 @@ captured, whether an instruction was spoken, and the selection role
 | ID | Requirement |
 |----|-------------|
 | F1 | Global dictation hotkey records mic and pastes transcript at cursor in any app. |
-| F2 | Global instruction hotkey captures the current selection + spoken command and replaces the selection with the transform. |
-| F3 | Dictation and instruction can be chained within a configurable chain window. |
+| F2 | Opt-in (default off) global instruction hotkey (**Caps Lock**) captures the current selection + spoken command and replaces the selection with the transform. |
+| F3 | Dictation and instruction can be chained within a configurable chain window (when instruction mode is enabled). |
 | F4 | Escape cancels recording/processing; cancel is undo-able within ~3s. |
 | F5 | Three activation modes: tap-toggle, push-to-talk, double-tap-push. |
-| F6 | Configurable dictation key (platform-specific options) and instruction key. |
+| F6 | Configurable dictation key (platform-specific options); instruction key is Caps Lock on both platforms. |
 | F7 | STT via Groq (default `whisper-large-v3-turbo`); model + language selectable. |
 | F8 | LLM via OpenAI or OpenRouter; model + base URL configurable (any OpenAI-compatible endpoint). |
 | F9 | Per-provider keys entered in Settings, validated, and stored encrypted. |
@@ -182,6 +213,9 @@ captured, whether an instruction was spoken, and the selection role
 | F14 | Output mode: paste-at-cursor (default) or copy-to-clipboard. |
 | F15 | Sound feedback toggle; widget position (center/right); chunked-transcription toggle. |
 | F16 | macOS permissions flow (mic / accessibility / input-monitoring); auto-granted/no-op on Windows. |
+| F17 | Opt-in AI auto-format pass over raw dictation (default off), with graceful fallback to the unformatted transcript on any LLM failure. |
+| F18 | User-managed Dictionary (`from → to` corrections) applied to transcripts and fed to Groq Whisper as a vocabulary prompt hint. |
+| F19 | User-managed Snippets (spoken `trigger → content` expansion), case-insensitive and punctuation-tolerant. |
 
 ---
 
@@ -219,7 +253,8 @@ captured, whether an instruction was spoken, and the selection role
 ### v1 (in scope)
 - macOS + Windows.
 - STT: Groq. LLM: OpenAI + OpenRouter (+ any OpenAI-compatible endpoint).
-- Dictation, instruction, chaining, cancel/undo, activation modes.
+- Dictation; opt-in instruction, chaining, cancel/undo, activation modes.
+- Opt-in AI auto-format; user Dictionary + Snippets.
 - Encrypted BYO keys, local SQLite history, usage/cost, onboarding, tray,
   permissions, sound feedback, widget positioning.
 
@@ -243,5 +278,6 @@ captured, whether an instruction was spoken, and the selection role
   restored during selection capture.
 - Pricing tables are hardcoded local constants and **will drift** from provider
   pricing pages; cost figures are estimates, not invoices.
-- The shipped macOS key helper does not natively emit Right Shift; Caps Lock is
-  the recommended macOS instruction key (see README hotkeys note).
+- The instruction key is **Caps Lock** on both platforms; Right Shift was
+  removed entirely (system-shortcut and Shift+Enter conflicts). Instruction mode
+  itself is opt-in (off by default).

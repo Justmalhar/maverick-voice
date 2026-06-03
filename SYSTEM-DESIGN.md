@@ -18,7 +18,7 @@ Maverick Voice is an Electron desktop app with three processes/contexts:
 - **Preload** — a context-isolated `contextBridge` exposing exactly the
   `ElectronAPI` surface to the renderer.
 - **Renderer** (React 19) — two roots routed by URL hash: the **main window**
-  (history / features / settings / privacy) and the **HUD widget** pill.
+  (Home / History / Dictionary / Snippets / Settings) and the **HUD widget** pill.
 
 It is **provider-agnostic** (STT and LLM behind interfaces + a registry),
 **cross-platform** (macOS + Windows with platform seams), and **BYO-key**
@@ -34,12 +34,12 @@ It is **provider-agnostic** (STT and LLM behind interfaces + a registry),
 |----|-------------|
 | FR1 | Capture global hotkeys for dictation and instruction on macOS and Windows. |
 | FR2 | Record microphone audio in the renderer; stream it (whole or chunked) to main. |
-| FR3 | Transcribe audio via a pluggable `TranscriptionProvider` (Groq Whisper v1). |
+| FR3 | Transcribe audio via a pluggable `TranscriptionProvider` (Groq Whisper v1); pass the Dictionary as a vocabulary prompt hint. |
 | FR4 | Lightly clean dictation transcripts in code (no LLM) for pure dictation. |
 | FR5 | Capture the current text selection (clipboard round-trip) for instructions. |
-| FR6 | Transform text via a pluggable `LLMProvider` (OpenAI/OpenRouter v1) on instruction. |
+| FR6 | Transform text via a pluggable `LLMProvider` (OpenAI/OpenRouter v1) on instruction (opt-in mode). |
 | FR7 | Deliver output to the cursor (paste) or clipboard, per output mode. |
-| FR8 | Support dictation, instruction, and dictation→instruction chaining. |
+| FR8 | Support dictation, opt-in instruction, and dictation→instruction chaining. |
 | FR9 | Cancel (Escape) with a ~3s undo window; discard too-short/silent clips. |
 | FR10 | Three activation modes (tap-toggle, push-to-talk, double-tap-push). |
 | FR11 | Persist session history + usage in local SQLite; allow retry from saved audio. |
@@ -47,6 +47,8 @@ It is **provider-agnostic** (STT and LLM behind interfaces + a registry),
 | FR13 | Store per-provider keys encrypted; validate against the provider. |
 | FR14 | Configurable keys, models, base URL, language, widget position, sound. |
 | FR15 | macOS permission flow; Windows resolves to granted/no-op. |
+| FR16 | Apply user Dictionary (`from→to`) + Snippets (`trigger→content`) to transcripts in code (Dictionary→Snippets order). |
+| FR17 | Opt-in AI auto-format pass over raw dictation, with graceful fallback to unformatted text on any LLM failure. |
 
 ### 2.2 Non-functional requirements
 
@@ -70,7 +72,7 @@ It is **provider-agnostic** (STT and LLM behind interfaces + a registry),
 ```mermaid
 flowchart TD
   subgraph OS["Operating System"]
-    HK["Global hotkey\n(Fn/Globe, Right Opt, Right Ctrl/Alt, Right Shift, Caps)"]
+    HK["Global hotkey\n(Fn/Globe, Right Opt, Right Ctrl/Alt; Caps Lock = instruction)"]
     MIC["Microphone"]
     CB["System clipboard + focused app"]
   end
@@ -134,7 +136,7 @@ flowchart TD
 flowchart LR
   subgraph WMmod["windowManager.ts"]
     MWIN["Main window\n900x640 (min 700x500)\nloads index.html"]
-    HUD["HUD/Widget window\n520x140 frameless transparent\nalways-on-top\nloads index.html#/widget"]
+    HUD["HUD/Widget window\n520x140 frameless transparent\nalways-on-top, bottom of screen\nloads index.html#/widget"]
   end
   MAIN2["main.ts"] --> MWIN
   MAIN2 --> HUD
@@ -143,10 +145,16 @@ flowchart LR
   HUD -->|WIDGET_READY handshake| MAIN2
 ```
 
-- The **main window** hosts the React app shell (sidebar: History / Features /
-  Settings / Privacy) and onboarding.
+- The **main window** hosts the React app shell (sidebar: Home / History /
+  Dictionary / Snippets / Settings) and onboarding. Usage stats and Privacy are
+  folded into Settings; the former Voice/"Features" explainer is a block on Home.
 - The **HUD widget** is a frameless, transparent, always-on-top pill that
-  floats over every app. `windowManager` gates `showHUD()` on a
+  floats over every app. It is positioned at the **bottom** of the screen:
+  `getHUDBounds` anchors it to the work-area bottom (Dock-aware — `workArea`
+  already excludes the Dock at any size/side, even auto-hidden) minus the
+  `HUD_HEIGHT` and an 80px `DOCK_CLEARANCE` margin, horizontally centered or
+  right-aligned (12px inset). The pill bottom-anchors inside the canvas and its
+  enter/exit animations rise/sink. `windowManager` gates `showHUD()` on a
   `WIDGET_READY` handshake from the renderer (`markHUDReady()` resolves the
   `hudReadyPromise`). `showHUD` calls `cancelPendingHide()` both before and
   after the readiness await; `hideHUD` defers teardown 220ms to let the exit
@@ -181,9 +189,9 @@ sequenceDiagram
   SM->>W: RECORDING_STOP
   W->>M: AUDIO_READY / AUDIO_CHUNK / AUDIO_FINAL_CHUNK
   M->>SM: receiveAudio*()
-  SM->>P: transcribe(buffer, opts, key, signal)
+  SM->>P: transcribe(buffer, opts{prompt=dictionary hint}, key, signal)
   P-->>SM: { text, durationSeconds }
-  Note over SM: pure dictation = cleanTranscript only (no LLM)
+  Note over SM: cleanTranscript → Dictionary → Snippets;\npure dictation skips LLM unless auto-format is on
   SM->>C: injectOutput(text)
   C->>C: clipboard.writeText + simulate paste
   SM->>W: OUTPUT_READY
@@ -200,7 +208,7 @@ sequenceDiagram
 
 | Module | Responsibility | Key exports |
 |--------|----------------|-------------|
-| `electron/main.ts` | Orchestration hub: boot order, IPC handlers, keyboard wiring, escape-owner machine, settings persistence, retry. | *(entry, no exports)* |
+| `electron/main.ts` | Orchestration hub: boot order, IPC handlers, keyboard wiring, escape-owner machine, settings persistence, retry. `StoreSchema` keys: `widgetPosition`, `soundFeedback`, `chunkedTranscription`, `outputMode`, `inputDeviceId`, `dictationKey`, `instructionKey`(`'caps-lock'`), `activationMode`, `sttSettings`, `llmSettings`, plus the June 2026 delta `instructionEnabled`(false), `autoFormat`(false), `dictionary`([]), `snippets`([]). `restoreSettings()` migrates any persisted `'right-shift'` instructionKey to `'caps-lock'` at boot. | *(entry, no exports)* |
 | `electron/config.ts` | Local-constant `AppConfig` + pricing tables (replaces Cloudflare ServerConfig). | `APP_CONFIG`, `REQUEST_TIMEOUT_MS`, `ModelPricing`, `STT_PRICING`, `LLM_PRICING`, `PRICING` |
 | `electron/keyStore.ts` | Per-provider encrypted key vault + `.env` dev seed. | `getApiKey`, `hasApiKey`, `setApiKey`, `clearApiKey`, `getMaskedKey` |
 | `electron/sessionManager.ts` | Core session state machine + sequential pipeline + chunk stitch + cancel/undo. | `cleanTranscript`, `sessionManager` |
@@ -228,12 +236,13 @@ sequenceDiagram
 | Module | Responsibility |
 |--------|----------------|
 | `renderer/main.tsx` | Hash route: `#/widget` → `WidgetApp`, else `App`. |
-| `renderer/app/App.tsx` | App shell + view machine (loading → onboarding → main) + sidebar tabs. |
+| `renderer/app/App.tsx` | App shell + view machine (loading → onboarding → main) + sidebar tabs (Home / History / Dictionary / Snippets / Settings). |
 | `renderer/app/Onboarding.tsx` | First-run: welcome, how-it-works, privacy, keys, mic, accessibility, shortcuts, ready. |
-| `renderer/app/Settings.tsx` | Permissions, provider keys, usage, shortcuts, audio, behavior, appearance, help. |
+| `renderer/app/Settings.tsx` | Permissions, provider keys, usage, shortcuts, audio, behavior (auto-format + instruction opt-in under Advanced), appearance, privacy, help. |
 | `renderer/app/History.tsx` | Session list, copy output, retry, live retry-status patch. |
-| `renderer/app/Privacy.tsx` | Static privacy explainer. |
-| `renderer/app/Voice.tsx` | Static "Features" explainer for the 3 modes. |
+| `renderer/app/Dictionary.tsx` | Manage `from→to` corrections (`get/setDictionary`). |
+| `renderer/app/Snippets.tsx` | Manage `trigger→content` expansions (`get/setSnippets`). |
+| `renderer/app/Usage.tsx`, `Privacy.tsx`, `Voice.tsx` | Sub-views folded into Settings (Usage, Privacy) and Home (Voice/features explainer); not standalone sidebar tabs. |
 | `renderer/widget/WidgetApp.tsx` | HUD controller: binds IPC ↔ `WidgetState`, sounds, auto-hide, `widgetReady()`. |
 | `renderer/widget/Widget.tsx` | Presentational HUD for every `WidgetState`. |
 | `renderer/widget/Waveform.tsx` | Canvas frequency-bar visualizer. |
@@ -282,21 +291,35 @@ stateDiagram-v2
 
 1. **Transcribe** via `getTranscriptionProvider(stt.provider).transcribe(buffer,
    { model, language: stt.language==='auto'?undefined:stt.language,
-   mimeType:'audio/webm' }, getApiKey(stt.provider)!, signal)`.
-2. **Route by flow type:**
-   - `dictation` → `cleanTranscript` only — **never** calls the LLM.
+   prompt: buildSttPromptHint(dictionary), mimeType:'audio/webm' },
+   getApiKey(stt.provider)!, signal)`. `buildSttPromptHint` joins the distinct
+   Dictionary `to` values, capped to ~200 chars (a bounded vocabulary bias,
+   distinct from the silence-parroting concern).
+2. **Deterministic text-replacement stage** (applied to BOTH dictation and
+   instruction transcripts, before junk detection / flow routing):
+   `cleanTranscript` → **Dictionary** replacement (`applyDictionary`) →
+   **Snippet** expansion (`applySnippets`). All in code, no LLM; both are
+   case-insensitive, word-boundary-tolerant of adjacent punctuation, longest
+   match first.
+3. **Route by flow type:**
+   - `dictation` → uses the cleaned + replaced transcript with **no LLM** —
+     **unless** `autoFormat` is on, in which case `runAutoFormat` runs an
+     `AUTO_FORMAT` LLM pass (mechanics only); on ANY failure it returns the
+     unformatted text and fires `OUTPUT_FALLBACK` (never blocks the paste).
    - `transform` / `context` / `instruction` → `assembleTransformMessages(...)`
      then `getLLMProvider(llm.provider).complete({ model, system, user,
      temperature, maxTokens: 4096, baseUrl: llm.baseUrl||undefined,
      timeoutMs: APP_CONFIG.transform.timeout_ms }, getApiKey(llm.provider)!,
      signal)`.
    - `quote` → `'> ' + selectedText`, no LLM.
-3. **Fallback:** LLM empty/refusal/error → raw transcript with a formatting
-   notice → `OUTPUT_FALLBACK`.
-4. **Key presence** checked via `hasApiKey(provider)` before the call;
-   `NoApiKeyError` is surfaced through `simplifyError`.
-5. **Output** delivered by `injectOutput` (paste) or `copyToClipboard`
-   depending on `setOutputMode` (default `'paste'`).
+4. **Fallback:** LLM empty/refusal/error (including auto-format) → raw transcript
+   with a formatting notice → `OUTPUT_FALLBACK`.
+5. **Key presence** checked via `hasApiKey(provider)` before the call;
+   `NoApiKeyError` is surfaced through `simplifyError`. Auto-format silently
+   skips (returns unformatted) when no LLM key is set.
+6. **Output** delivered by `injectOutput` (paste) or `copyToClipboard`
+   depending on `setOutputMode` (default `'paste'`). Auto-format tokens are
+   recorded via `usageTracker.recordLlmUsage` like any other LLM call.
 
 ### 4.4 Chunking & VAD (renderer `useAudioRecorder`)
 
@@ -332,9 +355,13 @@ flowchart TD
 | `DUAL_DOUBLE_TAP_MS` | 400 | double-tap detection window. |
 
 `resetState()` must clear **every** field influencing the next keystroke
-(including instruction-key state). `setActivationMode` resets the dual-tap
-state. Instruction is triggered on `instruction-down` **only** (Right Shift is
-momentary; ignore `instruction-up`).
+(including instruction-key state) — but NOT the persisted `instructionEnabled`
+flag. `setActivationMode` resets the dual-tap state. Instruction is triggered on
+`instruction-down` **only** (`instruction-up` is never emitted on either
+platform). Instruction mode is **opt-in (default off)**: when
+`instructionEnabled` is false, `handleKey` ignores ALL instruction-derived
+events (dictation + Escape are unaffected). The instruction key is **Caps Lock**
+on both platforms.
 
 ---
 
@@ -357,6 +384,7 @@ fire-and-forget; `R↔M` renderer invokes / main handles (Promise).
 | `OUTPUT_ERROR` | `output:error` | M→R | `(error, sessionId)` |
 | `SESSION_RETRY` | `session:retry` | R↔M | `(sessionId)` → `void` |
 | `SESSION_RETRY_STATUS` | `session:retry-status` | M→R | `(sessionId, status, data?)` |
+| `WIDGET_STOP` | `widget:stop` | R→M | `()` — HUD Stop button: stop + process now |
 | `WIDGET_CANCEL` | `widget:cancel` | R→M | `()` |
 | `WIDGET_UNDO_CANCEL` | `widget:undo-cancel` | R→M | `()` |
 | `SESSION_CANCELLED` | `session:cancelled` | M→R | `()` |
@@ -397,6 +425,14 @@ fire-and-forget; `R↔M` renderer invokes / main handles (Promise).
 | `GET_INSTRUCTION_KEY` | `settings:get-instruction-key` | R↔M | `()` → `InstructionKey` |
 | `SET_ACTIVATION_MODE` | `settings:activation-mode` | R→M | `(mode)` |
 | `GET_ACTIVATION_MODE` | `settings:get-activation-mode` | R↔M | `()` → `ActivationMode` |
+| `SET_AUTO_FORMAT` | `settings:auto-format` | R→M | `(enabled)` |
+| `GET_AUTO_FORMAT` | `settings:get-auto-format` | R↔M | `()` → `boolean` (default `false`) |
+| `SET_INSTRUCTION_ENABLED` | `settings:instruction-enabled` | R→M | `(enabled)` |
+| `GET_INSTRUCTION_ENABLED` | `settings:get-instruction-enabled` | R↔M | `()` → `boolean` (default `false`) |
+| `SET_DICTIONARY` | `settings:dictionary` | R↔M | `(entries: DictionaryEntry[])` → `void` |
+| `GET_DICTIONARY` | `settings:get-dictionary` | R↔M | `()` → `DictionaryEntry[]` (default `[]`) |
+| `SET_SNIPPETS` | `settings:snippets` | R↔M | `(snippets: Snippet[])` → `void` |
+| `GET_SNIPPETS` | `settings:get-snippets` | R↔M | `()` → `Snippet[]` (default `[]`) |
 | `DEV_ERROR_LOG` | `dev:error-log` | M→R | `(entry: ErrorEntry)` |
 
 > The renderer never imports `shared/ipc.ts`; it touches only
@@ -525,7 +561,7 @@ feature flags.
 |---------|-------|---------|
 | **Key listening** | spawn `resources/bin/globe-listener` (Swift), parse stdout protocol | `uiohook-napi` keydown/keyup by `UiohookKey` name |
 | **Dictation key** | Fn(Globe) / Right Option | Right Ctrl / Right Alt |
-| **Instruction key** | Caps Lock (recommended) / Right Shift (needs Swift recompile) | Right Shift (native) |
+| **Instruction key** *(opt-in, default off)* | Caps Lock (LED-pair collapsed to one `instruction-down`) | Caps Lock (typematic auto-repeat suppressed) |
 | **Paste/copy** | `osascript` System Events keystroke | clipboard + PowerShell `SendKeys` (`^v`/`^c`) |
 | **Permissions** | mic / accessibility / input-monitoring via `systemPreferences` | granted / no-op |
 | **Tray icon** | template image (auto-tint) | white-on-transparent normal image |

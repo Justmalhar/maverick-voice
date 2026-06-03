@@ -122,10 +122,11 @@ export function showMainWindow(): void {
 /* ===============================
    HUD WIDGET WINDOW
 
-   A 520×140 transparent frameless panel that drops in from the top of the
-   screen when recording starts (center or right, see getHUDBounds). Hidden by
-   default. Show/hide is driven by the main process (sessionManager); the
-   entry/exit animations themselves live in the renderer CSS.
+   A 520×140 transparent frameless panel that rises from the bottom of the
+   screen — above the Dock plus DOCK_CLEARANCE — when recording starts
+   (center or right, see getHUDBounds). Hidden by default. Show/hide is driven
+   by the main process (sessionManager); the entry/exit animations themselves
+   live in the renderer CSS.
 ================================ */
 
 const HUD_WIDTH = 520

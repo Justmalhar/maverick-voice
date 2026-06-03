@@ -204,15 +204,15 @@ class KeyboardManager extends EventEmitter {
           console.log('[keyboard] Instruction key ignored — instruction mode disabled')
           break
         }
-        // The instruction key (Right Shift = momentary; Caps Lock LED-toggle
-        // collapsed to a single 'instruction-down' by keyListener) triggers on
-        // DOWN only.
+        // Caps Lock triggers on DOWN only: darwin's LED-pair is collapsed to a
+        // single 'instruction-down' by keyListener, and win32 emits one down
+        // per physical press (auto-repeat swallowed).
         this.handleInstructionToggle()
         break
       case 'instruction-up':
-        // Right Shift is momentary — ignore the release; the toggle already
-        // happened on 'instruction-down'. (Also ignored when instruction mode
-        // is disabled.)
+        // Never emitted on either platform today (darwin collapses the pair,
+        // win32 suppresses it for parity) — kept as an explicit no-op so a
+        // future hold-style instruction key has a documented landing spot.
         break
     }
   }
