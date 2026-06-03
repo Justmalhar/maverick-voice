@@ -36,6 +36,36 @@ export type DictationKey = 'fn' | 'right-option' | 'right-ctrl' | 'right-alt'
  */
 export type InstructionKey = 'caps-lock'
 
+/**
+ * A single modifier key usable in a dictation COMBO binding.
+ *  - darwin: 'cmd' | 'ctrl' | 'option' | 'shift' | 'fn'
+ *  - win32:  resolver maps cmd->Win(Meta), option->Alt; 'fn' is darwin-only.
+ * Left/right variants are equivalent (the resolver treats them as the same modifier).
+ */
+export type ModifierKey = 'cmd' | 'ctrl' | 'option' | 'shift' | 'fn'
+
+/**
+ * How dictation is triggered. Either a single physical key (legacy default)
+ * or a COMBINATION of >=2 held modifiers (Discord-style PTT, conflict-free).
+ *  - { type: 'key';   key }  — the existing single-key behavior.
+ *  - { type: 'combo'; mods } — fires while the held modifier set is a superset
+ *    of `mods` (exact-or-superset match; MINIMUM 2 modifiers, enforced in UI
+ *    AND the resolver — single modifiers are the conflict class that got
+ *    Right Shift removed).
+ * Migrated at boot from the legacy `dictationKey` store value
+ * (=> { type: 'key', key: stored }).
+ */
+export type DictationBinding =
+  | { type: 'key'; key: DictationKey }
+  | { type: 'combo'; mods: ModifierKey[] }
+
+/**
+ * Per-app formatting profile chosen for the AI Auto-Format pass. Detected from
+ * the frontmost application at dictation-session START. 'default' = BASE RULES
+ * only (browsers included). See electron/appProfiles.ts for the mapping table.
+ */
+export type AppProfile = 'email' | 'chat-ai' | 'code-editor' | 'messaging' | 'notes' | 'default'
+
 // ─── Provider identifiers ─────────────────────────────────────────────────
 
 /** Speech-to-text provider ids. Registry keys. 'groq' is the only v1 STT. */
@@ -193,7 +223,15 @@ export interface TestProviderKeyResult {
 
 export interface ElectronAPI {
   // ── Recording control (main -> renderer) ──
-  onRecordingStart: (callback: (mode: SessionMode, sessionId?: string) => void) => void
+  /**
+   * RECORDING_START. Trailing positional args extend the legacy signature
+   * (backward-compatible): the HUD may show an app chip from `appName`/`profile`.
+   * Both are absent for instruction/chained flows or when detection is
+   * unresolved/disabled.
+   */
+  onRecordingStart: (
+    callback: (mode: SessionMode, sessionId?: string, appName?: string, profile?: AppProfile) => void
+  ) => void
   onRecordingStop: (callback: () => void) => void
 
   // ── Audio streaming (renderer -> main) ──
@@ -285,6 +323,12 @@ export interface ElectronAPI {
   /** Whether the LLM auto-format pass runs on raw dictation transcripts (default false). */
   getAutoFormat: () => Promise<boolean>
   setAutoFormat: (enabled: boolean) => void
+  /**
+   * Whether the auto-format prompt adapts to the frontmost app (default true).
+   * Only has effect when autoFormat is on.
+   */
+  getAppAwareFormatting: () => Promise<boolean>
+  setAppAwareFormatting: (enabled: boolean) => void
 
   // ── Instruction mode opt-in (renderer <-> main) ──
   /** Whether instruction (edit-selected-text) key events are honored at all (default false). */
@@ -300,8 +344,15 @@ export interface ElectronAPI {
   setSnippets: (snippets: Snippet[]) => Promise<void>
 
   // ── Key bindings (renderer <-> main) ──
+  /** Legacy single-key dictation accessor; kept for back-compat. Settings uses the binding API below. */
   setDictationKey: (key: DictationKey) => void
   getDictationKey: () => Promise<DictationKey>
+  /**
+   * Dictation trigger as a single key OR a >=2-modifier combo. Supersedes the
+   * legacy key accessor in Settings. Boot-migrated from the stored dictationKey.
+   */
+  getDictationBinding: () => Promise<DictationBinding>
+  setDictationBinding: (binding: DictationBinding) => void
   setInstructionKey: (key: InstructionKey) => void
   getInstructionKey: () => Promise<InstructionKey>
   setActivationMode: (mode: ActivationMode) => void

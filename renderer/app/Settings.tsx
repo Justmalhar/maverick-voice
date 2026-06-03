@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import type {
   DictationKey,
+  DictationBinding,
+  ModifierKey,
   ActivationMode,
   STTSettings,
   LLMSettings,
@@ -46,6 +48,61 @@ const DICTATION_KEY_OPTIONS: { value: DictationKey; label: string }[] = IS_MAC
       { value: 'right-alt', label: 'Right Alt' }
     ]
 
+// Sentinel for the "Custom combo" segmented option — distinct from any
+// DictationKey so the picker can switch the binding into combo mode.
+const COMBO_OPTION = '__combo__'
+
+// Default dictation key per platform (used when switching combo -> single key).
+const DEFAULT_DICTATION_KEY: DictationKey = IS_MAC ? 'fn' : 'right-ctrl'
+
+// Platform-aware modifier chips for the custom combo picker. ModifierKey is the
+// darwin vocabulary; the resolver maps cmd->Win and option->Alt on win32, so we
+// keep the same value union and only relabel for Windows.
+const MODIFIER_CHIPS: { value: ModifierKey; label: string }[] = IS_MAC
+  ? [
+      { value: 'cmd', label: '⌘ Cmd' },
+      { value: 'ctrl', label: '⌃ Ctrl' },
+      { value: 'option', label: '⌥ Option' },
+      { value: 'shift', label: '⇧ Shift' },
+      { value: 'fn', label: 'fn' }
+    ]
+  : [
+      { value: 'cmd', label: 'Win' },
+      { value: 'ctrl', label: 'Ctrl' },
+      { value: 'option', label: 'Alt' },
+      { value: 'shift', label: 'Shift' }
+    ]
+
+/** Short keycap label for an active-combo chip (e.g. '⌘'). */
+function modifierCapLabel(mod: ModifierKey): string {
+  if (IS_MAC) {
+    switch (mod) {
+      case 'cmd':
+        return '⌘'
+      case 'ctrl':
+        return '⌃'
+      case 'option':
+        return '⌥'
+      case 'shift':
+        return '⇧'
+      case 'fn':
+        return 'fn'
+    }
+  }
+  switch (mod) {
+    case 'cmd':
+      return 'Win'
+    case 'ctrl':
+      return 'Ctrl'
+    case 'option':
+      return 'Alt'
+    case 'shift':
+      return 'Shift'
+    case 'fn':
+      return 'fn'
+  }
+}
+
 
 const ACTIVATION_MODES: { value: ActivationMode; label: string; blurb: string }[] = [
   { value: 'tap-toggle', label: 'Tap toggle', blurb: 'Tap once to start, tap again to stop.' },
@@ -77,10 +134,14 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 
   // ── AI ──
   const [autoFormat, setAutoFormat] = useState(false)
+  const [appAwareFormatting, setAppAwareFormatting] = useState(true)
   const [instructionEnabled, setInstructionEnabled] = useState(false)
 
   // ── Key bindings ──
-  const [dictationKey, setDictationKey] = useState<DictationKey>(IS_MAC ? 'fn' : 'right-ctrl')
+  // `binding` is the source of truth for the picker. `dictationKey` mirrors the
+  // single-key choice (also fed to the legacy onDictationKeyChange callback).
+  const [binding, setBinding] = useState<DictationBinding>({ type: 'key', key: DEFAULT_DICTATION_KEY })
+  const [dictationKey, setDictationKey] = useState<DictationKey>(DEFAULT_DICTATION_KEY)
   const [activationMode, setActivationMode] = useState<ActivationMode>('tap-toggle')
 
   // ── Provider settings ──
@@ -146,6 +207,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     window.electronAPI.getSoundFeedback().then(setSoundFeedback).catch(() => {})
     window.electronAPI.getChunkedTranscription().then(setChunkedTranscription).catch(() => {})
     window.electronAPI.getAutoFormat().then(setAutoFormat).catch(() => {})
+    window.electronAPI.getAppAwareFormatting().then(setAppAwareFormatting).catch(() => {})
     window.electronAPI.getInstructionEnabled().then(setInstructionEnabled).catch(() => {})
     window.electronAPI
       .getOutputMode()
@@ -153,9 +215,17 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
         if (v === 'paste' || v === 'clipboard') setOutputMode(v)
       })
       .catch(() => {})
-    window.electronAPI.getDictationKey().then((v) => {
-      if (['fn', 'right-option', 'right-ctrl', 'right-alt'].includes(v)) setDictationKey(v)
-    })
+    // Binding supersedes the legacy single-key accessor in Settings. Mirror the
+    // single-key value into `dictationKey` so a combo->key switch has a sane default.
+    window.electronAPI
+      .getDictationBinding()
+      .then((b) => {
+        setBinding(b)
+        if (b.type === 'key' && ['fn', 'right-option', 'right-ctrl', 'right-alt'].includes(b.key)) {
+          setDictationKey(b.key)
+        }
+      })
+      .catch(() => {})
     window.electronAPI.getActivationMode().then((v) => {
       if (v === 'tap-toggle' || v === 'push-to-talk' || v === 'double-tap-push') setActivationMode(v)
     })
@@ -239,17 +309,46 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     window.electronAPI.setAutoFormat(value)
   }
 
+  function handleAppAwareFormattingChange(value: boolean) {
+    setAppAwareFormatting(value)
+    window.electronAPI.setAppAwareFormatting(value)
+  }
+
   function handleInstructionEnabledChange(value: boolean) {
     setInstructionEnabled(value)
     window.electronAPI.setInstructionEnabled(value)
   }
 
   // ── Key binding handlers ──
-  function handleDictationKeyChange(value: string) {
+  // The segmented picker offers the single-key options + a "Custom combo" entry.
+  // Selecting a single key persists a `{type:'key'}` binding immediately;
+  // selecting combo only switches the UI into combo mode (persists once >=2 mods
+  // are chosen — see toggleComboModifier).
+  function handleBindingPickerChange(value: string) {
+    if (value === COMBO_OPTION) {
+      // Switch into combo mode without persisting yet (needs >=2 modifiers).
+      // Seed from any previously-stored combo so re-opening keeps the selection.
+      setBinding((prev) => (prev.type === 'combo' ? prev : { type: 'combo', mods: [] }))
+      return
+    }
     const key = value as DictationKey
+    setBinding({ type: 'key', key })
     setDictationKey(key)
-    window.electronAPI.setDictationKey(key)
+    window.electronAPI.setDictationBinding({ type: 'key', key })
     onDictationKeyChange?.(key)
+  }
+
+  // Toggle a modifier in the combo. Persist only when >=2 are selected (the
+  // resolver also enforces this); otherwise hold the selection in local state and
+  // show the inline hint.
+  function toggleComboModifier(mod: ModifierKey) {
+    setBinding((prev) => {
+      const mods = prev.type === 'combo' ? prev.mods : []
+      const next = mods.includes(mod) ? mods.filter((m) => m !== mod) : [...mods, mod]
+      const nextBinding: DictationBinding = { type: 'combo', mods: next }
+      if (next.length >= 2) window.electronAPI.setDictationBinding(nextBinding)
+      return nextBinding
+    })
   }
 
   function handleActivationModeChange(value: string) {
@@ -285,6 +384,13 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 
   const llmModels = llmSettings.provider === 'openai' ? openaiModels : openrouterModels
   const activationBlurb = ACTIVATION_MODES.find((a) => a.value === activationMode)?.blurb
+
+  // Dictation picker derived state.
+  const isComboMode = binding.type === 'combo'
+  const comboMods = binding.type === 'combo' ? binding.mods : []
+  const bindingPickerValue = isComboMode ? COMBO_OPTION : binding.key
+  const dictationKeyPickerOptions = [...DICTATION_KEY_OPTIONS, { value: COMBO_OPTION, label: 'Custom combo' }]
+  const comboTooFew = comboMods.length < 2
 
   return (
     <div>
@@ -325,9 +431,55 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 
       {/* ═══ Dictation ═══ */}
       <Section title="Dictation" icon={<MicIcon />}>
-        <SettingRow label="Dictation key" description="The key you press to start dictating">
-          <Segmented options={DICTATION_KEY_OPTIONS} value={dictationKey} onChange={handleDictationKeyChange} />
+        <SettingRow label="Dictation trigger" description="The key — or modifier combo — you press to start dictating">
+          <Segmented options={dictationKeyPickerOptions} value={bindingPickerValue} onChange={handleBindingPickerChange} />
         </SettingRow>
+
+        {isComboMode && (
+          <div className="px-5 py-4 border-b border-mv-border">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-mv-text-secondary">Combo modifiers</p>
+                <p className="text-[10.5px] text-mv-text-muted mt-0.5 max-w-[260px] leading-snug">
+                  Hold these together to dictate. Pick at least two to avoid clashing with system shortcuts.
+                </p>
+              </div>
+              {/* Active combo as keycap chips */}
+              <div className="shrink-0 flex items-center gap-1.5">
+                {comboMods.length > 0 ? (
+                  comboMods.map((m) => (
+                    <kbd key={m} className="kbd-3d !min-w-[28px] !px-2 !py-1 !text-[11px]">
+                      {modifierCapLabel(m)}
+                    </kbd>
+                  ))
+                ) : (
+                  <span className="text-[11px] text-mv-text-muted">No combo set</span>
+                )}
+              </div>
+            </div>
+
+            {/* Modifier toggle-chips */}
+            <div className="mv-combo-chips">
+              {MODIFIER_CHIPS.map((chip) => {
+                const active = comboMods.includes(chip.value)
+                return (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    onClick={() => toggleComboModifier(chip.value)}
+                    className={`mv-combo-chip ${active ? 'mv-combo-chip--active' : ''}`}
+                    aria-pressed={active}
+                  >
+                    {chip.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {comboTooFew && <p className="text-[11px] text-mv-text-muted mt-2.5">Pick at least two modifiers</p>}
+          </div>
+        )}
+
         <SettingRow label="Activation mode" description={activationBlurb || ''}>
           <Segmented options={ACTIVATION_MODES} value={activationMode} onChange={handleActivationModeChange} />
         </SettingRow>
@@ -354,6 +506,25 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
         >
           <Toggle checked={autoFormat} onChange={handleAutoFormatChange} />
         </SettingRow>
+
+        {/* Adapt to active app — nested under Auto-Format; only effective when on. */}
+        <div className={`pl-9 pr-5 py-4 border-b border-mv-border ${autoFormat ? '' : 'opacity-50'}`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-mv-text-primary">Adapt to active app</p>
+              <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug max-w-[360px]">
+                Emails get paragraphs, IDE prompts get @file references, chats stay casual.
+              </p>
+            </div>
+            <div className="shrink-0">
+              <Toggle
+                checked={appAwareFormatting}
+                onChange={handleAppAwareFormattingChange}
+                disabled={!autoFormat}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* LLM provider + model (always visible) */}
         <div className="px-5 py-4 border-b border-mv-border">
@@ -835,9 +1006,22 @@ function Segmented({
   )
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (val: boolean) => void }) {
+function Toggle({
+  checked,
+  onChange,
+  disabled
+}: {
+  checked: boolean
+  onChange: (val: boolean) => void
+  disabled?: boolean
+}) {
   return (
-    <button onClick={() => onChange(!checked)} className={`mv-toggle ${checked ? 'mv-toggle--on' : ''}`} aria-pressed={checked}>
+    <button
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`mv-toggle ${checked ? 'mv-toggle--on' : ''} ${disabled ? 'mv-toggle--disabled' : ''}`}
+      aria-pressed={checked}
+    >
       <span className="mv-toggle__knob" />
     </button>
   )

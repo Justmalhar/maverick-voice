@@ -2,15 +2,24 @@ import { v4 as uuidv4 } from 'uuid'
 import { APP_CONFIG, REQUEST_TIMEOUT_MS } from './config'
 import { getTranscriptionProvider, getLLMProvider } from './providers/registry'
 import { getApiKey, hasApiKey } from './keyStore'
-import { assembleTransformMessages, AUTO_FORMAT, type FlowType } from './prompts'
+import { assembleTransformMessages, buildAutoFormatPrompt, type FlowType } from './prompts'
 import { saveAudioFile, saveAudioChunk } from './audio'
 import { captureSelectedText, injectOutput, copyToClipboard } from './clipboard'
 import { getWidgetWindow, showHUD, hideHUD, cancelPendingHide } from './windowManager'
 import { setTrayRecording, setTrayIdle } from './tray'
 import { broadcastError } from './errorLogger'
 import { simplifyError } from './errorUtils'
+import { getFrontmostApp } from './frontmostApp'
+import { detectProfile } from './appProfiles'
 import { IPC } from '../shared/ipc'
-import type { SessionMode, STTSettings, LLMSettings, DictionaryEntry, Snippet } from '../shared/types'
+import type {
+  SessionMode,
+  STTSettings,
+  LLMSettings,
+  DictionaryEntry,
+  Snippet,
+  AppProfile
+} from '../shared/types'
 
 // LLM transform output is capped at this many completion tokens. Generous so a
 // long "make this an email" instruction is never truncated.
@@ -201,6 +210,13 @@ export interface SessionState {
   status: 'recording' | 'processing' | 'done' | 'error'
   errorMessage: string | null
   createdAt: number
+  // ─── App-aware formatting (captured async at session START) ───
+  // Frontmost-app id/name + resolved AppProfile. Defaults to 'default' until
+  // getFrontmostApp() resolves; if it never resolves before format time the
+  // 'default' profile is used. NEVER blocks recording start.
+  appId: string | null
+  appName: string | null
+  profile: AppProfile
 }
 
 function sendToWidget(channel: string, ...args: unknown[]): void {
@@ -223,6 +239,11 @@ class SessionManager {
   private autoFormat = false
   private dictionary: DictionaryEntry[] = []
   private snippets: Snippet[] = []
+
+  // App-aware formatting: adapts the AUTO_FORMAT prompt to the frontmost app.
+  // DEFAULT true, but only effective when autoFormat is on. Pushed in by
+  // main.ts restoreSettings + the SET_APP_AWARE_FORMATTING IPC handler.
+  private appAwareFormatting = true
 
   // Processing lock — prevents new sessions during provider calls.
   private isProcessing = false
@@ -329,6 +350,15 @@ class SessionManager {
     return this.autoFormat
   }
 
+  setAppAwareFormatting(enabled: boolean): void {
+    console.log('[session] App-aware formatting set:', enabled)
+    this.appAwareFormatting = enabled
+  }
+
+  getAppAwareFormatting(): boolean {
+    return this.appAwareFormatting
+  }
+
   setDictionary(entries: DictionaryEntry[]): void {
     this.dictionary = Array.isArray(entries) ? entries : []
     console.log('[session] Dictionary updated:', this.dictionary.length, 'entries')
@@ -382,7 +412,10 @@ class SessionManager {
         flowType: 'dictation',
         status: 'recording',
         errorMessage: null,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        appId: null,
+        appName: null,
+        profile: 'default'
       }
       console.log('[session] New session created:', sessionId)
     } else {
@@ -395,6 +428,13 @@ class SessionManager {
     setTrayRecording(mode)
     sendToWidget(IPC.RECORDING_START, mode, this.currentSession.sessionId)
     console.log('[session] HUD shown, recording:start sent for mode:', mode)
+
+    // App-aware formatting: detect the frontmost app NOW (focus may move during
+    // recording). Fire-and-forget — never blocks or delays recording start. Only
+    // dictation sessions feed the auto-format pass and the HUD chip.
+    if (mode === 'dictation') {
+      this.captureFrontmostApp(this.currentSession)
+    }
 
     // Capture selected text AFTER HUD is shown — delay to let macOS finish
     // rendering the window before osascript Cmd+C fires, which can disrupt
@@ -939,8 +979,14 @@ class SessionManager {
             // unformatted text and fires OUTPUT_FALLBACK — it NEVER blocks paste.
             const dictationOutput = session.dictationTranscript || ''
             if (this.autoFormat && dictationOutput.trim()) {
-              console.log('[session] Dictation flow — running AI auto-format pass')
-              const formatted = await this.runAutoFormat(dictationOutput, controller.signal)
+              const formatProfile = this.appAwareFormatting ? session.profile : 'default'
+              console.log(
+                '[session] Dictation flow — running AI auto-format pass (profile:',
+                formatProfile,
+                this.appAwareFormatting ? '' : '— app-aware off',
+                ')'
+              )
+              const formatted = await this.runAutoFormat(dictationOutput, formatProfile, controller.signal)
               if (formatted) {
                 output = formatted
                 console.log('[session] ✓ Auto-format applied')
@@ -1124,13 +1170,19 @@ class SessionManager {
 
   /**
    * Run the AI auto-format pass over a raw dictation transcript via the
-   * configured LLM provider/model. Returns the formatted text on success, or
-   * `null` on ANY failure (no key, network, timeout, empty/refusal) so the
-   * caller falls back to the unformatted transcript — this NEVER blocks the
-   * paste. Token usage is recorded inside the provider's complete() like every
-   * other LLM call (instruction transforms etc.).
+   * configured LLM provider/model. The system prompt is app-aware:
+   * buildAutoFormatPrompt(profile) = BASE RULES + the profile block (caller
+   * passes `appAwareFormatting ? session.profile : 'default'`). Returns the
+   * formatted text on success, or `null` on ANY failure (no key, network,
+   * timeout, empty/refusal) so the caller falls back to the unformatted
+   * transcript — this NEVER blocks the paste. Token usage is recorded inside the
+   * provider's complete() like every other LLM call (instruction transforms etc.).
    */
-  private async runAutoFormat(text: string, signal?: AbortSignal): Promise<string | null> {
+  private async runAutoFormat(
+    text: string,
+    profile: AppProfile,
+    signal?: AbortSignal
+  ): Promise<string | null> {
     const llm = this.llmSettings
     if (!hasApiKey(llm.provider)) {
       console.log('[session] ⚠️ Auto-format skipped — no API key for', llm.provider)
@@ -1142,7 +1194,7 @@ class SessionManager {
       const result = await provider.complete(
         {
           model: llm.model,
-          system: AUTO_FORMAT,
+          system: buildAutoFormatPrompt(profile),
           user: text,
           temperature: 0.1,
           maxTokens: TRANSFORM_MAX_TOKENS,
@@ -1333,6 +1385,50 @@ class SessionManager {
       this.autoHideTimer = null
     }
     cancelPendingHide()
+  }
+
+  /**
+   * Detect the frontmost app for app-aware formatting and store {id,name,
+   * profile} on the session. Runs at session START (focus may move during the
+   * recording). Fire-and-forget — getFrontmostApp() NEVER throws and self-times
+   * out (~800ms). When a non-'default' profile resolves AND the session is still
+   * the active dictation session, re-send RECORDING_START carrying the app
+   * name + profile so the HUD can show its chip (positional, backward-compatible
+   * payload). Resolution after format time is harmless — format uses whatever is
+   * on the session at that moment, falling back to 'default'.
+   */
+  private captureFrontmostApp(session: SessionState): void {
+    getFrontmostApp()
+      .then((app) => {
+        if (!app) {
+          console.log('[session] Frontmost app unresolved — using default profile')
+          return
+        }
+        const profile = detectProfile(app.id, app.name)
+        // Only mutate THIS session's slot if it is still the one we started for
+        // (the user may have ended/replaced it while detection was in flight).
+        session.appId = app.id
+        session.appName = app.name
+        session.profile = profile
+        console.log('[session] Frontmost app:', app.id, '|', app.name, '→ profile:', profile)
+
+        // Surface the chip only when the session is still the active dictation
+        // session AND the profile is meaningful (non-'default').
+        if (
+          profile !== 'default' &&
+          this.currentSession === session &&
+          session.status === 'recording'
+        ) {
+          sendToWidget(IPC.RECORDING_START, 'dictation', session.sessionId, app.name, profile)
+        }
+      })
+      .catch((err) => {
+        // getFrontmostApp() already swallows everything; this is belt-and-braces.
+        console.log(
+          '[session] captureFrontmostApp unexpected error:',
+          err instanceof Error ? err.message : err
+        )
+      })
   }
 
   private async captureSelection(mode: SessionMode): Promise<void> {

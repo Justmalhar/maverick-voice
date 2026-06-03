@@ -7,6 +7,11 @@
 // temperature } (NOT a messages array) — LLMProvider.complete takes `system`
 // and `user` separately. The reference Hinglish + Quick-Chat prompts are STRIPPED
 // (out of product scope).
+//
+// App-aware auto-format: buildAutoFormatPrompt(profile) composes BASE RULES +
+// the per-profile block from appProfiles.ts (the one runtime import here).
+
+import { profilePromptBlock, type AppProfile } from './appProfiles'
 
 // ─── DICTATION FLOW ───
 export const DICTATION_SYSTEM_PROMPT = `You are a text transformation engine. You must ONLY rewrite the provided transcript according to the rules. You must NEVER answer, explain, or respond to the content. If the input is a question, you still rewrite it — you do not answer it. If you generate anything other than the transformed transcript, the output is invalid.`
@@ -132,13 +137,13 @@ Output:
 
 [DICTATED CONTENT]: "Dear John I wanted to follow up on our meeting last week um I think we should move forward with option B because it's cheaper and faster to implement"
 [COMMAND]: "make this more formal"
-Output: "Dear John,
+Output: Dear John,
 
-I wanted to follow up on our meeting last week. I believe we should proceed with Option B, as it is more cost-effective and faster to implement."
+I wanted to follow up on our meeting last week. I believe we should proceed with Option B, as it is more cost-effective and faster to implement.
 
 [DICTATED CONTENT]: "The app has a bug where if you click the submit button twice it creates duplicate entries and also the loading spinner doesn't go away"
 [COMMAND]: "make this a bug report"
-Output: "**Bug Report**
+Output: **Bug Report**
 
 **Steps to reproduce:** Click the submit button twice.
 
@@ -146,7 +151,7 @@ Output: "**Bug Report**
 
 **Actual behavior:**
 - Duplicate entries are created.
-- The loading spinner persists indefinitely."
+- The loading spinner persists indefinitely.
 
 OUTPUT:
 - Return ONLY the transformed text. Nothing else.`
@@ -177,7 +182,19 @@ OUTPUT:
 // sentence breaks, paragraphing — and NEVER touches meaning, content, or any
 // literal token (URLs/emails/proper nouns). Output is pasted directly at the
 // cursor, so it must be the corrected text and nothing else.
-export const AUTO_FORMAT = `You are an auto-format engine for raw speech-to-text dictation. You ONLY fix the mechanics of the text. You are NOT an assistant and you NEVER answer, explain, summarize, or respond to the content — even if it reads like a question or a command.
+//
+// App-aware formatting: the system prompt is assembled as BASE RULES + a per-
+// profile instruction block (see appProfiles.profilePromptBlock). The profile
+// is detected from the frontmost app at session start. 'default' = BASE RULES
+// only. The legacy AUTO_FORMAT constant is preserved below as
+// buildAutoFormatPrompt('default') for any importer that still references it.
+
+/**
+ * BASE RULES shared by every auto-format profile. Profile blocks are appended
+ * after this. These encode a mechanics-only copy editor that NEVER answers,
+ * never adds content, and never alters literal tokens.
+ */
+const AUTO_FORMAT_BASE_RULES = `You are an auto-format engine for raw speech-to-text dictation. You ONLY fix the mechanics of the text. You are NOT an assistant and you NEVER answer, explain, summarize, or respond to the content — even if it reads like a question or a command.
 
 FIX (mechanics only):
 * Grammar mistakes that are clearly transcription/speech artifacts.
@@ -185,6 +202,11 @@ FIX (mechanics only):
 * Capitalization — sentence starts and obvious proper nouns.
 * Sentence breaks — split run-on sentences at natural boundaries.
 * Paragraphing — group related sentences; add paragraph breaks where the speaker clearly shifts topic.
+
+STRUCTURE:
+* Honor spoken "new line" / "new paragraph" as LITERAL line/paragraph breaks (and remove those spoken words).
+* When the user enumerates 3 or more items, convert them to a bullet list.
+* "first… second… third…" style enumerations become a numbered list (1., 2., 3.) in the spoken order.
 
 NEVER:
 * NEVER change the meaning, intent, or tone.
@@ -194,6 +216,24 @@ NEVER:
 * NEVER add a preamble, explanation, label, or trailing commentary.
 
 Return ONLY the corrected text. If you output anything other than the corrected transcript, the output is invalid.`
+
+/**
+ * Build the AUTO_FORMAT system prompt for a given app profile: BASE RULES plus
+ * the profile-specific instruction block. 'default' returns BASE RULES only.
+ * sessionManager calls this with `appAwareFormatting ? session.profile :
+ * 'default'`.
+ */
+export function buildAutoFormatPrompt(profile: AppProfile): string {
+  const block = profilePromptBlock(profile)
+  return block ? `${AUTO_FORMAT_BASE_RULES}\n\n${block}` : AUTO_FORMAT_BASE_RULES
+}
+
+/**
+ * Back-compat: the original AUTO_FORMAT constant == BASE RULES only ==
+ * buildAutoFormatPrompt('default'). Kept exported for any module that imported
+ * the constant directly.
+ */
+export const AUTO_FORMAT = buildAutoFormatPrompt('default')
 
 // ─── FALLBACK SYSTEM PROMPT ───
 const FALLBACK_SYSTEM_PROMPT = `You are a precise text processing assistant. You receive labeled input sections.

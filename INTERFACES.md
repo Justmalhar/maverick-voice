@@ -575,3 +575,107 @@ New IPC handlers:
 - `GET_SNIPPETS` -> store; `SET_SNIPPETS` -> `sessionManager.setSnippets` + store (handle, returns void).
 
 The electron-store schema in `main.ts` adds `instructionEnabled: boolean`, `autoFormat: boolean`, `dictionary: DictionaryEntry[]`, `snippets: Snippet[]`.
+
+---
+
+# Feature delta (app-aware formatting + combo hotkeys)
+
+New contract surface added to `shared/types.ts` (`AppProfile`, `ModifierKey`, `DictationBinding`; the `onRecordingStart` callback gains trailing optional `appName?: string`, `profile?: AppProfile`; 4 new `ElectronAPI` methods), `shared/ipc.ts` (4 channels), and `electron/preload.ts` (4 implementations + the extended `onRecordingStart` forwarding). Channel constants (use `IPC.*` — never inline):
+
+- `IPC.SET_APP_AWARE_FORMATTING` `'settings:app-aware-formatting'` (R->M), `IPC.GET_APP_AWARE_FORMATTING` `'settings:get-app-aware-formatting'` (R<->M)
+- `IPC.SET_DICTATION_BINDING` `'settings:dictation-binding'` (R->M), `IPC.GET_DICTATION_BINDING` `'settings:get-dictation-binding'` (R<->M)
+
+`setAppAwareFormatting`/`setDictationBinding` are fire-and-forget `void` (`ipcMain.on`); `getAppAwareFormatting`/`getDictationBinding` are `ipcMain.handle` request/response. The legacy `SET/GET_DICTATION_KEY` channels stay for back-compat; Settings drives the binding via `SET/GET_DICTATION_BINDING` only.
+
+`onRecordingStart` payload: `RECORDING_START` now sends `(mode, sessionId, appName?, profile?)` — positional, backward-compatible. `appName`/`profile` are present only for dictation flows when detection resolved AND a non-`'default'` chip is worth showing; absent for instruction/chained flows or when unresolved/disabled. The HUD truncates `appName` >18 chars and hides the chip when absent.
+
+## `electron/frontmostApp.ts` (NEW module)
+
+**Owner:** input builder. **Imports:** `node:child_process` (`execFile`), `node:util` (`promisify`), `keyListener.ts` (`keyListener` — darwin `sendCommand`/stdout `FRONTAPP:` reply). **Imported by:** `sessionManager.ts` (called at session START).
+
+```ts
+export function getFrontmostApp(): Promise<{ id: string; name: string } | null>
+```
+
+**Notes:** Internal ~800ms timeout -> resolves `null`. **NEVER throws** (all paths caught -> `null`).
+- **darwin PRIMARY:** send a new `FRONTAPP` command to the globe-listener helper via its existing stdin protocol (`keyListener.sendCommand`); the Swift helper replies on stdout with ONE line `FRONTAPP:<bundleId>|<localizedName>` (from `NSWorkspace.shared.frontmostApplication`). **darwin FALLBACK** (helper unavailable): `osascript -e 'tell application "System Events" to get bundle identifier of first application process whose frontmost is true'` (name may be the bundle id when only the id is available).
+- **win32:** `execFile('powershell', ['-NoProfile', ...])` with an `Add-Type` P/Invoke snippet (`GetForegroundWindow` + `GetWindowThreadProcessId` + `Process.GetProcessById`) returning `'<processName>|<windowTitle>'`. `id` = processName, `name` = windowTitle (fallback processName).
+- `[frontapp]` log prefix.
+
+## `electron/appProfiles.ts` (NEW module)
+
+**Owner:** prompts/profiles builder. **Imports:** `shared/types.ts` (`AppProfile`). **Imported by:** `sessionManager.ts` (resolve profile at session start), `prompts.ts` (`profilePromptBlock`).
+
+```ts
+export type AppProfile // re-exported from shared/types.ts (type lives in shared per contract)
+export function detectProfile(appId: string | null, appName: string | null): AppProfile
+export function profilePromptBlock(profile: AppProfile): string
+```
+
+**Notes:** `detectProfile` does case-insensitive substring/exact matching over ONE extensible data table mapping darwin bundle ids AND win32 process names to a profile. `com.jetbrains.*` matches by PREFIX. Mapping (per spec):
+- **email:** `com.apple.mail`, `com.microsoft.Outlook`, `com.readdle.smartemail`, `com.superhuman.electron`, `com.missiveapp.missive`, `olk.exe`, `outlook.exe`
+- **chat-ai:** `com.openai.chat`, `com.anthropic.claudefordesktop`, `ai.perplexity.mac`, `chatgpt.exe`, `claude.exe`
+- **code-editor:** `com.microsoft.VSCode`, `com.todesktop.230313mzl4w4u92` (Cursor), `com.google.antigravity`, `dev.zed.Zed`, `com.exafunction.windsurf`, `com.jetbrains.*` (prefix), `com.sublimetext.4`, `code.exe`, `cursor.exe`, `antigravity.exe`, `windsurf.exe`, `idea64.exe`
+- **messaging:** `com.tinyspeck.slackmacgap`, `com.hnc.Discord`, `net.whatsapp.WhatsApp`, `ru.keepcoder.Telegram`, `com.microsoft.teams2`, `com.apple.MobileSMS`, `slack.exe`, `discord.exe`, `teams.exe`, `whatsapp.exe`, `telegram.exe`
+- **notes:** `notion.id`, `md.obsidian`, `com.apple.Notes`, `net.shinyfrog.bear`, `com.lukilabs.lukiapp` (Craft), `notion.exe`, `obsidian.exe`
+- **default:** anything else (browsers included).
+
+`profilePromptBlock(profile)` returns the per-profile instruction block appended to BASE RULES (see `prompts.buildAutoFormatPrompt`).
+
+## `electron/prompts.ts` — new export
+
+```ts
+export function buildAutoFormatPrompt(profile: AppProfile): string
+```
+Refactors the existing `AUTO_FORMAT` constant into BASE RULES + `profilePromptBlock(profile)`. BASE RULES (all profiles): fix grammar/punctuation/capitalization; NEVER change meaning, add content, or alter URLs/emails/numbers/proper nouns; honor spoken "new line"/"new paragraph" as literal breaks; 3+ enumerated items -> bullet list; "first… second… third…" -> numbered list; output ONLY the corrected text. Profile blocks: **email** plain-text paragraphs, greeting/sign-off on own lines, professional, preserve tone; **chat-ai** minimal intervention, fix transcription artifacts + punctuation only, backtick unambiguous inline code; **code-editor** IDE-assistant prompt — spoken filenames -> `@`-references (`main dot py` -> `@main.py`, `user service dot ts` -> `@userService.ts` best-effort camelCase join), identifiers verbatim, backtick inline code; **messaging** casual, short lines, no headers, bullets only for explicit enumerations; **notes** full markdown (headings via "heading:", lists, bold via "bold:"); **default** BASE RULES only. The `AUTO_FORMAT` const remains exported for back-compat (== `buildAutoFormatPrompt('default')`); `sessionManager` calls `buildAutoFormatPrompt(profile)`.
+
+## `electron/keyListener.ts` — new export + protocol lines
+
+```ts
+//   setDictationBinding(binding: DictationBinding): void  // augments/replaces setDictationKey on the listener
+```
+
+**Combo resolver (platform-agnostic core):** maintain a `Set<ModifierKey>` of held modifiers. When `binding.type === 'combo'`: emit `'dictation-down'` exactly ONCE when the held set becomes a SUPERSET of `binding.mods` (exact-or-superset — an extra held modifier must NOT break PTT); emit `'dictation-up'` when ANY combo member releases. Enforce `mods.length >= 2` (ignore shorter combos). When `binding.type === 'key'`, behave exactly as today (single-key normalization). **GUARD:** while a combo is configured, single-key dictation tokens (`FN_*`, `RIGHT_OPTION_*`, win32 dictation keys) must NOT also trigger — one binding at a time. The emitted `KeyEvent` strings are unchanged, so `keyboard.ts` (tap-toggle / push-to-talk / double-tap-push) consumes combos identically.
+
+- **darwin feed:** parse new `MODS:<csv>` lines (below). Keep ALL existing tokens (`FN_*`, `RIGHT_OPTION_*`, `CAPS_*`) emitting exactly as today.
+- **win32 feed:** uiohook keydown/keyup for `UiohookKey.{Ctrl,CtrlRight,Alt,AltRight,Shift,ShiftRight,Meta,MetaRight}` — left/right equivalent; map `Meta`->`cmd`-equivalent, `Alt`->`option`-equivalent. Keep typematic auto-repeat suppression (track per-modifier held state; modifier keydowns repeat on Windows).
+- `main.ts restoreSettings` applies the migrated binding at boot via `setDictationBinding`.
+
+### globe-listener stdout protocol additions (darwin)
+
+- `MODS:<csv>` — emitted on EVERY `flagsChanged`, the currently-held modifiers from `{fn,shift,ctrl,option,cmd}` as a comma-separated list (e.g. `MODS:cmd,shift`), or `MODS:` when none held. Existing tokens (`FN_*`, `RIGHT_OPTION_*`, `CAPS_*`, `PASTE_OK`, `COPY_OK`) keep emitting EXACTLY as today — full backward compatibility.
+- `FRONTAPP:<bundleId>|<localizedName>` — stdout reply to the new stdin `FRONTAPP` command (uses `NSWorkspace.shared.frontmostApplication`). `sendCommand` is extended to accept `'FRONTAPP'` and resolve the reply line.
+- New stdin command (newline-terminated): `FRONTAPP`.
+- The binary MUST be rebuilt via `node /Users/malharujawane/Documents/Development/maverick-voice/scripts/build-globe-listener.js` (confirm success).
+
+## `electron/sessionManager.ts` — session.profile capture + app-aware format
+
+New setters/state + per-session app capture:
+
+```ts
+//   setAppAwareFormatting(enabled: boolean): void; getAppAwareFormatting(): boolean
+```
+
+- New setting `appAwareFormatting: boolean` (DEFAULT true) — effective ONLY when `autoFormat` is on.
+- At session START (NOT at processing time — the user's focus may move): kick `getFrontmostApp()` asynchronously and store `{ id, name, profile }` on the pending SessionState (`session.profile`, plus app id/name). NEVER block or delay recording start. If unresolved by format time -> `'default'`.
+- The AUTO_FORMAT pass builds its system prompt via `prompts.buildAutoFormatPrompt(profile)` where `profile = appAwareFormatting ? session.profile : 'default'`.
+- Include the detected app name + profile in the `RECORDING_START` IPC payload (trailing positional `appName`, `profile`) so the HUD can show the chip.
+
+## `electron/main.ts` — new electron-store keys + migration + IPC handlers
+
+New persisted keys (with defaults), pushed into managers on restore:
+- `appAwareFormatting` (default `true`) -> `sessionManager.setAppAwareFormatting(...)`
+- `dictationBinding` (`DictationBinding`) — **boot MIGRATION:** if absent, derive `{ type: 'key', key: <stored dictationKey> }` and persist. `restoreSettings` applies it via `keyListener.setDictationBinding(...)`. The legacy `dictationKey` key remains for back-compat reads.
+
+New IPC handlers:
+- `GET_APP_AWARE_FORMATTING` -> store; `SET_APP_AWARE_FORMATTING` -> `sessionManager.setAppAwareFormatting` + store.
+- `GET_DICTATION_BINDING` -> store (migrated); `SET_DICTATION_BINDING` -> `keyListener.setDictationBinding` + store.
+
+The electron-store schema in `main.ts` adds `appAwareFormatting: boolean` and `dictationBinding: DictationBinding`.
+
+## `renderer/app/Settings.tsx` / `renderer/widget` / `renderer/app/Onboarding.tsx` — UI deltas
+
+- **Settings AI section:** "Adapt to active app" toggle (`getAppAwareFormatting`/`setAppAwareFormatting`, default on) nested under Auto-Format, enabled only when autoFormat is on; description "Emails get paragraphs, IDE prompts get @file references, chats stay casual".
+- **Settings Dictation section:** key picker gains a "Custom combo" option revealing modifier toggle-chips (`⌘ Cmd`, `⌃ Ctrl`, `⌥ Option`, `⇧ Shift`, `fn` on darwin; `Win`/`Ctrl`/`Alt`/`Shift` on win32) via `.kbd-3d`/`.btn-glass`; persists via `setDictationBinding` only when `>=2` selected (inline hint "Pick at least two modifiers" otherwise); switching back to a single key restores `type:'key'`. Active combo shown as keycap chips.
+- **HUD (`renderer/widget`):** `onRecordingStart` now receives `appName`/`profile`; show a subtle app chip next to the mode label ("Listening · Mail"), white-alpha tier text, truncate >18 chars, hidden when absent.
+- **Onboarding (`renderer/app/Onboarding.tsx`):** layout normalization — fixed-height content region + single persistent footer bar across all steps (Back ghost left / progress dots center / Continue right), identical paddings + button sizes on every step (Back hidden but space reserved on first; "Get started" on last). Content/logic unchanged.

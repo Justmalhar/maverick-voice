@@ -22,18 +22,22 @@ import type {
   ProviderModel,
   AppConfig,
   DictationKey,
+  DictationBinding,
   InstructionKey,
   ActivationMode,
   OutputMode,
   DictionaryEntry,
-  Snippet
+  Snippet,
+  AppProfile
 } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
   // ── Recording control ──
   onRecordingStart: (callback) => {
-    ipcRenderer.on(IPC.RECORDING_START, (_e, mode: SessionMode, sessionId?: string) =>
-      callback(mode, sessionId)
+    ipcRenderer.on(
+      IPC.RECORDING_START,
+      (_e, mode: SessionMode, sessionId?: string, appName?: string, profile?: AppProfile) =>
+        callback(mode, sessionId, appName, profile)
     )
   },
   onRecordingStop: (callback) => {
@@ -183,6 +187,10 @@ const electronAPI: ElectronAPI = {
   setAutoFormat: (enabled: boolean) => {
     ipcRenderer.send(IPC.SET_AUTO_FORMAT, enabled)
   },
+  getAppAwareFormatting: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_APP_AWARE_FORMATTING),
+  setAppAwareFormatting: (enabled: boolean) => {
+    ipcRenderer.send(IPC.SET_APP_AWARE_FORMATTING, enabled)
+  },
 
   // ── Instruction mode opt-in ──
   getInstructionEnabled: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_INSTRUCTION_ENABLED),
@@ -204,6 +212,10 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send(IPC.SET_DICTATION_KEY, key)
   },
   getDictationKey: (): Promise<DictationKey> => ipcRenderer.invoke(IPC.GET_DICTATION_KEY),
+  getDictationBinding: (): Promise<DictationBinding> => ipcRenderer.invoke(IPC.GET_DICTATION_BINDING),
+  setDictationBinding: (binding: DictationBinding) => {
+    ipcRenderer.send(IPC.SET_DICTATION_BINDING, binding)
+  },
   setInstructionKey: (key: InstructionKey) => {
     ipcRenderer.send(IPC.SET_INSTRUCTION_KEY, key)
   },

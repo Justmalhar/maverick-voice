@@ -43,6 +43,20 @@ func handleModifierChange(_ event: NSEvent) {
     }
 
     previousModifiers = mods
+
+    // Modifier-combo dictation support: emit the full set of currently-held
+    // modifiers on EVERY flagsChanged so the Electron side can resolve >=2
+    // modifier combos (Discord-style PTT). Order is fixed (fn,shift,ctrl,
+    // option,cmd) so the CSV is deterministic. "MODS:" (empty) when none held.
+    // This is ADDITIVE — the FN_*/CAPS_*/RIGHT_OPTION_* tokens above are
+    // unchanged for full backward compatibility.
+    var modNames: [String] = []
+    if mods.contains(.function) { modNames.append("fn") }
+    if mods.contains(.shift) { modNames.append("shift") }
+    if mods.contains(.control) { modNames.append("ctrl") }
+    if mods.contains(.option) { modNames.append("option") }
+    if mods.contains(.command) { modNames.append("cmd") }
+    print("MODS:" + modNames.joined(separator: ","))
 }
 
 // ─── Stdin command handler ───
@@ -71,6 +85,18 @@ func simulateKeystroke(_ keyCode: CGKeyCode) -> Bool {
     return true
 }
 
+// Reply to a FRONTAPP request with the frontmost application's bundle id and
+// localized name. NSWorkspace is an AppKit API — access it on the main thread
+// (the stdin loop runs on a background queue). Empty fields when nil.
+func reportFrontmostApp() {
+    DispatchQueue.main.async {
+        let app = NSWorkspace.shared.frontmostApplication
+        let bundleId = app?.bundleIdentifier ?? ""
+        let name = app?.localizedName ?? ""
+        print("FRONTAPP:\(bundleId)|\(name)")
+    }
+}
+
 func handleStdinCommand(_ command: String) {
     switch command {
     case "PASTE":
@@ -85,6 +111,8 @@ func handleStdinCommand(_ command: String) {
         } else {
             fputs("COPY_ERROR:Failed to create CGEvent\n", stderr)
         }
+    case "FRONTAPP":
+        reportFrontmostApp()
     default:
         break
     }

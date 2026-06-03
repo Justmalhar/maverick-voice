@@ -100,6 +100,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     else handleComplete()
   }
 
+  function back() {
+    if (step > 0) setStep(step - 1)
+  }
+
   function handleComplete() {
     localStorage.setItem(ONBOARDING_KEY, 'true')
     onComplete()
@@ -110,13 +114,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     <div key="welcome" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
       <BrandHero />
       <h1 className="font-display text-3xl font-extrabold text-mv-text-primary mb-3 tracking-tight">Maverick Voice</h1>
-      <p className="text-mv-text-secondary text-[15px] mb-10 max-w-md leading-relaxed">
+      <p className="text-mv-text-secondary text-[15px] max-w-md leading-relaxed">
         Voice-first dictation and voice-driven editing for your whole desktop. Speak anywhere, and your words land at the
         cursor — no window-switching, no cleanup.
       </p>
-      <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[15px] !rounded-mv-pill">
-        Get Started
-      </button>
     </div>,
 
     // ── Step 1: How it works ──
@@ -125,13 +126,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       <p className="text-mv-text-secondary text-[14px] mb-8 max-w-sm leading-relaxed">
         Speak anywhere on your machine — your words land at the cursor.
       </p>
-      <div className="flex flex-col gap-3 mb-8 w-full max-w-[400px]">
+      <div className="flex flex-col gap-3 w-full max-w-[400px]">
         <FeatureCard icon={<MicGlyph />} title="Dictate" description="Tap your dictation key, speak, tap again. Raw text lands exactly where the cursor is." />
         <FeatureCard icon={<WandGlyph />} title="AI auto-format" description="Optionally let the AI fix grammar, punctuation, and paragraphing as you dictate — without changing what you said. Turn it on anytime in Settings." />
       </div>
-      <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
-        Continue
-      </button>
     </div>,
 
     // ── Step 2: Privacy ──
@@ -146,14 +144,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       <p className="text-mv-text-secondary text-[14px] mb-8 max-w-sm leading-relaxed">
         Maverick Voice is local-first. There's no account, no Maverick server, and nothing to sign up for.
       </p>
-      <div className="flex flex-col gap-2.5 mb-8 w-full max-w-[420px] text-left">
+      <div className="flex flex-col gap-2.5 w-full max-w-[420px] text-left">
         <PrivacyBullet text="Dictation history lives only on this computer, in a local database." />
         <PrivacyBullet text={`Audio is sent only to the provider you configure — Groq for speech-to-text, OpenAI or OpenRouter for transforms.`} />
         <PrivacyBullet text={`API keys are encrypted with ${IS_MAC ? 'the macOS Keychain' : 'Windows DPAPI'} via Electron safeStorage. No accounts, no tracking.`} />
       </div>
-      <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
-        Continue
-      </button>
     </div>,
 
     // ── Step 3: Provider keys ──
@@ -176,9 +171,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       <p className="text-[11px] text-mv-text-muted mt-5 max-w-md">
         Add at least a Groq key for dictation, plus one LLM key for instructions. You can add the rest later in Settings.
       </p>
-      <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill mt-6">
-        Continue
-      </button>
     </div>,
 
     // ── Step 4: Microphone permission ──
@@ -199,9 +191,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       {micGranted ? (
         <div className="flex flex-col items-center gap-4 mt-4">
           <GrantedPill text="Microphone access granted" />
-          <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
-            Continue
-          </button>
         </div>
       ) : micStatus === 'denied' || micStatus === 'restricted' ? (
         <div className="flex flex-col items-center gap-3 mt-4">
@@ -241,9 +230,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       {accessibilityGranted ? (
         <div className="flex flex-col items-center gap-4 mt-4">
           <GrantedPill text="Accessibility access granted" />
-          <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
-            Continue
-          </button>
         </div>
       ) : (
         <>
@@ -258,9 +244,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               I've enabled it
             </button>
           </div>
-          <button onClick={next} className="mt-5 text-[12px] text-mv-text-muted font-medium hover:text-mv-text-secondary transition-colors">
-            Skip for now
-          </button>
         </>
       )}
     </div>,
@@ -278,7 +261,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </p>
       </div>
       {IS_MAC && (
-        <div className="mv-glass-card px-5 py-3.5 mb-8 max-w-[400px] text-left">
+        <div className="mv-glass-card px-5 py-3.5 max-w-[400px] text-left">
           <p className="text-[12px] text-mv-text-secondary leading-relaxed">
             <span className="font-bold text-mv-text-primary">One macOS tweak:</span> Fn shows emoji or triggers Apple
             Dictation by default. Set <span className="font-semibold text-mv-text-primary">Keyboard → "Press 🌐 key to" → Do Nothing</span> to free it.
@@ -288,9 +271,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           </button>
         </div>
       )}
-      <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
-        Continue
-      </button>
     </div>,
 
     // ── Step 7: Ready ──
@@ -299,15 +279,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         <BrandHero />
       </div>
       <h2 className="font-display text-3xl font-extrabold text-mv-text-primary mb-3 tracking-tight">You're all set!</h2>
-      <p className="text-mv-text-secondary text-[15px] mb-10 max-w-sm leading-relaxed">
+      <p className="text-mv-text-secondary text-[15px] max-w-sm leading-relaxed">
         Press <kbd className="kbd-3d">{dictationKeyLabel(dictationKey)}</kbd> anywhere to start dictating. Your voice, your
         words, everywhere.
       </p>
-      <button onClick={handleComplete} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[15px] !rounded-mv-pill">
-        Start Using Maverick Voice
-      </button>
     </div>
   ]
+
+  const isFirstStep = step === 0
+  const isLastStep = step === steps.length - 1
+  const primaryLabel = isLastStep ? 'Get started' : 'Continue'
 
   return (
     <div className="h-screen flex flex-col">
@@ -329,8 +310,40 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </span>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex items-center justify-center px-10 overflow-y-auto py-6">{steps[step]}</div>
+      {/* Content — fixed-height region; long steps scroll inside it so the
+          footer never moves between steps. */}
+      <div className="flex-1 min-h-0 flex items-center justify-center px-10 overflow-y-auto py-6">{steps[step]}</div>
+
+      {/* Persistent footer — identical layout/sizing on every step. Back (ghost)
+          left with reserved space (hidden, not removed, on the first step),
+          centered progress dots, primary action right. */}
+      <div className="onboarding-footer flex items-center justify-between gap-4 px-10 py-5 border-t border-mv-border">
+        {/* Back (ghost) — space always reserved so the dots stay centered. */}
+        <div className="flex-1 flex justify-start">
+          <button
+            onClick={back}
+            className={`btn-glass !px-6 !py-3 !text-[13px] !rounded-mv-pill ${isFirstStep ? 'invisible pointer-events-none' : ''}`}
+            aria-hidden={isFirstStep}
+            tabIndex={isFirstStep ? -1 : 0}
+          >
+            Back
+          </button>
+        </div>
+
+        {/* Centered progress dots. */}
+        <div className="flex items-center gap-2 shrink-0" aria-hidden="true">
+          {steps.map((_, i) => (
+            <span key={i} className={`onboarding-dot ${i === step ? 'onboarding-dot--active' : ''}`} />
+          ))}
+        </div>
+
+        {/* Primary action — Continue / Get started. */}
+        <div className="flex-1 flex justify-end">
+          <button onClick={next} className="btn-glass btn-glass--primary !px-8 !py-3 !text-[13px] !rounded-mv-pill">
+            {primaryLabel}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

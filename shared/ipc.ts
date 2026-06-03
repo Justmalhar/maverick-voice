@@ -145,6 +145,10 @@ export const IPC = {
   SET_AUTO_FORMAT: 'settings:auto-format',
   /** R<->M () -> boolean (default false) (handle). */
   GET_AUTO_FORMAT: 'settings:get-auto-format',
+  /** R->M  (enabled: boolean) -> sessionManager.setAppAwareFormatting + persist; effective only when autoFormat is on. */
+  SET_APP_AWARE_FORMATTING: 'settings:app-aware-formatting',
+  /** R<->M () -> boolean (default true) (handle). */
+  GET_APP_AWARE_FORMATTING: 'settings:get-app-aware-formatting',
 
   // ── Instruction mode opt-in ────────────────────────────────────────────────────────────────
   /** R->M  (enabled: boolean) -> keyboardManager.setInstructionEnabled + persist. */
@@ -169,6 +173,10 @@ export const IPC = {
   SET_DICTATION_KEY: 'settings:dictation-key',
   /** R<->M () -> DictationKey (platform-aware default) (handle). */
   GET_DICTATION_KEY: 'settings:get-dictation-key',
+  /** R->M  (binding: DictationBinding) -> keyListener.setDictationBinding + persist. */
+  SET_DICTATION_BINDING: 'settings:dictation-binding',
+  /** R<->M () -> DictationBinding (migrated from dictationKey) (handle). */
+  GET_DICTATION_BINDING: 'settings:get-dictation-binding',
   /** R->M  (key: InstructionKey) -> keyboardManager.setInstructionKey + persist. */
   SET_INSTRUCTION_KEY: 'settings:instruction-key',
   /** R<->M () -> InstructionKey (default 'caps-lock') (handle). */

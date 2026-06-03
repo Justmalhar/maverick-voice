@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Widget from './Widget'
 import { useAudioRecorder } from './useAudioRecorder'
-import type { WidgetState } from '../../shared/types'
+import type { WidgetState, AppProfile } from '../../shared/types'
 import { IPC } from '../../shared/ipc'
 
 // ─── Sound Feedback (Web Audio API) ───
@@ -58,10 +58,23 @@ export default function WidgetApp() {
   const [errorMessage, setErrorMessage] = useState('')
   const [showDiscardHint, setShowDiscardHint] = useState(false)
   const [engineNotice, setEngineNotice] = useState<string | null>(null)
+  // App chip shown next to the mode label during dictation ("Listening · Mail").
+  // Carried in the extended RECORDING_START payload; absent for instruction /
+  // chained flows or when detection is unresolved/disabled.
+  const [appName, setAppName] = useState<string | null>(null)
   const { analyserNode, maxDurationSeconds, startRecording, stopRecording } = useAudioRecorder()
 
   // Track auto-hide timer so it can be cancelled when a new recording starts
   const autoHideRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Track the sessionId of the in-flight recording. captureFrontmostApp()
+  // re-emits RECORDING_START with the SAME sessionId once front-app detection
+  // resolves to a non-default profile (see sessionManager.captureFrontmostApp).
+  // That re-send is a metadata-only chip update — it must NOT restart the
+  // recorder (which would flush the partial first fragment and drop the opening
+  // ~0.8s of dictation audio). We dedup on this ref to treat the re-send as a
+  // chip/appName update only.
+  const activeSessionIdRef = useRef<string | null>(null)
 
   const clearAutoHide = useCallback(() => {
     if (autoHideRef.current) {
@@ -112,12 +125,29 @@ export default function WidgetApp() {
         /* ignore — default is system default */
       })
 
-    api.onRecordingStart(async (mode, sessionId) => {
+    api.onRecordingStart(async (mode, sessionId, appName?: string, _profile?: AppProfile) => {
+      // Re-entry guard: a RECORDING_START whose sessionId matches the in-flight
+      // recording is the captureFrontmostApp() metadata re-send (front-app
+      // detection resolved to a non-default profile). Treat it as a chip update
+      // ONLY — never replay the start sequence. Restarting the recorder would
+      // flush the partial first fragment and drop the opening dictation audio,
+      // and would emit a spurious second start chime.
+      if (sessionId && activeSessionIdRef.current === sessionId) {
+        // App chip is dictation-only; trim falsy to null.
+        setAppName(mode === 'dictation' && appName ? appName : null)
+        return
+      }
+
       // Cancel any pending auto-hide from a previous session
       clearAutoHide()
 
+      activeSessionIdRef.current = sessionId ?? null
+
       playClickSound('start')
       setEngineNotice(null)
+      // App chip is dictation-only; main omits it for instruction/chained flows
+      // and when detection is unresolved/disabled. Trim falsy to null.
+      setAppName(mode === 'dictation' && appName ? appName : null)
       setState(mode === 'dictation' ? 'dictation-active' : 'instruction-active')
       // Refresh the chosen input device so a Settings change applies without a
       // widget restart. Empty/unknown id => system default (pass undefined).
@@ -136,6 +166,10 @@ export default function WidgetApp() {
     })
 
     api.onRecordingStop(async () => {
+      // Recording is ending — clear the in-flight id so a late
+      // captureFrontmostApp re-send can no longer match (and so the next
+      // session is never wrongly deduped against a reused id).
+      activeSessionIdRef.current = null
       setState('processing')
       setShowDiscardHint(false)
       await stopRecording()
@@ -169,6 +203,7 @@ export default function WidgetApp() {
     })
 
     api.onSessionCancelled(() => {
+      activeSessionIdRef.current = null
       setState('cancelled')
       setShowDiscardHint(false)
     })
@@ -246,6 +281,7 @@ export default function WidgetApp() {
         errorMessage={errorMessage}
         showDiscardHint={showDiscardHint}
         engineNotice={engineNotice}
+        appName={appName}
         onCancel={handleCancel}
         onStop={handleStop}
         onUndo={handleUndo}

@@ -273,6 +273,91 @@ a {
   background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
 }
+/* Disabled toggle — dimmed + non-interactive (e.g. app-aware when auto-format off). */
+.mv-toggle--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COMBO MODIFIER CHIPS — custom dictation combo picker (Dictation settings).
+   Toggleable 3D glass chips; active chip uses the bright white face like the
+   segmented active pill. Monochrome only.
+══════════════════════════════════════════════════════════════════════════ */
+.mv-combo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mv-combo-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 8px 14px;
+  font-family: var(--mv-font-primary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mv-text-secondary);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
+    var(--mv-black-02);
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius-sm);
+  cursor: pointer;
+  user-select: none;
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.6),
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset;
+  transition:
+    transform var(--mv-dur-fast) var(--mv-ease-out),
+    color var(--mv-dur-fast) var(--mv-ease-out),
+    background var(--mv-dur-fast) var(--mv-ease-out),
+    border-color var(--mv-dur-fast) var(--mv-ease-out);
+}
+.mv-combo-chip:hover {
+  color: var(--mv-text-primary);
+  transform: translateY(-1px);
+}
+.mv-combo-chip:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset;
+}
+.mv-combo-chip--active {
+  color: var(--mv-black);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.82) 100%);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+.mv-combo-chip--active:hover {
+  color: var(--mv-black);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 100%);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ONBOARDING FOOTER — single persistent bar across all steps. Centered
+   progress dots; brightness encodes the active step. Monochrome only.
+══════════════════════════════════════════════════════════════════════════ */
+.onboarding-footer {
+  flex-shrink: 0;
+}
+.onboarding-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--mv-white-24);
+  transition: width var(--mv-dur-base) var(--mv-ease-out),
+    background var(--mv-dur-base) var(--mv-ease-out);
+}
+.onboarding-dot--active {
+  width: 18px;
+  background: var(--mv-white-96);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    SECTION / CARD HELPERS

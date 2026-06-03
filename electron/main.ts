@@ -29,6 +29,7 @@ import type {
   STTSettings,
   LLMSettings,
   DictationKey,
+  DictationBinding,
   InstructionKey,
   ActivationMode,
   ProviderId,
@@ -119,6 +120,13 @@ interface StoreSchema {
   autoFormat: boolean
   dictionary: DictionaryEntry[]
   snippets: Snippet[]
+  // ── Feature delta (app-aware formatting + combo hotkeys) ──
+  // appAwareFormatting only has effect when autoFormat is on.
+  appAwareFormatting: boolean
+  // dictationBinding is OPTIONAL in the schema: it is MIGRATED at boot from the
+  // legacy `dictationKey` when absent (see restoreSettings) so we deliberately
+  // do NOT seed it in STORE_DEFAULTS (that would defeat the absence check).
+  dictationBinding?: DictationBinding
 }
 
 const STORE_DEFAULTS: StoreSchema = {
@@ -138,6 +146,9 @@ const STORE_DEFAULTS: StoreSchema = {
   autoFormat: false,
   dictionary: [],
   snippets: [],
+  // App-aware formatting is ON by default (only effective when autoFormat is on).
+  // dictationBinding intentionally omitted — migrated from dictationKey at boot.
+  appAwareFormatting: true,
 }
 
 const store = new Store<StoreSchema>({ defaults: STORE_DEFAULTS })
@@ -155,6 +166,20 @@ function restoreSettings(): void {
   const dictationKey = store.get('dictationKey')
   keyboardManager.setDictationKey(dictationKey)
   keyListener.setDictationKey(dictationKey)
+
+  // Combo-binding migration: stores written before combo support persisted only
+  // the single `dictationKey`. If `dictationBinding` is absent, derive
+  // { type:'key', key: <dictationKey> } and persist it once. The legacy
+  // `dictationKey` is left intact for back-compat reads.
+  let dictationBinding = store.get('dictationBinding') as DictationBinding | undefined
+  if (!dictationBinding) {
+    dictationBinding = { type: 'key', key: dictationKey }
+    store.set('dictationBinding', dictationBinding)
+  }
+  // The combo resolver (and single-key path) live in keyListener. keyboardManager
+  // stays driven by the legacy dictationKey above for its display accessor; the
+  // listener owns which physical key/combo actually emits dictation events.
+  keyListener.setDictationBinding(dictationBinding)
 
   // Migration: stores written before Right Shift was removed may persist
   // 'right-shift' — sanitize to the only remaining binding.
@@ -178,6 +203,9 @@ function restoreSettings(): void {
   const autoFormat = store.get('autoFormat')
   sessionManager.setAutoFormat(autoFormat)
 
+  const appAwareFormatting = store.get('appAwareFormatting')
+  sessionManager.setAppAwareFormatting(appAwareFormatting)
+
   const dictionary = store.get('dictionary')
   sessionManager.setDictionary(dictionary)
 
@@ -190,11 +218,13 @@ function restoreSettings(): void {
     '| llm:', JSON.stringify(llmSettings),
     '| outputMode:', outputMode,
     '| dictationKey:', dictationKey,
+    '| dictationBinding:', JSON.stringify(dictationBinding),
     '| instructionKey:', instructionKey,
     '| activationMode:', activationMode,
     '| widgetPosition:', widgetPosition,
     '| instructionEnabled:', instructionEnabled,
     '| autoFormat:', autoFormat,
+    '| appAwareFormatting:', appAwareFormatting,
     '| dictionary:', dictionary.length, 'entries',
     '| snippets:', snippets.length
   )
@@ -724,8 +754,41 @@ function setupIPC(): void {
     keyboardManager.setDictationKey(key)
     keyListener.setDictationKey(key)
     store.set('dictationKey', key)
+    // Keep the binding consistent: a legacy single-key set is a { type:'key' }
+    // binding (clears any previously-configured combo).
+    store.set('dictationBinding', { type: 'key', key })
   })
   ipcMain.handle(IPC.GET_DICTATION_KEY, () => keyboardManager.getDictationKey())
+
+  // ─── Dictation binding (single key OR >=2-modifier combo) ───
+  ipcMain.on(IPC.SET_DICTATION_BINDING, (_e, binding: DictationBinding) => {
+    console.log('[main] Dictation binding set:', JSON.stringify(binding))
+    // Reject malformed combos (the resolver also enforces >=2, but guard the
+    // persisted value too so a bad payload never sticks).
+    if (binding && binding.type === 'combo') {
+      const mods = Array.isArray(binding.mods) ? Array.from(new Set(binding.mods)) : []
+      if (mods.length < 2) {
+        console.warn('[main] Ignoring combo binding with <2 modifiers')
+        return
+      }
+      const normalized: DictationBinding = { type: 'combo', mods }
+      keyListener.setDictationBinding(normalized)
+      store.set('dictationBinding', normalized)
+      return
+    }
+    if (binding && binding.type === 'key') {
+      keyListener.setDictationBinding(binding)
+      // A single-key binding also updates keyboardManager's display accessor +
+      // the legacy stored key so the two stay in lockstep.
+      keyboardManager.setDictationKey(binding.key)
+      store.set('dictationKey', binding.key)
+      store.set('dictationBinding', binding)
+    }
+  })
+  ipcMain.handle(IPC.GET_DICTATION_BINDING, (): DictationBinding => {
+    const stored = store.get('dictationBinding') as DictationBinding | undefined
+    return stored ?? { type: 'key', key: store.get('dictationKey') }
+  })
 
   ipcMain.on(IPC.SET_INSTRUCTION_KEY, (_e, key: InstructionKey) => {
     console.log('[main] Instruction key set:', key)
@@ -759,6 +822,16 @@ function setupIPC(): void {
     store.set('autoFormat', value)
   })
   ipcMain.handle(IPC.GET_AUTO_FORMAT, () => store.get('autoFormat'))
+
+  // ─── App-aware formatting (R->M set / R<->M get) — effective only when
+  //     autoFormat is on. ───
+  ipcMain.on(IPC.SET_APP_AWARE_FORMATTING, (_e, enabled: boolean) => {
+    const value = !!enabled
+    console.log('[main] App-aware formatting set:', value)
+    sessionManager.setAppAwareFormatting(value)
+    store.set('appAwareFormatting', value)
+  })
+  ipcMain.handle(IPC.GET_APP_AWARE_FORMATTING, () => store.get('appAwareFormatting'))
 
   // ─── Dictionary (R<->M; whole-list set, returns void) ───
   ipcMain.handle(IPC.GET_DICTIONARY, () => store.get('dictionary'))
