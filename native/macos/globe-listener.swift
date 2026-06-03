@@ -42,18 +42,6 @@ func handleModifierChange(_ event: NSEvent) {
         }
     }
 
-    // Right Shift key detection (keyCode 60 = Right Shift, for instruction mode)
-    if event.keyCode == 60 {
-        let hadShift = previousModifiers.contains(.shift)
-        let hasShift = mods.contains(.shift)
-        if !hadShift && hasShift {
-            print("RIGHT_SHIFT_DOWN")
-        }
-        if hadShift && !hasShift {
-            print("RIGHT_SHIFT_UP")
-        }
-    }
-
     previousModifiers = mods
 }
 

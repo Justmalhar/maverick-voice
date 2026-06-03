@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Session, DictationKey } from '../../shared/types'
+import { IPC } from '../../shared/ipc'
 
 // Flow badges. Monochrome ONLY — intensity (white-alpha tier) encodes emphasis
 // instead of hue. dictation = brightest (primary action), transform/instruction
@@ -11,11 +12,6 @@ const FLOW_CONFIG: Record<string, { label: string; tier: string }> = {
   context: { label: 'Context', tier: 'text-mv-text-secondary bg-mv-white-04 border-mv-white-08' },
   quote: { label: 'Quote', tier: 'text-mv-text-secondary bg-mv-white-04 border-mv-white-08' }
 }
-
-// The literal channel string for IPC.SESSION_RETRY_STATUS. The renderer cannot
-// import shared/ipc.ts (main-process-only), so removeAllListeners takes the
-// literal. Keep in sync with IPC.SESSION_RETRY_STATUS = 'session:retry-status'.
-const RETRY_STATUS_CHANNEL = 'session:retry-status'
 
 function dictationKeyLabel(key: DictationKey): string {
   switch (key) {
@@ -63,7 +59,7 @@ export default function History({ dictationKey = 'fn' }: HistoryProps = {}) {
     })
 
     return () => {
-      window.electronAPI.removeAllListeners(RETRY_STATUS_CHANNEL)
+      window.electronAPI.removeAllListeners(IPC.SESSION_RETRY_STATUS)
     }
   }, [])
 

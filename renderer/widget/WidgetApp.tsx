@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Widget from './Widget'
 import { useAudioRecorder } from './useAudioRecorder'
 import type { WidgetState } from '../../shared/types'
+import { IPC } from '../../shared/ipc'
 
 // ─── Sound Feedback (Web Audio API) ───
 let soundEnabled = true // default on; loaded from settings on mount
@@ -191,15 +192,15 @@ export default function WidgetApp() {
     api.widgetReady()
 
     return () => {
-      api.removeAllListeners('recording:start')
-      api.removeAllListeners('recording:stop')
-      api.removeAllListeners('output:ready')
-      api.removeAllListeners('output:fallback')
-      api.removeAllListeners('output:error')
-      api.removeAllListeners('session:cancelled')
-      api.removeAllListeners('processing:show-discard-hint')
-      api.removeAllListeners('session:too-short')
-      api.removeAllListeners('session:engine-notice')
+      api.removeAllListeners(IPC.RECORDING_START)
+      api.removeAllListeners(IPC.RECORDING_STOP)
+      api.removeAllListeners(IPC.OUTPUT_READY)
+      api.removeAllListeners(IPC.OUTPUT_FALLBACK)
+      api.removeAllListeners(IPC.OUTPUT_ERROR)
+      api.removeAllListeners(IPC.SESSION_CANCELLED)
+      api.removeAllListeners(IPC.PROCESSING_SHOW_DISCARD_HINT)
+      api.removeAllListeners(IPC.SESSION_TOO_SHORT)
+      api.removeAllListeners(IPC.SESSION_ENGINE_NOTICE)
     }
   }, [startRecording, stopRecording, clearAutoHide, scheduleAutoHide])
 
@@ -229,8 +230,12 @@ export default function WidgetApp() {
 
   return (
     <div
-      className="w-full h-full flex items-start justify-center"
-      style={{ background: 'transparent', paddingTop: '8px' }}
+      // Bottom-anchored: the HUD window sits above the Dock (see
+      // windowManager.getHUDBounds); the pill hugs the canvas bottom so its
+      // gap to the Dock is exactly the configured margin. Error/multi-line
+      // states grow upward into the spare canvas.
+      className="w-full h-full flex items-end justify-center"
+      style={{ background: 'transparent', paddingBottom: '8px' }}
     >
       <Widget
         state={state}

@@ -35,8 +35,15 @@ class KeyboardManager extends EventEmitter {
 
   // ─── Configurable keys + activation mode ───
   private dictationKey: DictationKey = process.platform === 'darwin' ? 'fn' : 'right-ctrl'
-  private instructionKey: InstructionKey = process.platform === 'darwin' ? 'caps-lock' : 'right-shift'
+  private instructionKey: InstructionKey = 'caps-lock'
   private activationMode: ActivationMode = 'tap-toggle'
+
+  // Instruction mode is OPT-IN (default OFF). When false, every instruction-key
+  // event is ignored — including a dictation→instruction chain transition — so
+  // the user never accidentally enters edit-selected-text mode. Persisted
+  // setting: NOT cleared by resetState() (which only clears per-keystroke
+  // routing state). main.ts applies it at boot and on the live IPC setter.
+  private instructionEnabled = false
 
   // Double-tap-push (dual mode) state
   private dualState: DualModeState = 'idle'
@@ -108,6 +115,28 @@ class KeyboardManager extends EventEmitter {
     return this.instructionKey
   }
 
+  /**
+   * Toggle whether instruction (edit-selected-text) key events are honored.
+   * When false, handleKey ignores ALL instruction-derived events and the
+   * dictation→instruction chain transition is suppressed (dictation and Escape
+   * are unaffected). This is a persisted setting — resetState() must NOT clear
+   * it. Reset routing state on change so a half-formed instruction transition
+   * can't survive the toggle flip.
+   */
+  setInstructionEnabled(enabled: boolean): void {
+    console.log('[keyboard] Instruction mode enabled:', enabled)
+    this.instructionEnabled = enabled
+    if (!enabled && this.instructionActive) {
+      // Flipped off mid-instruction (edge case) — drop the active flag so the
+      // next dictation press isn't misrouted as a chain.
+      this.instructionActive = false
+    }
+  }
+
+  getInstructionEnabled(): boolean {
+    return this.instructionEnabled
+  }
+
   setActivationMode(mode: ActivationMode): void {
     console.log('[keyboard] Activation mode set to:', mode)
     this.activationMode = mode
@@ -169,6 +198,12 @@ class KeyboardManager extends EventEmitter {
         this.handleDictationKeyUp()
         break
       case 'instruction-down':
+        // Instruction mode is opt-in — when disabled, ignore ALL instruction
+        // key events (dictation + Escape are unaffected).
+        if (!this.instructionEnabled) {
+          console.log('[keyboard] Instruction key ignored — instruction mode disabled')
+          break
+        }
         // The instruction key (Right Shift = momentary; Caps Lock LED-toggle
         // collapsed to a single 'instruction-down' by keyListener) triggers on
         // DOWN only.
@@ -176,7 +211,8 @@ class KeyboardManager extends EventEmitter {
         break
       case 'instruction-up':
         // Right Shift is momentary — ignore the release; the toggle already
-        // happened on 'instruction-down'.
+        // happened on 'instruction-down'. (Also ignored when instruction mode
+        // is disabled.)
         break
     }
   }

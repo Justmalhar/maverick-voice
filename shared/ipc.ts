@@ -140,6 +140,30 @@ export const IPC = {
   /** R<->M () -> string (deviceId; '' = system default) (handle). */
   GET_INPUT_DEVICE: 'settings:get-input-device',
 
+  // ── AI auto-format ────────────────────────────────────────────────────────────────
+  /** R->M  (enabled: boolean) -> persist; sessionManager runs the LLM auto-format pass when on. */
+  SET_AUTO_FORMAT: 'settings:auto-format',
+  /** R<->M () -> boolean (default false) (handle). */
+  GET_AUTO_FORMAT: 'settings:get-auto-format',
+
+  // ── Instruction mode opt-in ────────────────────────────────────────────────────────────────
+  /** R->M  (enabled: boolean) -> keyboardManager.setInstructionEnabled + persist. */
+  SET_INSTRUCTION_ENABLED: 'settings:instruction-enabled',
+  /** R<->M () -> boolean (default false) (handle). */
+  GET_INSTRUCTION_ENABLED: 'settings:get-instruction-enabled',
+
+  // ── Dictionary ────────────────────────────────────────────────────────────────
+  /** R<->M (entries: DictionaryEntry[]) -> void (handle) — persist the whole list. */
+  SET_DICTIONARY: 'settings:dictionary',
+  /** R<->M () -> DictionaryEntry[] (default []) (handle). */
+  GET_DICTIONARY: 'settings:get-dictionary',
+
+  // ── Snippets ────────────────────────────────────────────────────────────────
+  /** R<->M (snippets: Snippet[]) -> void (handle) — persist the whole list. */
+  SET_SNIPPETS: 'settings:snippets',
+  /** R<->M () -> Snippet[] (default []) (handle). */
+  GET_SNIPPETS: 'settings:get-snippets',
+
   // ── Key bindings ────────────────────────────────────────────────────────────────
   /** R->M  (key: DictationKey) -> keyboardManager.setDictationKey + persist. */
   SET_DICTATION_KEY: 'settings:dictation-key',
@@ -147,7 +171,7 @@ export const IPC = {
   GET_DICTATION_KEY: 'settings:get-dictation-key',
   /** R->M  (key: InstructionKey) -> keyboardManager.setInstructionKey + persist. */
   SET_INSTRUCTION_KEY: 'settings:instruction-key',
-  /** R<->M () -> InstructionKey (default 'right-shift') (handle). */
+  /** R<->M () -> InstructionKey (default 'caps-lock') (handle). */
   GET_INSTRUCTION_KEY: 'settings:get-instruction-key',
   /** R->M  (mode: ActivationMode) -> setActivationMode + persist. */
   SET_ACTIVATION_MODE: 'settings:activation-mode',

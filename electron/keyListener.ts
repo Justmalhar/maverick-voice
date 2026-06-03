@@ -6,8 +6,8 @@
 //   'dictation-down' | 'dictation-up' | 'instruction-down' | 'instruction-up'
 //
 //  - darwin: spawns resources/bin/globe-listener (Swift helper) and translates
-//    its raw stdout token protocol (FN_*, RIGHT_OPTION_*, RIGHT_SHIFT_*, CAPS_*)
-//    into the normalized events based on the configured dictation/instruction keys.
+//    its raw stdout token protocol (FN_*, RIGHT_OPTION_*, CAPS_*) into the
+//    normalized events based on the configured dictation/instruction keys.
 //  - win32: uiohook-napi (uIOhook, UiohookKey) maps RightCtrl/RightAlt as the
 //    dictation key and RightShift as the instruction key.
 //
@@ -37,7 +37,7 @@ class KeyListener extends EventEmitter {
 
   // ─── Configurable physical-key mapping (platform default applied by main) ───
   private dictationKey: DictationKey = process.platform === 'darwin' ? 'fn' : 'right-ctrl'
-  private instructionKey: InstructionKey = 'right-shift'
+  private instructionKey: InstructionKey = 'caps-lock'
 
   // ─── darwin Caps Lock dedupe: the LED toggle fires BOTH CAPS_DOWN and
   // CAPS_UP for a single physical press. keyboard.ts triggers on
@@ -79,9 +79,8 @@ class KeyListener extends EventEmitter {
   }
 
   /**
-   * Remap which physical key produces instruction events.
-   * On darwin the native sources are Right Shift (RIGHT_SHIFT_* tokens,
-   * keyCode 60) and Caps Lock (CAPS_* tokens) — globe-listener.swift emits both.
+   * Remap which physical key produces instruction events. Caps Lock is the
+   * only binding (Right Shift was removed — system-shortcut conflicts).
    */
   setInstructionKey(key: InstructionKey): void {
     console.log('[keyListener] Instruction key set to:', key)
@@ -192,12 +191,6 @@ class KeyListener extends EventEmitter {
       case 'RIGHT_OPTION_UP':
         if (this.dictationKey === 'right-option') this.emit('key', 'dictation-up' as KeyEvent)
         break
-      case 'RIGHT_SHIFT_DOWN':
-        if (this.instructionKey === 'right-shift') this.emit('key', 'instruction-down' as KeyEvent)
-        break
-      case 'RIGHT_SHIFT_UP':
-        if (this.instructionKey === 'right-shift') this.emit('key', 'instruction-up' as KeyEvent)
-        break
       case 'CAPS_DOWN':
       case 'CAPS_UP':
         // Caps Lock fires on LED toggle: BOTH CAPS_DOWN and CAPS_UP arrive for a
@@ -237,14 +230,16 @@ class KeyListener extends EventEmitter {
           stop: () => void
           removeListener: (event: 'keydown' | 'keyup', cb: (e: { keycode: number }) => void) => void
         }
-        UiohookKey: { CtrlRight: number; AltRight: number; ShiftRight: number }
+        UiohookKey: { CtrlRight: number; AltRight: number; CapsLock: number }
       }
 
       // Resolve the uiohook keycode for the currently-configured dictation key.
       const dictationKeycode = (): number =>
         this.dictationKey === 'right-alt' ? UiohookKey.AltRight : UiohookKey.CtrlRight
-      // Instruction is Right Shift on win32 (the only supported native value).
-      const instructionKeycode = (): number => UiohookKey.ShiftRight
+      // Instruction is Caps Lock (Right Shift was removed — it conflicted with
+      // system shortcuts and fired during Shift+Enter). Unlike darwin's
+      // flagsChanged LED-pair quirk, win32 delivers plain keydown/keyup.
+      const instructionKeycode = (): number => UiohookKey.CapsLock
 
       this.uiohookKeydownHandler = (e: { keycode: number }) => {
         if (e.keycode === dictationKeycode()) {

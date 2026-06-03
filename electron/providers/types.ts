@@ -19,9 +19,11 @@ export interface TranscribeOptions {
   /** Language hint; omit/undefined for auto-detect. Maps from STTSettings.language ('auto' => undefined). */
   language?: string
   /**
-   * Optional Whisper prompt. NOTE: the Groq provider deliberately OMITS this —
-   * Whisper parrots prompt text back on silence/noise. Left here for future
-   * providers that handle prompts safely.
+   * Optional Whisper vocabulary-biasing prompt. Callers pass a
+   * dictionary-bounded hint (the user's corrected spellings, capped to ~200
+   * chars); the Groq provider forwards it so Whisper biases toward those
+   * spellings. Keep it bounded — Whisper parrots ARBITRARY prompt text back on
+   * silence/noise, so never pass a free-form instruction here.
    */
   prompt?: string
   /** MIME type of the audio buffer. Renderer MediaRecorder emits 'audio/webm'. */

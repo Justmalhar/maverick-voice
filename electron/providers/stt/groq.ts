@@ -63,8 +63,12 @@ async function transcribe(
   form.append('model', model)
   form.append('temperature', '0')
   form.append('response_format', 'verbose_json')
-  // No `prompt`: Whisper treats it as preceding text and parrots it back on
-  // silence/noise (e.g. "What is the spoken audio?"). Omitting it avoids that.
+  // Vocabulary-biasing prompt: the caller passes a dictionary-bounded hint
+  // (the user's corrected `to` spellings, capped to ~200 chars). This is safe
+  // to forward — the silence/noise parroting risk applies to ARBITRARY prompts
+  // (e.g. "What is the spoken audio?"), not to a short list of domain terms.
+  // Whisper biases toward these spellings without parroting on silence.
+  if (opts.prompt) form.append('prompt', opts.prompt)
   if (opts.language && opts.language !== 'auto') form.append('language', opts.language)
 
   const t0 = Date.now()

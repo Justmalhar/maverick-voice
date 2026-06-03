@@ -30,11 +30,11 @@ export type OutputMode = 'paste' | 'clipboard'
 export type DictationKey = 'fn' | 'right-option' | 'right-ctrl' | 'right-alt'
 
 /**
- * The physical key that triggers INSTRUCTION.
- *  - 'right-shift' is the DEFAULT on BOTH platforms.
- *  - 'caps-lock' is an additional macOS-only option (LED-toggle semantics).
+ * The physical key that triggers INSTRUCTION (opt-in feature).
+ * Caps Lock is the sole binding on both platforms — Right Shift was removed
+ * entirely (it collided with system shortcuts and fired during Shift+Enter).
  */
-export type InstructionKey = 'right-shift' | 'caps-lock'
+export type InstructionKey = 'caps-lock'
 
 // ─── Provider identifiers ─────────────────────────────────────────────────
 
@@ -152,6 +152,22 @@ export type WidgetState =
   | 'cancelled'
   | 'too-short'
 
+// ─── Dictionary / Snippets (text-replacement pipeline) ────────────────────
+
+/** A spoken-word fix applied to dictation AND instruction transcripts: replace `from` with `to`. */
+export interface DictionaryEntry {
+  id: string
+  from: string
+  to: string
+}
+
+/** A spoken trigger expanded inline into longer `content` (e.g. "my linkedin" -> a URL). */
+export interface Snippet {
+  id: string
+  trigger: string
+  content: string
+}
+
 // ─── Per-provider key API result shapes ───────────────────────────────────
 
 export interface ProviderKeyStatus {
@@ -264,6 +280,24 @@ export interface ElectronAPI {
   /** Chosen microphone input device id ('' = system default). */
   setInputDevice: (deviceId: string) => void
   getInputDevice: () => Promise<string>
+
+  // ── AI auto-format (renderer <-> main) ──
+  /** Whether the LLM auto-format pass runs on raw dictation transcripts (default false). */
+  getAutoFormat: () => Promise<boolean>
+  setAutoFormat: (enabled: boolean) => void
+
+  // ── Instruction mode opt-in (renderer <-> main) ──
+  /** Whether instruction (edit-selected-text) key events are honored at all (default false). */
+  getInstructionEnabled: () => Promise<boolean>
+  setInstructionEnabled: (enabled: boolean) => void
+
+  // ── Dictionary (renderer <-> main; whole-list set) ──
+  getDictionary: () => Promise<DictionaryEntry[]>
+  setDictionary: (entries: DictionaryEntry[]) => Promise<void>
+
+  // ── Snippets (renderer <-> main; whole-list set) ──
+  getSnippets: () => Promise<Snippet[]>
+  setSnippets: (snippets: Snippet[]) => Promise<void>
 
   // ── Key bindings (renderer <-> main) ──
   setDictationKey: (key: DictationKey) => void

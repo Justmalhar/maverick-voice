@@ -288,6 +288,58 @@ a {
   color: var(--mv-text-muted);
 }
 
+/* ── Compact usage stat row (Settings header) ── */
+.mv-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.mv-stat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: var(--mv-glass-panel-bg);
+  -webkit-backdrop-filter: var(--mv-blur-panel);
+  backdrop-filter: var(--mv-blur-panel);
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius-lg);
+  box-shadow: var(--mv-shadow-panel);
+}
+
+/* ── Disclosure section (Advanced) ── */
+.mv-disclosure__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--mv-dur-fast) var(--mv-ease-out);
+}
+.mv-disclosure__head:hover {
+  background: var(--mv-white-04);
+}
+.mv-disclosure__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mv-text-muted);
+  flex-shrink: 0;
+  transition: transform var(--mv-dur-base) var(--mv-ease-out),
+    color var(--mv-dur-fast) var(--mv-ease-out);
+}
+.mv-disclosure__head:hover .mv-disclosure__chevron {
+  color: var(--mv-text-secondary);
+}
+.mv-disclosure__chevron--open {
+  transform: rotate(180deg);
+}
+
 /* Status dot — brightness encodes state (granted = bright, idle = dim). */
 .mv-status-dot {
   width: 7px;

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import type {
   DictationKey,
-  InstructionKey,
   ActivationMode,
   STTSettings,
   LLMSettings,
   STTProviderId,
   LLMProviderId,
   ProviderId,
-  ProviderModel
+  ProviderModel,
+  UsageSummary
 } from '../../shared/types'
 
 // ─── Platform detection (renderer can't import process.platform) ───
@@ -46,22 +46,25 @@ const DICTATION_KEY_OPTIONS: { value: DictationKey; label: string }[] = IS_MAC
       { value: 'right-alt', label: 'Right Alt' }
     ]
 
-// Instruction key choices — Right Shift on both platforms; Caps Lock extra on
-// macOS (LED-toggle semantics handled in keyListener).
-const INSTRUCTION_KEY_OPTIONS: { value: InstructionKey; label: string }[] = IS_MAC
-  ? [
-      { value: 'right-shift', label: 'Right Shift' },
-      { value: 'caps-lock', label: 'Caps Lock' }
-    ]
-  : [{ value: 'right-shift', label: 'Right Shift' }]
 
 const ACTIVATION_MODES: { value: ActivationMode; label: string; blurb: string }[] = [
   { value: 'tap-toggle', label: 'Tap toggle', blurb: 'Tap once to start, tap again to stop.' },
   { value: 'push-to-talk', label: 'Push to talk', blurb: 'Hold the key to record, release to submit.' },
-  { value: 'double-tap-push', label: 'Dual mode', blurb: 'Double-tap for hands-free, or hold for push-to-talk.' }
+  { value: 'double-tap-push', label: 'Dual mode', blurb: 'Double-tap for hands-free, or hold to push-to-talk.' }
 ]
 
+/** Estimated USD; sub-cent totals show as "<$0.01". */
+function fmtUsd(n: number | undefined): string {
+  if (n === undefined) return '—'
+  if (n <= 0) return '$0.00'
+  if (n < 0.01) return '<$0.01'
+  return '$' + n.toFixed(2)
+}
+
 export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
+  // ── Usage (compact 3-stat row) ──
+  const [usage, setUsage] = useState<UsageSummary | null>(null)
+
   // ── Audio ──
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([])
   const [selectedDevice, setSelectedDevice] = useState<string>('')
@@ -72,9 +75,12 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   const [chunkedTranscription, setChunkedTranscription] = useState(true)
   const [widgetPosition, setWidgetPosition] = useState<'center' | 'right'>('center')
 
+  // ── AI ──
+  const [autoFormat, setAutoFormat] = useState(false)
+  const [instructionEnabled, setInstructionEnabled] = useState(false)
+
   // ── Key bindings ──
   const [dictationKey, setDictationKey] = useState<DictationKey>(IS_MAC ? 'fn' : 'right-ctrl')
-  const [instructionKey, setInstructionKey] = useState<InstructionKey>('right-shift')
   const [activationMode, setActivationMode] = useState<ActivationMode>('tap-toggle')
 
   // ── Provider settings ──
@@ -91,6 +97,9 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   const [sttModels, setSttModels] = useState<ProviderModel[]>([])
   const [openaiModels, setOpenaiModels] = useState<ProviderModel[]>([])
   const [openrouterModels, setOpenrouterModels] = useState<ProviderModel[]>([])
+
+  // ── Advanced disclosure ──
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   // ── Permissions (macOS) ──
   const [micStatus, setMicStatus] = useState<string>('unknown')
@@ -120,6 +129,9 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   }, [refreshPermissions])
 
   useEffect(() => {
+    // Usage stats for the compact header row.
+    window.electronAPI.getUsage().then(setUsage).catch(() => {})
+
     // Load the persisted microphone choice first, then enumerate devices so the
     // dropdown reflects the saved selection instead of resetting to the first
     // device. '' = system default (recorder passes undefined).
@@ -133,6 +145,8 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     })
     window.electronAPI.getSoundFeedback().then(setSoundFeedback).catch(() => {})
     window.electronAPI.getChunkedTranscription().then(setChunkedTranscription).catch(() => {})
+    window.electronAPI.getAutoFormat().then(setAutoFormat).catch(() => {})
+    window.electronAPI.getInstructionEnabled().then(setInstructionEnabled).catch(() => {})
     window.electronAPI
       .getOutputMode()
       .then((v) => {
@@ -141,9 +155,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
       .catch(() => {})
     window.electronAPI.getDictationKey().then((v) => {
       if (['fn', 'right-option', 'right-ctrl', 'right-alt'].includes(v)) setDictationKey(v)
-    })
-    window.electronAPI.getInstructionKey().then((v) => {
-      if (v === 'right-shift' || v === 'caps-lock') setInstructionKey(v)
     })
     window.electronAPI.getActivationMode().then((v) => {
       if (v === 'tap-toggle' || v === 'push-to-talk' || v === 'double-tap-push') setActivationMode(v)
@@ -222,18 +233,23 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     window.electronAPI.setChunkedTranscription(value)
   }
 
+  // ── AI handlers ──
+  function handleAutoFormatChange(value: boolean) {
+    setAutoFormat(value)
+    window.electronAPI.setAutoFormat(value)
+  }
+
+  function handleInstructionEnabledChange(value: boolean) {
+    setInstructionEnabled(value)
+    window.electronAPI.setInstructionEnabled(value)
+  }
+
   // ── Key binding handlers ──
   function handleDictationKeyChange(value: string) {
     const key = value as DictationKey
     setDictationKey(key)
     window.electronAPI.setDictationKey(key)
     onDictationKeyChange?.(key)
-  }
-
-  function handleInstructionKeyChange(value: string) {
-    const key = value as InstructionKey
-    setInstructionKey(key)
-    window.electronAPI.setInstructionKey(key)
   }
 
   function handleActivationModeChange(value: string) {
@@ -267,219 +283,23 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     updateLlm({ provider, model })
   }
 
+  const llmModels = llmSettings.provider === 'openai' ? openaiModels : openrouterModels
+  const activationBlurb = ACTIVATION_MODES.find((a) => a.value === activationMode)?.blurb
+
   return (
     <div>
-      <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight mb-7">Settings</h2>
+      <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight mb-5">Settings</h2>
 
-      {/* ═══ Permissions (macOS only) ═══ */}
-      {IS_MAC && (
-        <Section title="Permissions" icon={<ShieldIcon />}>
-          <PermissionRow
-            title="Microphone"
-            description="So Maverick Voice can hear what you say. Required."
-            granted={micGranted}
-            statusText={micGranted ? 'Granted' : micStatus === 'denied' || micStatus === 'restricted' ? 'Denied' : 'Not granted'}
-            primary={!micGranted ? { label: 'Grant', onClick: handleGrantMic } : null}
-            secondary={micStatus === 'denied' || micStatus === 'restricted' ? { label: 'Open Settings', onClick: () => window.electronAPI.openMicSettings() } : null}
-          />
-          <Divider />
-          <PermissionRow
-            title="Accessibility"
-            description="Lets Maverick Voice detect your shortcut keys and paste at the cursor. Required."
-            granted={accessibilityGranted}
-            statusText={accessibilityGranted ? 'Granted' : 'Not granted'}
-            primary={!accessibilityGranted ? { label: 'Grant', onClick: handleGrantAccessibility } : null}
-            secondary={!accessibilityGranted ? { label: "I've enabled it", onClick: refreshPermissions } : null}
-          />
-          <Divider />
-          <div className="px-5 py-4">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <p className="text-[13px] font-semibold text-mv-text-primary">Free up the Fn key</p>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-mv-text-muted">Recommended</span>
-            </div>
-            <p className="text-[12px] text-mv-text-secondary leading-relaxed">
-              macOS uses <span className="font-mono text-mv-text-primary">Fn</span> for emoji / Apple Dictation. To use it for
-              Maverick Voice, open Keyboard Settings and set{' '}
-              <span className="font-semibold text-mv-text-primary">"Press 🌐 key to" → "Do Nothing"</span>.
-            </p>
-            <button onClick={() => window.electronAPI.openKeyboardSettings()} className="btn-glass !px-3.5 !py-2 !text-[11px] mt-3">
-              Open Keyboard Settings
-            </button>
-          </div>
-        </Section>
-      )}
-
-      {/* ═══ Speech-to-text (Groq) ═══ */}
-      <Section title="Speech-to-text" icon={<MicIcon />}>
-        <div className="px-5 py-4">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <p className="text-[13px] font-semibold text-mv-text-primary">Transcription provider</p>
-              <p className="text-[11px] text-mv-text-muted mt-0.5">Converts your speech to text.</p>
-            </div>
-            <Segmented
-              options={[{ value: 'groq', label: 'Groq' }]}
-              value={sttSettings.provider}
-              onChange={(v) => updateStt({ provider: v as STTProviderId })}
-            />
-          </div>
-          <FieldRow label="Model">
-            <select className="mv-select min-w-[200px]" value={sttSettings.model} onChange={(e) => updateStt({ model: e.target.value })}>
-              {sttModels.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-              {/* keep current model selectable even if listModels hasn't resolved */}
-              {!sttModels.some((m) => m.id === sttSettings.model) && (
-                <option value={sttSettings.model}>{sttSettings.model}</option>
-              )}
-            </select>
-          </FieldRow>
-          <FieldRow label="Language" last>
-            <select
-              className="mv-select min-w-[160px]"
-              value={sttSettings.language}
-              onChange={(e) => updateStt({ language: e.target.value as STTSettings['language'] })}
-            >
-              {STT_LANGUAGES.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </FieldRow>
-        </div>
-        <Divider />
-        <ProviderKeyCard provider="groq" label="Groq" placeholder="gsk_..." consoleUrl="https://console.groq.com/keys" />
-      </Section>
-
-      {/* ═══ AI transforms (OpenAI + OpenRouter) ═══ */}
-      <Section title="AI transforms" icon={<WandIcon />}>
-        <div className="px-5 py-4">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <p className="text-[13px] font-semibold text-mv-text-primary">LLM provider</p>
-              <p className="text-[11px] text-mv-text-muted mt-0.5">Rewrites selected text from your voice instruction.</p>
-            </div>
-            <Segmented
-              options={[
-                { value: 'openai', label: 'OpenAI' },
-                { value: 'openrouter', label: 'OpenRouter' }
-              ]}
-              value={llmSettings.provider}
-              onChange={(v) => handleLlmProviderChange(v as LLMProviderId)}
-            />
-          </div>
-          <FieldRow label="Model">
-            <select className="mv-select min-w-[220px]" value={llmSettings.model} onChange={(e) => updateLlm({ model: e.target.value })}>
-              {(llmSettings.provider === 'openai' ? openaiModels : openrouterModels).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-              {/* allow a custom model id (escape hatch) to remain selected */}
-              {!(llmSettings.provider === 'openai' ? openaiModels : openrouterModels).some((m) => m.id === llmSettings.model) && (
-                <option value={llmSettings.model}>{llmSettings.model} (custom)</option>
-              )}
-            </select>
-          </FieldRow>
-          <FieldRow label="Custom model" hint="Type any model id this endpoint serves.">
-            <input
-              className="mv-input !w-[220px]"
-              placeholder="e.g. gpt-4.1"
-              value={llmSettings.model}
-              spellCheck={false}
-              autoComplete="off"
-              onChange={(e) => updateLlm({ model: e.target.value })}
-            />
-          </FieldRow>
-          <FieldRow label="Base URL" hint="Empty = provider default. Point at any OpenAI-compatible endpoint." last>
-            <input
-              className="mv-input !w-[260px]"
-              placeholder={llmSettings.provider === 'openai' ? 'https://api.openai.com/v1' : 'https://openrouter.ai/api/v1'}
-              value={llmSettings.baseUrl}
-              spellCheck={false}
-              autoComplete="off"
-              onChange={(e) => updateLlm({ baseUrl: e.target.value })}
-            />
-          </FieldRow>
-        </div>
-        <Divider />
-        <ProviderKeyCard provider="openai" label="OpenAI" placeholder="sk-..." consoleUrl="https://platform.openai.com/api-keys" />
-        <Divider />
-        <ProviderKeyCard provider="openrouter" label="OpenRouter" placeholder="sk-or-..." consoleUrl="https://openrouter.ai/keys" />
-      </Section>
-
-      {/* ═══ Keyboard shortcuts (dark hero) ═══ */}
-      <div className="mv-glass-card overflow-hidden mb-3 relative">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_12%,rgba(255,255,255,0.05)_0%,transparent_55%)] pointer-events-none" />
-        <div className="px-6 pt-5">
-          <div className="text-[9px] font-bold tracking-[0.12em] uppercase text-mv-text-muted mb-1">Keyboard Shortcuts</div>
-          <div className="font-display text-[18px] font-extrabold tracking-tight text-mv-text-primary">Your triggers</div>
-        </div>
-        <div className="p-5 pt-4 flex flex-col gap-2.5">
-          {/* Dictation */}
-          <div className="px-4 py-3.5 bg-mv-white-04 border border-mv-border rounded-mv-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-[13px] font-semibold text-mv-text-primary mb-0.5">Dictation trigger</h4>
-                <p className="text-[11px] text-mv-text-muted">{ACTIVATION_MODES.find((a) => a.value === activationMode)?.blurb}</p>
-              </div>
-              <kbd className="kbd-3d">{DICTATION_KEY_OPTIONS.find((o) => o.value === dictationKey)?.label || dictationKey}</kbd>
-            </div>
-            <div className="mt-3.5 flex items-center justify-between">
-              <span className="text-[11px] text-mv-text-secondary">Dictation key</span>
-              <Segmented options={DICTATION_KEY_OPTIONS} value={dictationKey} onChange={handleDictationKeyChange} />
-            </div>
-            <div className="mt-2.5 flex items-center justify-between">
-              <span className="text-[11px] text-mv-text-secondary">Activation mode</span>
-              <Segmented options={ACTIVATION_MODES} value={activationMode} onChange={handleActivationModeChange} />
-            </div>
-          </div>
-
-          {/* Instruction */}
-          <div className="px-4 py-3.5 bg-mv-white-04 border border-mv-border rounded-mv-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-[13px] font-semibold text-mv-text-primary mb-0.5">Instruction trigger</h4>
-                <p className="text-[11px] text-mv-text-muted">Select text, tap the key, speak an instruction.</p>
-              </div>
-              <kbd className="kbd-3d">{INSTRUCTION_KEY_OPTIONS.find((o) => o.value === instructionKey)?.label || instructionKey}</kbd>
-            </div>
-            <div className="mt-3.5 flex items-center justify-between">
-              <span className="text-[11px] text-mv-text-secondary">Instruction key</span>
-              <Segmented options={INSTRUCTION_KEY_OPTIONS} value={instructionKey} onChange={handleInstructionKeyChange} />
-            </div>
-            {IS_MAC && instructionKey === 'right-shift' && (
-              <p className="text-[10.5px] text-mv-text-muted leading-relaxed mt-3 px-3 py-2 rounded-mv-sm bg-mv-white-04 border border-mv-border">
-                Native Right Shift on macOS needs the optional Swift recompile. Until then it falls back to Caps Lock.
-              </p>
-            )}
-          </div>
-
-          {/* Activation-mode explainer cards */}
-          <div className="grid grid-cols-3 gap-2 mt-1">
-            {ACTIVATION_MODES.map((m) => (
-              <div
-                key={m.value}
-                className={`px-3 py-2.5 rounded-mv-md border transition-colors ${
-                  activationMode === m.value
-                    ? 'bg-mv-white-08 border-mv-border-focus'
-                    : 'bg-mv-white-04 border-mv-border'
-                }`}
-              >
-                <p className="text-[11px] font-semibold text-mv-text-primary mb-0.5">{m.label}</p>
-                <p className="text-[10px] text-mv-text-muted leading-snug">{m.blurb}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* ═══ Usage stats (compact, top) ═══ */}
+      <div className="mv-stat-row mb-7">
+        <StatPill label="Today" value={fmtUsd(usage?.today.cost)} />
+        <StatPill label="This month" value={fmtUsd(usage?.month.cost)} />
+        <StatPill label="All time" value={fmtUsd(usage?.allTime.cost)} />
       </div>
 
-      {/* ═══ Audio ═══ */}
-      <Section title="Audio" icon={<MicIcon />}>
-        <SettingRow label="Microphone" description="Select your input device" last>
+      {/* ═══ General ═══ */}
+      <Section title="General" icon={<SlidersIcon />}>
+        <SettingRow label="Microphone" description="Your input device">
           <select className="mv-select min-w-[200px]" value={selectedDevice} onChange={(e) => handleInputDeviceChange(e.target.value)}>
             {audioDevices.map((device) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -488,35 +308,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
             ))}
           </select>
         </SettingRow>
-      </Section>
-
-      {/* ═══ Behavior ═══ */}
-      <Section title="Behavior" icon={<BehaviorIcon />}>
-        <SettingRow label="Output mode" description="How the result is delivered">
-          <Segmented
-            options={[
-              { value: 'paste', label: 'Paste at cursor' },
-              { value: 'clipboard', label: 'Clipboard' }
-            ]}
-            value={outputMode}
-            onChange={(v) => handleOutputModeChange(v as 'paste' | 'clipboard')}
-          />
-        </SettingRow>
-        <SettingRow label="Sound feedback" description="Play sounds on start / stop">
-          <Toggle checked={soundFeedback} onChange={handleSoundFeedbackChange} />
-        </SettingRow>
-        <SettingRow
-          label="Chunked transcription"
-          description="Stream long recordings to the model in VAD-split chunks"
-          last
-        >
-          <Toggle checked={chunkedTranscription} onChange={handleChunkedChange} />
-        </SettingRow>
-      </Section>
-
-      {/* ═══ Appearance ═══ */}
-      <Section title="Appearance" icon={<AppearanceIcon />}>
-        <SettingRow label="Widget position" description="Where the HUD pill appears on screen" last>
+        <SettingRow label="Widget position" description="Where the HUD pill appears on screen">
           <Segmented
             options={[
               { value: 'center', label: 'Top center' },
@@ -526,41 +318,272 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
             onChange={handleWidgetPositionChange}
           />
         </SettingRow>
-      </Section>
-
-      {/* ═══ Help ═══ */}
-      <Section title="Help" icon={<HelpIcon />}>
-        <SettingRow label="Replay onboarding" description="Walk through the welcome and setup steps again" last>
-          <button
-            onClick={() => {
-              localStorage.removeItem('maverickvoice_onboarding_complete')
-              location.reload()
-            }}
-            className="btn-glass !px-4 !py-2 !text-[12px]"
-          >
-            Replay
-          </button>
+        <SettingRow label="Sound feedback" description="Play sounds on start / stop" last>
+          <Toggle checked={soundFeedback} onChange={handleSoundFeedbackChange} />
         </SettingRow>
       </Section>
+
+      {/* ═══ Dictation ═══ */}
+      <Section title="Dictation" icon={<MicIcon />}>
+        <SettingRow label="Dictation key" description="The key you press to start dictating">
+          <Segmented options={DICTATION_KEY_OPTIONS} value={dictationKey} onChange={handleDictationKeyChange} />
+        </SettingRow>
+        <SettingRow label="Activation mode" description={activationBlurb || ''}>
+          <Segmented options={ACTIVATION_MODES} value={activationMode} onChange={handleActivationModeChange} />
+        </SettingRow>
+        <SettingRow label="Language" description="Speech recognition language hint" last>
+          <select
+            className="mv-select min-w-[160px]"
+            value={sttSettings.language}
+            onChange={(e) => updateStt({ language: e.target.value as STTSettings['language'] })}
+          >
+            {STT_LANGUAGES.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+      </Section>
+
+      {/* ═══ AI ═══ */}
+      <Section title="AI" icon={<WandIcon />}>
+        <SettingRow
+          label="AI auto-format"
+          description="Clean up grammar, punctuation, and paragraphing of your dictation — meaning untouched."
+        >
+          <Toggle checked={autoFormat} onChange={handleAutoFormatChange} />
+        </SettingRow>
+
+        {/* LLM provider + model (always visible) */}
+        <div className="px-5 py-4 border-b border-mv-border">
+          <FieldRow label="LLM provider" hint="Used for auto-format and instruction edits.">
+            <Segmented
+              options={[
+                { value: 'openai', label: 'OpenAI' },
+                { value: 'openrouter', label: 'OpenRouter' }
+              ]}
+              value={llmSettings.provider}
+              onChange={(v) => handleLlmProviderChange(v as LLMProviderId)}
+            />
+          </FieldRow>
+          <FieldRow label="Model">
+            <select className="mv-select min-w-[200px]" value={llmSettings.model} onChange={(e) => updateLlm({ model: e.target.value })}>
+              {llmModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+              {/* allow a custom model id (escape hatch) to remain selected */}
+              {!llmModels.some((m) => m.id === llmSettings.model) && (
+                <option value={llmSettings.model}>{llmSettings.model} (custom)</option>
+              )}
+            </select>
+          </FieldRow>
+          <FieldRow label="Custom model" hint="Type any model id this endpoint serves." last>
+            <input
+              className="mv-input !w-[200px]"
+              placeholder="e.g. gpt-4.1"
+              value={llmSettings.model}
+              spellCheck={false}
+              autoComplete="off"
+              onChange={(e) => updateLlm({ model: e.target.value })}
+            />
+          </FieldRow>
+        </div>
+
+        {/* API keys — Groq required for dictation; OpenAI/OpenRouter for AI. */}
+        <ProviderKeyRow
+          provider="groq"
+          label="Groq"
+          tag="Required for dictation"
+          placeholder="gsk_..."
+          consoleUrl="https://console.groq.com/keys"
+        />
+        <Divider />
+        <ProviderKeyRow provider="openai" label="OpenAI" placeholder="sk-..." consoleUrl="https://platform.openai.com/api-keys" />
+        <Divider />
+        <ProviderKeyRow
+          provider="openrouter"
+          label="OpenRouter"
+          placeholder="sk-or-..."
+          consoleUrl="https://openrouter.ai/keys"
+          last
+        />
+      </Section>
+
+      {/* ═══ Advanced (collapsed) ═══ */}
+      <div className="mv-section-label mb-2.5 mt-6">
+        <span className="text-mv-text-muted">
+          <CogIcon />
+        </span>
+        Advanced
+      </div>
+      <div className="mv-glass-card overflow-hidden mb-3">
+        <button
+          className="mv-disclosure__head"
+          onClick={() => setAdvancedOpen((v) => !v)}
+          aria-expanded={advancedOpen}
+        >
+          <div className="min-w-0 text-left">
+            <p className="text-[13px] font-semibold text-mv-text-primary">Advanced settings</p>
+            <p className="text-[11px] text-mv-text-muted mt-0.5">
+              Edit-with-voice, output mode, transcription, permissions
+            </p>
+          </div>
+          <span className={`mv-disclosure__chevron ${advancedOpen ? 'mv-disclosure__chevron--open' : ''}`}>
+            <ChevronIcon />
+          </span>
+        </button>
+
+        {advancedOpen && (
+          <div className="border-t border-mv-border">
+            {/* Instruction mode opt-in */}
+            <SettingRow
+              label="Edit selected text with voice"
+              description="Select text, tap a key, and speak an instruction to rewrite it."
+            >
+              <Toggle checked={instructionEnabled} onChange={handleInstructionEnabledChange} />
+            </SettingRow>
+            {instructionEnabled && (
+              <SettingRow label="Instruction key" description="The key you press while text is selected">
+                <span className="kbd-3d">Caps Lock</span>
+              </SettingRow>
+            )}
+
+            {/* Output mode */}
+            <SettingRow label="Output mode" description="How the result is delivered">
+              <Segmented
+                options={[
+                  { value: 'paste', label: 'Paste at cursor' },
+                  { value: 'clipboard', label: 'Clipboard' }
+                ]}
+                value={outputMode}
+                onChange={(v) => handleOutputModeChange(v as 'paste' | 'clipboard')}
+              />
+            </SettingRow>
+
+            {/* Chunked transcription */}
+            <SettingRow
+              label="Chunked transcription"
+              description="Stream long recordings to the model in VAD-split chunks"
+              last={!IS_MAC}
+            >
+              <Toggle checked={chunkedTranscription} onChange={handleChunkedChange} />
+            </SettingRow>
+
+            {/* STT model (advanced — most users keep the default) */}
+            <SettingRow label="Transcription model" description="Groq Whisper variant used for speech-to-text" last={!IS_MAC}>
+              <select className="mv-select min-w-[200px]" value={sttSettings.model} onChange={(e) => updateStt({ model: e.target.value })}>
+                {sttModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+                {!sttModels.some((m) => m.id === sttSettings.model) && (
+                  <option value={sttSettings.model}>{sttSettings.model}</option>
+                )}
+              </select>
+            </SettingRow>
+
+            {/* Permissions (macOS) */}
+            {IS_MAC && (
+              <>
+                <PermissionRow
+                  title="Microphone"
+                  description="Required so Maverick Voice can hear what you say."
+                  granted={micGranted}
+                  statusText={
+                    micGranted ? 'Granted' : micStatus === 'denied' || micStatus === 'restricted' ? 'Denied' : 'Not granted'
+                  }
+                  primary={!micGranted ? { label: 'Grant', onClick: handleGrantMic } : null}
+                  secondary={
+                    micStatus === 'denied' || micStatus === 'restricted'
+                      ? { label: 'Open Settings', onClick: () => window.electronAPI.openMicSettings() }
+                      : null
+                  }
+                />
+                <PermissionRow
+                  title="Accessibility"
+                  description="Required to detect shortcut keys and paste at the cursor."
+                  granted={accessibilityGranted}
+                  statusText={accessibilityGranted ? 'Granted' : 'Not granted'}
+                  primary={!accessibilityGranted ? { label: 'Grant', onClick: handleGrantAccessibility } : null}
+                  secondary={
+                    !accessibilityGranted ? { label: "I've enabled it", onClick: refreshPermissions } : null
+                  }
+                />
+                <div className="px-5 py-4 border-t border-mv-border">
+                  <div className="flex items-center justify-between gap-3 mb-1.5">
+                    <p className="text-[13px] font-semibold text-mv-text-primary">Free up the Fn key</p>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-mv-text-muted">Recommended</span>
+                  </div>
+                  <p className="text-[12px] text-mv-text-secondary leading-relaxed">
+                    macOS uses <span className="font-mono text-mv-text-primary">Fn</span> for emoji / Apple Dictation. To use it
+                    for Maverick Voice, set <span className="font-semibold text-mv-text-primary">"Press 🌐 key to" → "Do Nothing"</span>.
+                  </p>
+                  <button onClick={() => window.electronAPI.openKeyboardSettings()} className="btn-glass !px-3.5 !py-2 !text-[11px] mt-3">
+                    Open Keyboard Settings
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Replay onboarding */}
+            <SettingRow label="Replay onboarding" description="Walk through the welcome and setup steps again" last>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('maverickvoice_onboarding_complete')
+                  location.reload()
+                }}
+                className="btn-glass !px-4 !py-2 !text-[12px]"
+              >
+                Replay
+              </button>
+            </SettingRow>
+          </div>
+        )}
+      </div>
+
+      {/* ═══ Privacy footer ═══ */}
+      <div className="mt-8 px-1 pb-2">
+        <div className="mv-section-label mb-2">
+          <span className="text-mv-text-muted">
+            <ShieldIcon />
+          </span>
+          Privacy
+        </div>
+        <p className="text-[12px] text-mv-text-secondary leading-relaxed max-w-[560px]">
+          Maverick Voice is local-first and account-free. Your transcripts, history, and audio stay on your device. Your API
+          keys are encrypted via Electron safeStorage (Keychain on macOS, DPAPI on Windows). Audio is sent only to the
+          provider you configured — Groq for speech-to-text, OpenAI or OpenRouter for AI. There is no sign-up, no telemetry,
+          and no tracking; usage costs are estimated locally from public provider pricing.
+        </p>
+      </div>
     </div>
   )
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   Per-provider API key card — masked status, set / test / clear.
+   Compact per-provider API key row — masked status, set / test / clear.
 ════════════════════════════════════════════════════════════════════════ */
-function ProviderKeyCard({
+function ProviderKeyRow({
   provider,
   label,
+  tag,
   placeholder,
-  consoleUrl
+  consoleUrl,
+  last
 }: {
   provider: ProviderId
   label: string
+  tag?: string
   placeholder: string
   consoleUrl: string
+  last?: boolean
 }) {
   const [masked, setMasked] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null)
@@ -587,6 +610,7 @@ function ProviderKeyCard({
       if (res.success) {
         setMasked(res.masked ?? null)
         setInput('')
+        setEditing(false)
         setMsg({ text: 'Key saved securely.', type: 'ok' })
       } else {
         setMsg({ text: res.error || 'Failed to save key', type: 'err' })
@@ -619,49 +643,84 @@ function ProviderKeyCard({
     window.electronAPI.clearProviderKey(provider)
     setMasked(null)
     setInput('')
+    setEditing(false)
     setMsg(null)
   }
 
   return (
-    <div className="px-5 py-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2.5">
+    <div className={`px-5 py-4 ${last ? '' : ''}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <span className={`mv-status-dot ${masked ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
-          <span className="text-[13px] font-semibold text-mv-text-primary">{label} API key</span>
-          {masked && <span className="text-[12px] text-mv-text-muted font-mono">{masked}</span>}
+          <span className="text-[13px] font-semibold text-mv-text-primary shrink-0">{label}</span>
+          {tag && (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-mv-text-muted bg-mv-white-04 border border-mv-border rounded-mv-sm px-1.5 py-0.5 shrink-0">
+              {tag}
+            </span>
+          )}
+          <span className="text-[12px] text-mv-text-muted font-mono truncate">{masked || 'Not set'}</span>
         </div>
-        {masked && (
-          <button onClick={handleClear} className="text-[12px] font-medium text-mv-text-secondary hover:text-mv-text-primary transition-colors px-2 py-1">
-            Clear
+        <div className="flex items-center gap-2 shrink-0">
+          {!editing && (
+            <button
+              onClick={() => {
+                setEditing(true)
+                setMsg(null)
+              }}
+              className="btn-glass !px-3 !py-1.5 !text-[11px] whitespace-nowrap"
+            >
+              {masked ? 'Replace' : 'Set'}
+            </button>
+          )}
+          {!editing && masked && (
+            <>
+              <button onClick={handleTest} disabled={busy} className="btn-glass !px-3 !py-1.5 !text-[11px] whitespace-nowrap">
+                Test
+              </button>
+              <button
+                onClick={handleClear}
+                className="text-[11px] font-medium text-mv-text-secondary hover:text-mv-text-primary transition-colors px-2 py-1"
+              >
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {editing && (
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="password"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value)
+              setMsg(null)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave()
+              if (e.key === 'Escape') {
+                setEditing(false)
+                setInput('')
+                setMsg(null)
+              }
+            }}
+            placeholder={placeholder}
+            spellCheck={false}
+            autoComplete="off"
+            autoFocus
+            className="mv-input flex-1"
+          />
+          <button onClick={handleTest} disabled={busy} className="btn-glass !px-3.5 !py-2.5 !text-[12px] whitespace-nowrap">
+            Test
           </button>
-        )}
-      </div>
+          <button onClick={handleSave} disabled={!input.trim() || busy} className="btn-glass btn-glass--primary !px-4 !py-2.5 !text-[12px] whitespace-nowrap">
+            {busy ? 'Checking…' : 'Save'}
+          </button>
+        </div>
+      )}
 
-      <div className="flex items-center gap-2">
-        <input
-          type="password"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-            setMsg(null)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave()
-          }}
-          placeholder={masked ? 'Paste a new key to replace' : placeholder}
-          spellCheck={false}
-          autoComplete="off"
-          className="mv-input flex-1"
-        />
-        <button onClick={handleTest} disabled={busy} className="btn-glass !px-3.5 !py-2.5 !text-[12px] whitespace-nowrap">
-          Test
-        </button>
-        <button onClick={handleSave} disabled={!input.trim() || busy} className="btn-glass btn-glass--primary !px-4 !py-2.5 !text-[12px] whitespace-nowrap">
-          {busy ? 'Checking…' : 'Save'}
-        </button>
-      </div>
-
-      <div className="flex items-center justify-between mt-2.5">
+      <div className="flex items-center justify-between mt-2.5 gap-3">
         <button
           onClick={() => window.electronAPI.openExternal(consoleUrl)}
           className="text-[11px] text-mv-text-muted hover:text-mv-text-primary transition-colors underline underline-offset-2"
@@ -696,6 +755,17 @@ function Divider() {
   return <div className="h-px bg-mv-border" />
 }
 
+function StatPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="mv-stat-pill">
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-mv-text-muted">{label}</span>
+      <span className="font-display text-[20px] font-extrabold text-mv-text-primary tabular-nums tracking-tight mt-1">
+        {value}
+      </span>
+    </div>
+  )
+}
+
 function SettingRow({
   label,
   description,
@@ -711,7 +781,7 @@ function SettingRow({
     <div className={`flex items-center justify-between px-5 py-4 gap-4 ${last ? '' : 'border-b border-mv-border'}`}>
       <div className="min-w-0">
         <p className="text-[13px] font-medium text-mv-text-primary">{label}</p>
-        <p className="text-[11px] text-mv-text-muted mt-0.5">{description}</p>
+        {description && <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -734,7 +804,7 @@ function FieldRow({
     <div className={`flex items-center justify-between gap-4 py-2.5 ${last ? '' : 'border-b border-mv-white-04'}`}>
       <div className="min-w-0">
         <p className="text-[12px] font-medium text-mv-text-secondary">{label}</p>
-        {hint && <p className="text-[10.5px] text-mv-text-muted mt-0.5 max-w-[220px] leading-snug">{hint}</p>}
+        {hint && <p className="text-[10.5px] text-mv-text-muted mt-0.5 max-w-[240px] leading-snug">{hint}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -789,7 +859,7 @@ function PermissionRow({
   secondary: { label: string; onClick: () => void } | null
 }) {
   return (
-    <div className="px-5 py-4 flex items-start gap-3">
+    <div className="px-5 py-4 flex items-start gap-3 border-t border-mv-border">
       <div className={`w-8 h-8 rounded-mv-md flex items-center justify-center shrink-0 mt-0.5 border ${granted ? 'bg-mv-white-12 border-mv-border-focus text-mv-text-primary' : 'bg-mv-white-04 border-mv-border text-mv-text-muted'}`}>
         {granted ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -855,30 +925,30 @@ function ShieldIcon() {
   )
 }
 
-function BehaviorIcon() {
+function SlidersIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12z" />
-      <path d="M8 5v4l2 2" />
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="2.5" y1="5" x2="13.5" y2="5" />
+      <line x1="2.5" y1="11" x2="13.5" y2="11" />
+      <circle cx="6" cy="5" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="11" r="1.6" fill="currentColor" stroke="none" />
     </svg>
   )
 }
 
-function AppearanceIcon() {
+function CogIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="8" r="5" />
-      <path d="M8 3V1M8 15v-2M3 8H1M15 8h-2" />
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="2.2" />
+      <path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1M12.6 12.6l-1.1-1.1M4.5 4.5L3.4 3.4" />
     </svg>
   )
 }
 
-function HelpIcon() {
+function ChevronIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="8" r="6.5" />
-      <path d="M6 6a2 2 0 1 1 2.7 1.9c-.5.2-.7.6-.7 1.1v.3" />
-      <line x1="8" y1="11.5" x2="8.01" y2="11.5" />
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 6 8 10 12 6" />
     </svg>
   )
 }

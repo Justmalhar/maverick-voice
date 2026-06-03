@@ -123,11 +123,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     <div key="how" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
       <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-2 tracking-tight">How it works</h2>
       <p className="text-mv-text-secondary text-[14px] mb-8 max-w-sm leading-relaxed">
-        Two ways to use your voice, anywhere on your machine.
+        Speak anywhere on your machine — your words land at the cursor.
       </p>
       <div className="flex flex-col gap-3 mb-8 w-full max-w-[400px]">
-        <FeatureCard icon={<MicGlyph />} title="Dictate" description="Tap your dictation key, speak, tap again. Raw text lands exactly where the cursor is — never auto-formatted unless you ask." />
-        <FeatureCard icon={<WandGlyph />} title="Instruct" description={'Select text, give a voice command — "make this formal", "turn into bullets", "translate to Hindi". It rewrites in place.'} />
+        <FeatureCard icon={<MicGlyph />} title="Dictate" description="Tap your dictation key, speak, tap again. Raw text lands exactly where the cursor is." />
+        <FeatureCard icon={<WandGlyph />} title="AI auto-format" description="Optionally let the AI fix grammar, punctuation, and paragraphing as you dictate — without changing what you said. Turn it on anytime in Settings." />
       </div>
       <button onClick={next} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
         Continue
@@ -267,15 +267,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
     // ── Step 6: Shortcuts (platform-aware) ──
     <div key="shortcuts" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-6 tracking-tight">Your shortcuts</h2>
+      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-6 tracking-tight">Your shortcut</h2>
       <div className="flex flex-col gap-3 mb-8 w-full max-w-[400px]">
         <ShortcutCard keyLabel={dictationKeyLabel(dictationKey)} title="Dictation" description={`Tap ${dictationKeyLabel(dictationKey)} to start, tap again to stop.`} />
-        <ShortcutCard keyLabel="Right Shift" title="Instruction" description="Select text, tap Right Shift, speak an instruction." />
       </div>
       <div className="mv-glass-card px-5 py-3.5 mb-3 max-w-[400px] text-left">
         <p className="text-[12px] text-mv-text-secondary leading-relaxed">
-          <span className="font-bold text-mv-text-primary">Pro tip:</span> chain them — dictate, then immediately tap Right
-          Shift to refine what you just said.
+          <span className="font-bold text-mv-text-primary">Pro tip:</span> turn on AI auto-format in Settings to clean up
+          grammar and punctuation as you dictate. Voice editing of selected text is also there when you want it.
         </p>
       </div>
       {IS_MAC && (

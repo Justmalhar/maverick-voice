@@ -35,6 +35,8 @@ import type {
   ProviderModel,
   AppConfig,
   OutputMode,
+  DictionaryEntry,
+  Snippet,
 } from '../shared/types'
 
 import { APP_CONFIG } from './config'
@@ -96,10 +98,10 @@ app.on('second-instance', () => {
 // ════════════════════════════════════════════════════════════════════════
 
 // Platform-aware defaults. macOS dictation defaults to the Globe/Fn key; win32
-// to Right-Ctrl. Instruction defaults to Right Shift on both (keyListener
-// resolves Right Shift → Caps Lock on darwin for the native source).
+// to Right-Ctrl. Instruction (opt-in) is Caps Lock — Right Shift was removed
+// entirely (system-shortcut + Shift+Enter conflicts).
 const DEFAULT_DICTATION_KEY: DictationKey = process.platform === 'darwin' ? 'fn' : 'right-ctrl'
-const DEFAULT_INSTRUCTION_KEY: InstructionKey = 'right-shift'
+const DEFAULT_INSTRUCTION_KEY: InstructionKey = 'caps-lock'
 
 interface StoreSchema {
   widgetPosition: 'center' | 'right'
@@ -112,6 +114,11 @@ interface StoreSchema {
   activationMode: ActivationMode
   sttSettings: STTSettings
   llmSettings: LLMSettings
+  // ── Feature delta (June 2026) ──
+  instructionEnabled: boolean
+  autoFormat: boolean
+  dictionary: DictionaryEntry[]
+  snippets: Snippet[]
 }
 
 const STORE_DEFAULTS: StoreSchema = {
@@ -125,6 +132,12 @@ const STORE_DEFAULTS: StoreSchema = {
   activationMode: 'tap-toggle',
   sttSettings: { provider: 'groq', model: 'whisper-large-v3-turbo', language: 'en' },
   llmSettings: { provider: 'openai', model: 'gpt-4o-mini', baseUrl: '' },
+  // Instruction mode + AI auto-format are OPT-IN (default off). Dictionary and
+  // snippet lists start empty.
+  instructionEnabled: false,
+  autoFormat: false,
+  dictionary: [],
+  snippets: [],
 }
 
 const store = new Store<StoreSchema>({ defaults: STORE_DEFAULTS })
@@ -143,6 +156,11 @@ function restoreSettings(): void {
   keyboardManager.setDictationKey(dictationKey)
   keyListener.setDictationKey(dictationKey)
 
+  // Migration: stores written before Right Shift was removed may persist
+  // 'right-shift' — sanitize to the only remaining binding.
+  if ((store.get('instructionKey') as string) !== 'caps-lock') {
+    store.set('instructionKey', 'caps-lock')
+  }
   const instructionKey = store.get('instructionKey')
   keyboardManager.setInstructionKey(instructionKey)
   keyListener.setInstructionKey(instructionKey)
@@ -153,6 +171,19 @@ function restoreSettings(): void {
   const widgetPosition = store.get('widgetPosition')
   setHUDPosition(widgetPosition)
 
+  // ── Feature delta: instruction opt-in, auto-format, dictionary, snippets ──
+  const instructionEnabled = store.get('instructionEnabled')
+  keyboardManager.setInstructionEnabled(instructionEnabled)
+
+  const autoFormat = store.get('autoFormat')
+  sessionManager.setAutoFormat(autoFormat)
+
+  const dictionary = store.get('dictionary')
+  sessionManager.setDictionary(dictionary)
+
+  const snippets = store.get('snippets')
+  sessionManager.setSnippets(snippets)
+
   console.log(
     '[main] Settings restored —',
     'stt:', JSON.stringify(sttSettings),
@@ -161,7 +192,11 @@ function restoreSettings(): void {
     '| dictationKey:', dictationKey,
     '| instructionKey:', instructionKey,
     '| activationMode:', activationMode,
-    '| widgetPosition:', widgetPosition
+    '| widgetPosition:', widgetPosition,
+    '| instructionEnabled:', instructionEnabled,
+    '| autoFormat:', autoFormat,
+    '| dictionary:', dictionary.length, 'entries',
+    '| snippets:', snippets.length
   )
 }
 
@@ -706,6 +741,42 @@ function setupIPC(): void {
     store.set('activationMode', mode)
   })
   ipcMain.handle(IPC.GET_ACTIVATION_MODE, () => keyboardManager.getActivationMode())
+
+  // ─── Instruction mode opt-in (R->M set / R<->M get) ───
+  ipcMain.on(IPC.SET_INSTRUCTION_ENABLED, (_e, enabled: boolean) => {
+    const value = !!enabled
+    console.log('[main] Instruction mode enabled set:', value)
+    keyboardManager.setInstructionEnabled(value)
+    store.set('instructionEnabled', value)
+  })
+  ipcMain.handle(IPC.GET_INSTRUCTION_ENABLED, () => store.get('instructionEnabled'))
+
+  // ─── AI auto-format (R->M set / R<->M get) ───
+  ipcMain.on(IPC.SET_AUTO_FORMAT, (_e, enabled: boolean) => {
+    const value = !!enabled
+    console.log('[main] Auto-format set:', value)
+    sessionManager.setAutoFormat(value)
+    store.set('autoFormat', value)
+  })
+  ipcMain.handle(IPC.GET_AUTO_FORMAT, () => store.get('autoFormat'))
+
+  // ─── Dictionary (R<->M; whole-list set, returns void) ───
+  ipcMain.handle(IPC.GET_DICTIONARY, () => store.get('dictionary'))
+  ipcMain.handle(IPC.SET_DICTIONARY, (_e, entries: DictionaryEntry[]) => {
+    const list = Array.isArray(entries) ? entries : []
+    console.log('[main] Dictionary set:', list.length, 'entries')
+    sessionManager.setDictionary(list)
+    store.set('dictionary', list)
+  })
+
+  // ─── Snippets (R<->M; whole-list set, returns void) ───
+  ipcMain.handle(IPC.GET_SNIPPETS, () => store.get('snippets'))
+  ipcMain.handle(IPC.SET_SNIPPETS, (_e, snippets: Snippet[]) => {
+    const list = Array.isArray(snippets) ? snippets : []
+    console.log('[main] Snippets set:', list.length)
+    sessionManager.setSnippets(list)
+    store.set('snippets', list)
+  })
 }
 
 // ════════════════════════════════════════════════════════════════════════

@@ -1,22 +1,21 @@
 import { useState, useEffect } from 'react'
 import type { DictationKey } from '../../shared/types'
 import History from './History'
-import Voice from './Voice'
-import Usage from './Usage'
+import Dictionary from './Dictionary'
+import Snippets from './Snippets'
 import Settings from './Settings'
-import Privacy from './Privacy'
 import Onboarding from './Onboarding'
 
-// Tab keys. INTERFACES.md fixes the reference-derived set (history / voice→
-// "Features" / settings / privacy); Maverick Voice adds the dedicated `usage`
-// cost surface (Usage.tsx) as a flagship tab.
-type Tab = 'history' | 'voice' | 'usage' | 'settings' | 'privacy'
+// Final nav set (June 2026 delta): Home, History, Dictionary, Snippets,
+// Settings. Usage + Privacy were folded into Settings; the Voice/"Features"
+// explainer is now a concise block inside Home.
+type Tab = 'home' | 'history' | 'dictionary' | 'snippets' | 'settings'
 
 type AppView = 'loading' | 'onboarding' | 'main'
 
 const ONBOARDING_KEY = 'maverickvoice_onboarding_complete'
 
-/** Pretty label for the active dictation key (used by the sidebar pro-tip). */
+/** Pretty label for the active dictation key (used by the sidebar pro-tip + Home). */
 function dictationKeyLabel(key: DictationKey): string {
   switch (key) {
     case 'fn':
@@ -36,7 +35,7 @@ const DICTATION_KEYS: DictationKey[] = ['fn', 'right-option', 'right-ctrl', 'rig
 
 export default function App() {
   const [view, setView] = useState<AppView>('loading')
-  const [activeTab, setActiveTab] = useState<Tab>('history')
+  const [activeTab, setActiveTab] = useState<Tab>('home')
   const [dictationKey, setDictationKey] = useState<DictationKey>('fn')
 
   useEffect(() => {
@@ -107,34 +106,34 @@ export default function App() {
         {/* Nav items */}
         <div className="flex flex-col gap-1">
           <SidebarButton
+            icon={<HomeIcon />}
+            label="Home"
+            active={activeTab === 'home'}
+            onClick={() => setActiveTab('home')}
+          />
+          <SidebarButton
             icon={<HistoryIcon />}
             label="History"
             active={activeTab === 'history'}
             onClick={() => setActiveTab('history')}
           />
           <SidebarButton
-            icon={<VoiceIcon />}
-            label="Features"
-            active={activeTab === 'voice'}
-            onClick={() => setActiveTab('voice')}
+            icon={<DictionaryIcon />}
+            label="Dictionary"
+            active={activeTab === 'dictionary'}
+            onClick={() => setActiveTab('dictionary')}
           />
           <SidebarButton
-            icon={<UsageIcon />}
-            label="Usage"
-            active={activeTab === 'usage'}
-            onClick={() => setActiveTab('usage')}
+            icon={<SnippetsIcon />}
+            label="Snippets"
+            active={activeTab === 'snippets'}
+            onClick={() => setActiveTab('snippets')}
           />
           <SidebarButton
             icon={<SettingsIcon />}
             label="Settings"
             active={activeTab === 'settings'}
             onClick={() => setActiveTab('settings')}
-          />
-          <SidebarButton
-            icon={<PrivacyIcon />}
-            label="Privacy"
-            active={activeTab === 'privacy'}
-            onClick={() => setActiveTab('privacy')}
           />
         </div>
 
@@ -146,7 +145,7 @@ export default function App() {
             </p>
             <p className="text-[11px] text-mv-text-secondary leading-relaxed">
               Press <kbd className="kbd-3d !min-w-0 !px-2 !py-0.5">{dictationKeyLabel(dictationKey)}</kbd>{' '}
-              to dictate, <kbd className="kbd-3d !min-w-0 !px-2 !py-0.5">Right Shift</kbd> to instruct AI.
+              anywhere to dictate. Turn on AI auto-format in Settings to clean it up.
             </p>
           </div>
         </div>
@@ -157,14 +156,120 @@ export default function App() {
         <div className="max-w-2xl mx-auto pb-12">
           {/* key forces the entrance animation to replay on tab change */}
           <div key={activeTab} className="animate-view-enter">
+            {activeTab === 'home' && (
+              <Home dictationKey={dictationKey} onNavigate={setActiveTab} />
+            )}
             {activeTab === 'history' && <History dictationKey={dictationKey} />}
-            {activeTab === 'voice' && <Voice dictationKey={dictationKey} />}
-            {activeTab === 'usage' && <Usage />}
+            {activeTab === 'dictionary' && <Dictionary />}
+            {activeTab === 'snippets' && <Snippets />}
             {activeTab === 'settings' && <Settings onDictationKeyChange={setDictationKey} />}
-            {activeTab === 'privacy' && <Privacy />}
           </div>
         </div>
       </main>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Home — concise landing + the folded Voice/features explainer.
+════════════════════════════════════════════════════════════════════════ */
+
+function Home({
+  dictationKey,
+  onNavigate
+}: {
+  dictationKey: DictationKey
+  onNavigate: (tab: Tab) => void
+}) {
+  const dictLabel = dictationKeyLabel(dictationKey)
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight">
+          Maverick Voice
+        </h2>
+        <p className="text-[12px] text-mv-text-secondary mt-1.5 leading-relaxed max-w-md">
+          Speak anywhere on your desktop and your words land at the cursor — no window-switching, no
+          cleanup.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <FeatureCard
+          icon={<MicGlyph />}
+          title="Dictate"
+          description="Tap your dictation key, speak, tap again. Raw text lands exactly where the cursor is."
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <kbd className="kbd-3d">{dictLabel}</kbd>
+            <span className="text-[11px] text-mv-text-muted">speak, tap again to stop</span>
+          </div>
+        </FeatureCard>
+
+        <FeatureCard
+          icon={<SparkGlyph />}
+          title="AI auto-format"
+          description="Optionally let the AI fix grammar, punctuation, and paragraphing — without changing what you said."
+        >
+          <button
+            onClick={() => onNavigate('settings')}
+            className="btn-glass !px-3.5 !py-1.5 !text-[11px]"
+          >
+            Enable in Settings
+          </button>
+        </FeatureCard>
+
+        <FeatureCard
+          icon={<DictionaryIcon size={18} />}
+          title="Dictionary & Snippets"
+          description="Teach Maverick the words it mishears, and expand short spoken triggers into longer text."
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => onNavigate('dictionary')}
+              className="btn-glass !px-3.5 !py-1.5 !text-[11px]"
+            >
+              Dictionary
+            </button>
+            <button
+              onClick={() => onNavigate('snippets')}
+              className="btn-glass !px-3.5 !py-1.5 !text-[11px]"
+            >
+              Snippets
+            </button>
+          </div>
+        </FeatureCard>
+      </div>
+    </div>
+  )
+}
+
+function FeatureCard({
+  icon,
+  title,
+  description,
+  children
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="mv-glass-card px-5 py-5">
+      <div className="flex items-start gap-4">
+        <span className="w-10 h-10 rounded-mv-md bg-mv-white-04 border border-mv-border flex items-center justify-center text-mv-text-secondary shrink-0">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-display text-[15px] font-bold text-mv-text-primary tracking-tight">
+            {title}
+          </h3>
+          <p className="text-[12px] text-mv-text-secondary leading-relaxed mt-1.5">{description}</p>
+          {children && <div className="mt-3">{children}</div>}
+        </div>
+      </div>
     </div>
   )
 }
@@ -221,6 +326,16 @@ function BrandMark() {
 
 /* ─── Icons ─── */
 
+function HomeIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 7.5L8 2.5l5.5 5" />
+      <path d="M3.75 6.75V13h8.5V6.75" />
+      <path d="M6.5 13V9.5h3V13" />
+    </svg>
+  )
+}
+
 function HistoryIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -230,20 +345,20 @@ function HistoryIcon() {
   )
 }
 
-function VoiceIcon() {
+function DictionaryIcon({ size = 15 }: { size?: number }) {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5.5" y="1.5" width="5" height="8" rx="2.5" />
-      <path d="M3.5 7.5a4.5 4.5 0 0 0 9 0" />
-      <line x1="8" y1="12" x2="8" y2="14.5" />
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 13a1.5 1.5 0 0 1 1.5-1.5H13" />
+      <path d="M4.5 1.5H13v13H4.5A1.5 1.5 0 0 1 3 13V3a1.5 1.5 0 0 1 1.5-1.5z" />
+      <line x1="6" y1="4.75" x2="10.5" y2="4.75" />
     </svg>
   )
 }
 
-function UsageIcon() {
+function SnippetsIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 1v14M11 4H6.5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4H5" />
+      <polygon points="8.5 1.5 3 9 7.5 9 7 14.5 13 6.5 8 6.5 8.5 1.5" />
     </svg>
   )
 }
@@ -257,11 +372,23 @@ function SettingsIcon() {
   )
 }
 
-function PrivacyIcon() {
+/* ─── Home glyphs ─── */
+
+function MicGlyph() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 14.5s5.5-2.5 5.5-7V3.5L8 1.5 2.5 3.5V7.5c0 4.5 5.5 7 5.5 7z" />
-      <polyline points="5.5 8 7 9.5 10.5 6" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="1" width="6" height="12" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  )
+}
+
+function SparkGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3l1.8 4.6L18.4 9.4 13.8 11.2 12 15.8 10.2 11.2 5.6 9.4 10.2 7.6 12 3z" />
+      <path d="M19 15l.7 1.8L21.5 17.5 19.7 18.2 19 20l-.7-1.8L16.5 17.5 18.3 16.8 19 15z" />
     </svg>
   )
 }

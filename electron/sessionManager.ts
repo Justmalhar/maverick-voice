@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { APP_CONFIG, REQUEST_TIMEOUT_MS } from './config'
 import { getTranscriptionProvider, getLLMProvider } from './providers/registry'
 import { getApiKey, hasApiKey } from './keyStore'
-import { assembleTransformMessages, type FlowType } from './prompts'
+import { assembleTransformMessages, AUTO_FORMAT, type FlowType } from './prompts'
 import { saveAudioFile, saveAudioChunk } from './audio'
 import { captureSelectedText, injectOutput, copyToClipboard } from './clipboard'
 import { getWidgetWindow, showHUD, hideHUD, cancelPendingHide } from './windowManager'
@@ -10,7 +10,7 @@ import { setTrayRecording, setTrayIdle } from './tray'
 import { broadcastError } from './errorLogger'
 import { simplifyError } from './errorUtils'
 import { IPC } from '../shared/ipc'
-import type { SessionMode, STTSettings, LLMSettings } from '../shared/types'
+import type { SessionMode, STTSettings, LLMSettings, DictionaryEntry, Snippet } from '../shared/types'
 
 // LLM transform output is capped at this many completion tokens. Generous so a
 // long "make this an email" instruction is never truncated.
@@ -79,6 +79,115 @@ function stitchChunks(transcripts: string[]): string {
   return cleanTranscript(cleaned.join(' '))
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// Text-replacement pipeline helpers (Dictionary + Snippets).
+//
+// PURE FUNCTIONS — no side effects, no `this`. Exported for unit testing.
+// Both run on the transcript AFTER cleanTranscript and BEFORE any LLM pass.
+// ════════════════════════════════════════════════════════════════════════
+
+/** Escape regex metacharacters so a `from`/`trigger` is matched literally. */
+export function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Word-boundary regex tolerant of punctuation adjacency. JS `\b` is unreliable
+ * around non-ASCII and breaks on tokens that start/end with a regex metaclass,
+ * so we anchor on "start-of-string or a non-word, non-apostrophe character"
+ * lookbehind/lookahead. This matches "mavrik" in "mavrik." / "(mavrik)" /
+ * "say mavrik" but NOT inside "mavriking". The apostrophe carve-out keeps
+ * contractions (e.g. "it's") from being split mid-token.
+ */
+function boundaryPattern(escaped: string): RegExp {
+  return new RegExp(`(?<![\\w'])(?:${escaped})(?![\\w'])`, 'gi')
+}
+
+/**
+ * Apply Dictionary replacements to a transcript.
+ *  - case-insensitive
+ *  - word-boundary match tolerant of adjacent punctuation
+ *  - regex specials in `from` escaped
+ *  - LONGEST `from` applied first (so "mac book pro" beats "mac")
+ * Entries with an empty `from` are skipped. Returns the input unchanged when
+ * there are no entries.
+ */
+export function applyDictionary(text: string, entries: DictionaryEntry[]): string {
+  if (!text || !entries.length) return text
+  const ordered = entries
+    .filter((e) => e && e.from && e.from.trim().length > 0)
+    .slice()
+    .sort((a, b) => b.from.length - a.from.length)
+  let out = text
+  for (const entry of ordered) {
+    const re = boundaryPattern(escapeRegex(entry.from.trim()))
+    // Use a replacer function so `$` sequences in `to` (e.g. a price) are not
+    // interpreted as regex backreferences.
+    out = out.replace(re, () => entry.to)
+  }
+  return out
+}
+
+/**
+ * Expand Snippet triggers inline.
+ *  - case-insensitive
+ *  - tolerant of surrounding/trailing punctuation (same boundary rule as the
+ *    dictionary so "my linkedin." expands and keeps the trailing period)
+ *  - LONGEST `trigger` applied first
+ * Entries with an empty `trigger` are skipped. Returns the input unchanged when
+ * there are no snippets.
+ */
+export function applySnippets(text: string, snippets: Snippet[]): string {
+  if (!text || !snippets.length) return text
+  const ordered = snippets
+    .filter((s) => s && s.trigger && s.trigger.trim().length > 0)
+    .slice()
+    .sort((a, b) => b.trigger.length - a.trigger.length)
+  let out = text
+  for (const snip of ordered) {
+    const re = boundaryPattern(escapeRegex(snip.trigger.trim()))
+    out = out.replace(re, () => snip.content)
+  }
+  return out
+}
+
+/** Dictionary → Snippets, in order (the deterministic replacement stage). */
+function applyReplacements(text: string, dictionary: DictionaryEntry[], snippets: Snippet[]): string {
+  if (!text) return text
+  let out = applyDictionary(text, dictionary)
+  out = applySnippets(out, snippets)
+  return out
+}
+
+/**
+ * STT vocabulary biasing hint built from the dictionary `to` values, joined and
+ * capped to ~200 chars. Passed as the Whisper `prompt` so Groq biases toward
+ * the user's corrected spellings. Bounded by the dictionary (distinct from the
+ * silence-parroting concern that bans an arbitrary prompt).
+ */
+const STT_PROMPT_HINT_MAX = 200
+function buildSttPromptHint(dictionary: DictionaryEntry[]): string | undefined {
+  if (!dictionary.length) return undefined
+  const seen = new Set<string>()
+  const terms: string[] = []
+  for (const e of dictionary) {
+    const term = e?.to?.trim()
+    if (!term) continue
+    const key = term.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    terms.push(term)
+  }
+  if (!terms.length) return undefined
+  let hint = ''
+  for (const term of terms) {
+    const next = hint ? `${hint}, ${term}` : term
+    if (next.length > STT_PROMPT_HINT_MAX) break
+    hint = next
+  }
+  return hint || undefined
+}
+
 export interface SessionState {
   sessionId: string
   dictationAudio: Buffer | null
@@ -108,6 +217,12 @@ class SessionManager {
   // Provider runtime settings (restored from electron-store by main.ts).
   private sttSettings: STTSettings = { provider: 'groq', model: 'whisper-large-v3-turbo', language: 'en' }
   private llmSettings: LLMSettings = { provider: 'openai', model: 'gpt-4o-mini', baseUrl: '' }
+
+  // ─── Feature delta: AI auto-format + text-replacement pipeline ───
+  // All OPT-IN / empty by default; pushed in by main.ts restoreSettings + IPC.
+  private autoFormat = false
+  private dictionary: DictionaryEntry[] = []
+  private snippets: Snippet[] = []
 
   // Processing lock — prevents new sessions during provider calls.
   private isProcessing = false
@@ -203,6 +318,33 @@ class SessionManager {
 
   getLLMSettings(): LLMSettings {
     return this.llmSettings
+  }
+
+  setAutoFormat(enabled: boolean): void {
+    console.log('[session] Auto-format set:', enabled)
+    this.autoFormat = enabled
+  }
+
+  getAutoFormat(): boolean {
+    return this.autoFormat
+  }
+
+  setDictionary(entries: DictionaryEntry[]): void {
+    this.dictionary = Array.isArray(entries) ? entries : []
+    console.log('[session] Dictionary updated:', this.dictionary.length, 'entries')
+  }
+
+  getDictionary(): DictionaryEntry[] {
+    return this.dictionary
+  }
+
+  setSnippets(snippets: Snippet[]): void {
+    this.snippets = Array.isArray(snippets) ? snippets : []
+    console.log('[session] Snippets updated:', this.snippets.length)
+  }
+
+  getSnippets(): Snippet[] {
+    return this.snippets
   }
 
   startSession(mode: SessionMode): void {
@@ -453,11 +595,14 @@ class SessionManager {
     }
     const provider = getTranscriptionProvider(stt.provider)
     const key = getApiKey(stt.provider)!
+    // Vocabulary biasing: feed the dictionary `to` values as the Whisper prompt
+    // hint so the STT provider biases toward the user's corrected spellings.
     const result = await provider.transcribe(
       buffer,
       {
         model: stt.model,
         language: stt.language === 'auto' ? undefined : stt.language,
+        prompt: buildSttPromptHint(this.dictionary),
         mimeType: 'audio/webm',
       },
       key,
@@ -739,6 +884,28 @@ class SessionManager {
         console.log('[session] No instruction audio to transcribe')
       }
 
+      // ─── Deterministic text-replacement stage (Dictionary → Snippets) ───
+      // Applied to BOTH transcripts before junk detection / flow routing so
+      // every downstream flow (dictation, transform, context, instruction) sees
+      // the user's corrected vocabulary + expanded snippets. The dictation
+      // transcript is cleaned first (single-buffer path defers cleanTranscript
+      // to the flow switch; running it here makes the order clean → dictionary
+      // → snippets uniform across chunked + single-buffer paths). The dictation
+      // flow's later cleanTranscript() call is idempotent on already-clean text.
+      if (session.dictationTranscript) {
+        const cleaned = cleanTranscript(session.dictationTranscript)
+        session.dictationTranscript = applyReplacements(cleaned, this.dictionary, this.snippets)
+        console.log('[session] Dictation transcript after dictionary/snippets:', JSON.stringify(session.dictationTranscript))
+      }
+      if (session.instructionTranscript) {
+        session.instructionTranscript = applyReplacements(
+          session.instructionTranscript,
+          this.dictionary,
+          this.snippets
+        )
+        console.log('[session] Instruction transcript after dictionary/snippets:', JSON.stringify(session.instructionTranscript))
+      }
+
       // Guard: if all transcripts are empty/junk (e.g. just punctuation from
       // silence), skip the LLM call and treat as no-op to avoid pasting garbage.
       const dictationText = (session.dictationTranscript || '').trim()
@@ -764,13 +931,31 @@ class SessionManager {
             console.log('[session] Quote flow output (no LLM):', JSON.stringify(output))
             break
 
-          case 'dictation':
-            // Raw-by-default: dictation is never sent to the LLM. The transcript
-            // is cleaned deterministically in code. Formatting is on-demand only
-            // (via an instruction key → transform/instruction flows).
-            console.log('[session] Dictation flow — raw transcript (no LLM)')
-            output = cleanTranscript(session.dictationTranscript || '')
+          case 'dictation': {
+            // Dictation transcript is already cleaned + dictionary/snippet
+            // replaced above. By default it's NEVER sent to the LLM. The AI
+            // auto-format pass is the one opt-in exception: when enabled, run a
+            // mechanics-only LLM correction. On ANY failure it falls back to the
+            // unformatted text and fires OUTPUT_FALLBACK — it NEVER blocks paste.
+            const dictationOutput = session.dictationTranscript || ''
+            if (this.autoFormat && dictationOutput.trim()) {
+              console.log('[session] Dictation flow — running AI auto-format pass')
+              const formatted = await this.runAutoFormat(dictationOutput, controller.signal)
+              if (formatted) {
+                output = formatted
+                console.log('[session] ✓ Auto-format applied')
+              } else {
+                output = dictationOutput
+                session.errorMessage = 'formatting-fallback'
+                this.notifyEngineFallback(this.formattingNotice())
+                console.log('[session] Auto-format unavailable — pasted unformatted transcript')
+              }
+            } else {
+              console.log('[session] Dictation flow — raw transcript (no LLM)')
+              output = dictationOutput
+            }
             break
+          }
 
           case 'context':
             console.log('[session] Context flow — sending to LLM provider:', this.llmSettings.provider)
@@ -934,6 +1119,59 @@ class SessionManager {
         this.notifyEngineFallback(this.formattingNotice())
       }
       return rawFallback
+    }
+  }
+
+  /**
+   * Run the AI auto-format pass over a raw dictation transcript via the
+   * configured LLM provider/model. Returns the formatted text on success, or
+   * `null` on ANY failure (no key, network, timeout, empty/refusal) so the
+   * caller falls back to the unformatted transcript — this NEVER blocks the
+   * paste. Token usage is recorded inside the provider's complete() like every
+   * other LLM call (instruction transforms etc.).
+   */
+  private async runAutoFormat(text: string, signal?: AbortSignal): Promise<string | null> {
+    const llm = this.llmSettings
+    if (!hasApiKey(llm.provider)) {
+      console.log('[session] ⚠️ Auto-format skipped — no API key for', llm.provider)
+      return null
+    }
+    try {
+      const provider = getLLMProvider(llm.provider)
+      const key = getApiKey(llm.provider)!
+      const result = await provider.complete(
+        {
+          model: llm.model,
+          system: AUTO_FORMAT,
+          user: text,
+          temperature: 0.1,
+          maxTokens: TRANSFORM_MAX_TOKENS,
+          baseUrl: llm.baseUrl || undefined,
+          timeoutMs: APP_CONFIG.transform.timeout_ms,
+        },
+        key,
+        signal
+      )
+      const formatted = (result.text || '').trim()
+      if (!formatted) {
+        console.log('[session] ⚠️ Auto-format returned empty — using unformatted text')
+        return null
+      }
+      if (isLLMRefusal(formatted)) {
+        console.log('[session] ⚠️ Auto-format refused — using unformatted text')
+        return null
+      }
+      return formatted
+    } catch (err) {
+      // AbortError = caller cancel; propagate so the session ends as cancelled
+      // rather than silently pasting (matches transformWithFallback semantics).
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw err
+      }
+      const msg = err instanceof Error ? err.message : String(err)
+      console.log('[session] ⚠️ Auto-format failed, using unformatted text:', msg)
+      broadcastError('provider', `auto-format failed: ${msg}`)
+      return null
     }
   }
 

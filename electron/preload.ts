@@ -24,7 +24,9 @@ import type {
   DictationKey,
   InstructionKey,
   ActivationMode,
-  OutputMode
+  OutputMode,
+  DictionaryEntry,
+  Snippet
 } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
@@ -175,6 +177,27 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send(IPC.SET_INPUT_DEVICE, deviceId)
   },
   getInputDevice: (): Promise<string> => ipcRenderer.invoke(IPC.GET_INPUT_DEVICE),
+
+  // ── AI auto-format ──
+  getAutoFormat: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_AUTO_FORMAT),
+  setAutoFormat: (enabled: boolean) => {
+    ipcRenderer.send(IPC.SET_AUTO_FORMAT, enabled)
+  },
+
+  // ── Instruction mode opt-in ──
+  getInstructionEnabled: (): Promise<boolean> => ipcRenderer.invoke(IPC.GET_INSTRUCTION_ENABLED),
+  setInstructionEnabled: (enabled: boolean) => {
+    ipcRenderer.send(IPC.SET_INSTRUCTION_ENABLED, enabled)
+  },
+
+  // ── Dictionary ──
+  getDictionary: (): Promise<DictionaryEntry[]> => ipcRenderer.invoke(IPC.GET_DICTIONARY),
+  setDictionary: (entries: DictionaryEntry[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.SET_DICTIONARY, entries),
+
+  // ── Snippets ──
+  getSnippets: (): Promise<Snippet[]> => ipcRenderer.invoke(IPC.GET_SNIPPETS),
+  setSnippets: (snippets: Snippet[]): Promise<void> => ipcRenderer.invoke(IPC.SET_SNIPPETS, snippets),
 
   // ── Key bindings ──
   setDictationKey: (key: DictationKey) => {

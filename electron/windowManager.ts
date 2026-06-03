@@ -130,9 +130,13 @@ export function showMainWindow(): void {
 
 const HUD_WIDTH = 520
 // Slightly taller canvas than the pill itself so the multi-line error pill has
-// room to grow without resizing the window. The pill anchors to the top of the
-// canvas; the empty area is transparent and click-through.
+// room to grow without resizing the window. The pill anchors to the BOTTOM of
+// the canvas (the HUD sits above the Dock); the empty area above is
+// transparent and click-through.
 const HUD_HEIGHT = 140
+// Extra margin between the HUD window and the top of the Dock / work-area
+// bottom, so the pill never crowds the Dock.
+const DOCK_CLEARANCE = 80
 
 let hudPosition: 'center' | 'right' = 'center'
 
@@ -154,7 +158,11 @@ function getHUDBounds(): { x: number; y: number; width: number; height: number }
   } else {
     x = workArea.x + Math.round((workArea.width - HUD_WIDTH) / 2) // centered
   }
-  const y = workArea.y + 6 // 6px below the top of the work area (under the menu bar)
+  // Bottom of the screen, clear of the macOS Dock: workArea already excludes
+  // the Dock (any size/side, even auto-hidden), then DOCK_CLEARANCE adds the
+  // requested extra breathing room above it. The pill itself bottom-anchors
+  // inside the canvas (WidgetApp), so the visual gap to the Dock ≈ this margin.
+  const y = workArea.y + workArea.height - HUD_HEIGHT - DOCK_CLEARANCE
 
   return { x, y, width: HUD_WIDTH, height: HUD_HEIGHT }
 }

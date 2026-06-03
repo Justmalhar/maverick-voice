@@ -515,3 +515,63 @@ Use `UiohookKey` constants BY NAME (the enum), never raw numeric keycodes:
 - `UiohookKey.Escape` — if needed for renderer-side; Escape cancel is handled in main via globalShortcut, so not required here.
 
 Event handlers: `uIOhook.on('keydown', (e) => { if (e.keycode === UiohookKey.ShiftRight) emit('key','instruction-down') ... })` and `'keyup'`. Start once with `uIOhook.start()`, stop with `uIOhook.stop()`. Right Shift on win32 is momentary (down/up), so keyboard.ts triggers on `instruction-down` only.
+
+---
+
+# Feature delta (June 2026): Dictionary / Snippets / AutoFormat / InstructionEnabled
+
+New contract surface added to `shared/types.ts` (`DictionaryEntry`, `Snippet`, 8 `ElectronAPI` methods), `shared/ipc.ts` (8 channels), and `electron/preload.ts` (8 implementations). Channel constants (use `IPC.*` — never inline):
+
+- `IPC.SET_AUTO_FORMAT` `'settings:auto-format'` (R->M), `IPC.GET_AUTO_FORMAT` `'settings:get-auto-format'` (R<->M)
+- `IPC.SET_INSTRUCTION_ENABLED` `'settings:instruction-enabled'` (R->M), `IPC.GET_INSTRUCTION_ENABLED` `'settings:get-instruction-enabled'` (R<->M)
+- `IPC.SET_DICTIONARY` `'settings:dictionary'` (R<->M, returns void), `IPC.GET_DICTIONARY` `'settings:get-dictionary'` (R<->M)
+- `IPC.SET_SNIPPETS` `'settings:snippets'` (R<->M, returns void), `IPC.GET_SNIPPETS` `'settings:get-snippets'` (R<->M)
+
+Note: `setDictionary`/`setSnippets` are `Promise<void>` (`ipcMain.handle`, whole-list set — lists are small). `setAutoFormat`/`setInstructionEnabled` are fire-and-forget `void` (`ipcMain.on`). Renderer generates entry/snippet `id`s with `crypto.randomUUID()`.
+
+## `electron/keyboard.ts` — new export
+
+```ts
+//   setInstructionEnabled(enabled: boolean): void
+```
+When `false`, `handleKey` IGNORES ALL instruction-derived events (`instruction-down`/`instruction-up`) — dictation and Escape are unaffected. Default OFF. `resetState()` must NOT clear the enabled flag (it is a persisted setting, not per-keystroke state). `main.ts` restoreSettings applies it at boot AND the `SET_INSTRUCTION_ENABLED` IPC handler applies it live.
+
+## `electron/sessionManager.ts` — new pipeline hooks
+
+Add setters/state the core reads during transcript processing (apply to BOTH dictation and instruction transcripts unless noted):
+
+```ts
+//   setAutoFormat(enabled: boolean): void; getAutoFormat(): boolean
+//   setDictionary(entries: DictionaryEntry[]): void; getDictionary(): DictionaryEntry[]
+//   setSnippets(snippets: Snippet[]): void; getSnippets(): Snippet[]
+```
+
+Transcript pipeline ORDER (dictation flow): STT transcript -> existing `cleanTranscript` -> **Dictionary replacement** -> **Snippet expansion** -> if `autoFormat` on, **LLM AUTO_FORMAT pass**. Instruction flow applies Dictionary + Snippet replacement to its transcript too (NO auto-format).
+
+- **Dictionary replacement:** for each `from`->`to`, case-insensitive, word-boundary match tolerant of adjacent punctuation, escape regex specials in `from`, apply LONGEST `from` first.
+- **Snippet expansion:** after dictionary, expand spoken `trigger`->`content`, case-insensitive, tolerant of surrounding/trailing punctuation, LONGEST `trigger` first.
+- **AUTO_FORMAT LLM pass:** uses the configured LLM provider+model via `getLLMProvider(llm.provider)`, key from `keyStore.getApiKey(llm.provider)`, system prompt `AUTO_FORMAT` from `prompts.ts`, sensible timeout (`APP_CONFIG.transform.timeout_ms`). On ANY failure (no key, network, timeout, empty/refusal) fall back gracefully to the unformatted text and emit the existing `IPC.OUTPUT_FALLBACK` with a short message — NEVER blocks the paste. Track tokens via `usageTracker.recordLlmUsage` like instruction transforms.
+- **STT vocabulary biasing:** pass dictionary `to` values (joined, capped ~200 chars) as `opts.prompt` to `TranscriptionProvider.transcribe` so Groq biases recognition. Wire it where sessionManager calls `transcribe`. (NOTE: this re-introduces a Whisper `prompt` for biasing — bounded by the dictionary, distinct from the reference's silence-parroting concern.)
+
+## `electron/prompts.ts` — new export
+
+```ts
+export const AUTO_FORMAT: string
+```
+System prompt: fix grammar, punctuation, capitalization, sentence breaks, paragraphing of a raw dictation transcript; NEVER change meaning, NEVER add content, NEVER alter URLs/emails/proper nouns; output ONLY the corrected text with no preamble.
+
+## `electron/main.ts` — new electron-store keys + IPC handlers
+
+New persisted keys (with defaults), pushed into managers on restore:
+- `instructionEnabled` (default `false`) -> `keyboardManager.setInstructionEnabled(...)`
+- `autoFormat` (default `false`) -> `sessionManager.setAutoFormat(...)`
+- `dictionary` (default `[]`, `DictionaryEntry[]`) -> `sessionManager.setDictionary(...)`
+- `snippets` (default `[]`, `Snippet[]`) -> `sessionManager.setSnippets(...)`
+
+New IPC handlers:
+- `GET_INSTRUCTION_ENABLED` -> store; `SET_INSTRUCTION_ENABLED` -> `keyboardManager.setInstructionEnabled` + store.
+- `GET_AUTO_FORMAT` -> store; `SET_AUTO_FORMAT` -> `sessionManager.setAutoFormat` + store.
+- `GET_DICTIONARY` -> store; `SET_DICTIONARY` -> `sessionManager.setDictionary` + store (handle, returns void).
+- `GET_SNIPPETS` -> store; `SET_SNIPPETS` -> `sessionManager.setSnippets` + store (handle, returns void).
+
+The electron-store schema in `main.ts` adds `instructionEnabled: boolean`, `autoFormat: boolean`, `dictionary: DictionaryEntry[]`, `snippets: Snippet[]`.
