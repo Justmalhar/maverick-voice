@@ -21,6 +21,8 @@ process.stderr?.on('error', (err) => {
 })
 
 import { app, ipcMain, globalShortcut, shell, systemPreferences } from 'electron'
+import path from 'path'
+import { existsSync } from 'fs'
 import Store from 'electron-store'
 import { IPC } from '../shared/ipc'
 import type {
@@ -711,6 +713,13 @@ function setupIPC(): void {
 // ════════════════════════════════════════════════════════════════════════
 
 app.whenReady().then(() => {
+  // Dev runs show the generic Electron Dock icon (the packaged bundle carries
+  // its own); brand the Dock/Cmd+Tab entry so the app is recognizable in dev.
+  if (process.platform === 'darwin' && !app.isPackaged) {
+    const devIcon = path.join(app.getAppPath(), 'resources', 'icon.png')
+    if (existsSync(devIcon)) app.dock?.setIcon(devIcon)
+  }
+
   // Boot order (per INTERFACES.md): DB → settings → windows → tray → error
   // logger → session persistence → IPC → keyboard. IPC is registered BEFORE
   // the keyboard so a key-listener crash can't block IPC handlers.

@@ -9,6 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "icons": "python3 scripts/make-icons.py",
     "compile:globe": "node scripts/build-globe-listener.js",
     "compile:key-poster": "node scripts/build-key-poster.js",
     "compile:native": "node -e \"if(process.platform!=='darwin'){console.log('[compile:native] Skipping (not macOS)');process.exit(0)};require('child_process').execSync('npm run compile:globe && npm run compile:key-poster',{stdio:'inherit'})\"",
