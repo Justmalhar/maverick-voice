@@ -20,7 +20,7 @@ process.stderr?.on('error', (err) => {
   if ((err as NodeJS.ErrnoException).code === 'EPIPE') return
 })
 
-import { app, BrowserWindow, ipcMain, globalShortcut, shell, systemPreferences } from 'electron'
+import { app, ipcMain, globalShortcut, shell, systemPreferences } from 'electron'
 import Store from 'electron-store'
 import { IPC } from '../shared/ipc'
 import type {
@@ -40,6 +40,7 @@ import {
   createMainWindow,
   createWidgetWindow,
   getMainWindow,
+  showMainWindow,
   setHUDPosition,
   markHUDReady,
 } from './windowManager'
@@ -734,10 +735,10 @@ app.whenReady().then(() => {
   }
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
-      createWidgetWindow()
-    }
+    // Dock click: surface (or recreate) the dashboard. Checking
+    // getAllWindows().length === 0 would never fire — the hidden HUD widget
+    // window almost always still exists.
+    showMainWindow()
   })
 })
 

@@ -107,10 +107,16 @@ export function createMainWindow(): BrowserWindow {
 }
 
 export function showMainWindow(): void {
-  if (mainWindow) {
-    mainWindow.show()
-    mainWindow.focus()
+  // Recreate on demand: the app is tray-resident, so the user may have closed
+  // the dashboard ('closed' nulls the reference) and expects the tray / Dock
+  // to bring it back.
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createMainWindow() // 'ready-to-show' shows + focuses it
+    return
   }
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
 }
 
 /* ===============================
