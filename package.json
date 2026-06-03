@@ -1,0 +1,125 @@
+{
+  "name": "maverick-voice",
+  "version": "1.0.0",
+  "description": "Voice dictation + voice-driven text editing desktop app",
+  "author": "Malhar Ujawane <malhar@mobiiworld.com>",
+  "main": "./dist/electron/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "compile:globe": "node scripts/build-globe-listener.js",
+    "compile:key-poster": "node scripts/build-key-poster.js",
+    "compile:native": "node -e \"if(process.platform!=='darwin'){console.log('[compile:native] Skipping (not macOS)');process.exit(0)};require('child_process').execSync('npm run compile:globe && npm run compile:key-poster',{stdio:'inherit'})\"",
+    "predev": "npm run compile:native",
+    "prebuild": "npm run compile:native",
+    "predist": "npm run compile:native",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "electron-vite build && electron-builder",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.justmalhar.maverickvoice",
+    "productName": "Maverick Voice",
+    "copyright": "Copyright © 2026 Malhar Ujawane",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/bin",
+        "to": "bin"
+      },
+      {
+        "from": "resources/icons",
+        "to": "icons"
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node",
+      "node_modules/ffmpeg-static/**"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "resources/icons/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Maverick Voice uses your microphone to transcribe what you say into text.",
+        "NSAppleEventsUsageDescription": "Maverick Voice uses System Events to paste transcribed text at your cursor."
+      }
+    },
+    "win": {
+      "icon": "resources/icons/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "contents": [
+        {
+          "x": 140,
+          "y": 220
+        },
+        {
+          "x": 400,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "electron-store": "^11.0.2",
+    "ffmpeg-static": "^5.3.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "uiohook-napi": "^1.5.4",
+    "undici": "^7.22.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^5.0.0",
+    "tailwindcss": "^4.2.0",
+    "typescript": "^5.9.3"
+  }
+}

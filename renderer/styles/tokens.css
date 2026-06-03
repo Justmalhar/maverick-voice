@@ -1,0 +1,327 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Maverick Voice — DESIGN SYSTEM (tokens + materials + motion)
+
+   Identity: BLACK & WHITE 3D GLASSMORPHISM. Monochrome ONLY.
+     - Surfaces: pure black glass (#000–#0a0a0a), blur(40–60px) saturate(180%),
+       inset white edge glow.
+     - Buttons: 3D raised — outer drop + inset top highlight + inset bottom
+       shade, hover lift, active press translateY(1px).
+     - NO color accents. Semantic states are white-alpha intensities only.
+       (The single allowed exception: a faint success token kept as a near-white
+        tint, used sparingly for the output-ack check.)
+
+   This file is imported FIRST by renderer/styles.css (which then does
+   `@import "tailwindcss";` + component classes). Builders: put the
+   Tailwind @theme token mirror in styles.css; THIS file owns the raw
+   CSS custom properties, material/button utility classes, and keyframes.
+   Every block is commented so builders re-skinning pages know the vocabulary.
+══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Monochrome scale ─── */
+  /* Pure blacks for surfaces / window backgrounds. */
+  --mv-black: #000000;
+  --mv-black-01: #050505;
+  --mv-black-02: #0a0a0a; /* deepest usable panel ink */
+  --mv-white: #ffffff;
+
+  /* White-alpha tiers — the ENTIRE accent system. Use these for borders,
+     text, fills, hovers, and "semantic" emphasis (brighter = more important). */
+  --mv-white-04: rgba(255, 255, 255, 0.04);
+  --mv-white-08: rgba(255, 255, 255, 0.08);
+  --mv-white-12: rgba(255, 255, 255, 0.12);
+  --mv-white-24: rgba(255, 255, 255, 0.24);
+  --mv-white-48: rgba(255, 255, 255, 0.48);
+  --mv-white-72: rgba(255, 255, 255, 0.72);
+  --mv-white-96: rgba(255, 255, 255, 0.96);
+
+  /* Black-alpha tiers — for layered drop shadows on the 3D buttons/glass. */
+  --mv-shade-35: rgba(0, 0, 0, 0.35);
+  --mv-shade-55: rgba(0, 0, 0, 0.55);
+  --mv-shade-72: rgba(0, 0, 0, 0.72);
+
+  /* ─── Glass surface materials ─── */
+  /* Widget HUD pill background — near-pure black glass. */
+  --mv-glass-widget-bg: rgba(0, 0, 0, 0.82);
+  /* Dashboard cards / panels — slightly lighter black glass. */
+  --mv-glass-panel-bg: rgba(0, 0, 0, 0.72);
+  /* Raised inner surface (segmented controls, inset rows). */
+  --mv-surface-raised: rgba(255, 255, 255, 0.05);
+  --mv-surface-hover: rgba(255, 255, 255, 0.08);
+
+  /* Backdrop-filter recipes (the load-bearing glass blur). */
+  --mv-blur-widget: blur(40px) saturate(180%);
+  --mv-blur-panel: blur(60px) saturate(180%);
+
+  /* Borders / edge glow. */
+  --mv-border: rgba(255, 255, 255, 0.10);
+  --mv-border-focus: rgba(255, 255, 255, 0.25);
+  --mv-edge-glow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+
+  /* Text on dark glass. */
+  --mv-text-primary: rgba(255, 255, 255, 1);
+  --mv-text-secondary: rgba(255, 255, 255, 0.65);
+  --mv-text-muted: rgba(255, 255, 255, 0.38);
+
+  /* Semantic = white-alpha intensities (NO hues). success kept near-white. */
+  --mv-success: rgba(255, 255, 255, 0.96);
+  --mv-error: rgba(255, 255, 255, 0.78);
+  --mv-warning: rgba(255, 255, 255, 0.62);
+
+  /* ─── Radii ─── */
+  --mv-radius-sm: 8px;
+  --mv-radius-md: 14px;
+  --mv-radius-lg: 20px;
+  --mv-radius-xl: 24px;
+  --mv-radius-pill: 9999px;
+
+  /* ─── Elevation shadows ─── */
+  --mv-shadow-widget: 0 12px 36px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --mv-shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+
+  /* ─── Fonts (native, offline — no Google Fonts) ─── */
+  --mv-font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --mv-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --mv-font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Menlo', ui-monospace, monospace;
+
+  /* ─── Motion tokens (springy, smooth) ─── */
+  --mv-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* overshoot pop */
+  --mv-ease-out: cubic-bezier(0.22, 1, 0.36, 1);        /* smooth settle */
+  --mv-dur-fast: 120ms;
+  --mv-dur-base: 200ms;
+  --mv-dur-slow: 320ms;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MATERIALS — glass surfaces
+══════════════════════════════════════════════════════════════════════════ */
+
+/* Liquid-glass pill HUD widget base. Apply to the .unmute-pill replacement. */
+.mv-glass-widget {
+  background: var(--mv-glass-widget-bg);
+  -webkit-backdrop-filter: var(--mv-blur-widget);
+  backdrop-filter: var(--mv-blur-widget);
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius-pill);
+  box-shadow: var(--mv-shadow-widget);
+}
+
+/* Glass card / panel for dashboard surfaces. */
+.mv-glass-card {
+  background: var(--mv-glass-panel-bg);
+  -webkit-backdrop-filter: var(--mv-blur-panel);
+  backdrop-filter: var(--mv-blur-panel);
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius-xl);
+  box-shadow: var(--mv-shadow-panel);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3D RAISED BUTTON — outer drop + inset top highlight + inset bottom shade.
+   Hover lifts; active presses down 1px. This is the elevated upgrade over the
+   reference flat pill. Derived from the reference KeyBadge/SegmentedControlDark
+   layered-shadow recipe, monochromed.
+══════════════════════════════════════════════════════════════════════════ */
+.btn-glass {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: var(--mv-text-primary);
+  font-family: var(--mv-font-primary);
+  font-weight: 500;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%),
+    var(--mv-glass-panel-bg);
+  -webkit-backdrop-filter: var(--mv-blur-widget);
+  backdrop-filter: var(--mv-blur-widget);
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius-md);
+  /* outer drop (depth) + inset top highlight + inset bottom shade */
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.15) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.40) inset;
+  cursor: pointer;
+  transition:
+    transform var(--mv-dur-fast) var(--mv-ease-out),
+    box-shadow var(--mv-dur-fast) var(--mv-ease-out),
+    background var(--mv-dur-fast) var(--mv-ease-out);
+  user-select: none;
+}
+.btn-glass:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 100%),
+    var(--mv-glass-panel-bg);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.40) inset;
+}
+.btn-glass:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.30) inset;
+}
+.btn-glass:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Primary emphasis variant — brighter white face (still monochrome). */
+.btn-glass--primary {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.82) 100%);
+  color: var(--mv-black);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.18) inset;
+}
+.btn-glass--primary:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 100%);
+}
+
+/* 3D key cap (for keyboard-shortcut badges in Features/Settings/Onboarding). */
+.kbd-3d {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 6px 10px;
+  font-family: var(--mv-font-mono);
+  font-size: 12px;
+  color: var(--mv-text-primary);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
+    var(--mv-black-02);
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius-sm);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.6),
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOTION — keyframes. Monochrome only; the reference sky-blue "processing"
+   glow is converted to white-alpha here.
+══════════════════════════════════════════════════════════════════════════ */
+
+/* HUD enter/exit — MUST stay ~200ms; windowManager.hideHUD waits 220ms. */
+@keyframes mv-hud-enter {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mv-hud-exit {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(0.97); }
+}
+.animate-hud-enter { animation: mv-hud-enter var(--mv-dur-base) var(--mv-ease-spring) both; }
+.animate-hud-exit { animation: mv-hud-exit 200ms var(--mv-ease-out) both; }
+
+/* Recording pulse — radiating white glow (dictation = dim, instruction = bright). */
+@keyframes mv-radiate-dim {
+  0%, 100% {
+    box-shadow: var(--mv-shadow-widget), 0 0 15px rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    box-shadow: var(--mv-shadow-widget), 0 0 28px rgba(255, 255, 255, 0.18), 0 0 50px rgba(255, 255, 255, 0.08);
+  }
+}
+@keyframes mv-radiate-bright {
+  0%, 100% {
+    box-shadow: var(--mv-shadow-widget), 0 0 15px rgba(255, 255, 255, 0.10), 0 0 30px rgba(255, 255, 255, 0.05);
+  }
+  50% {
+    box-shadow: var(--mv-shadow-widget), 0 0 22px rgba(255, 255, 255, 0.25), 0 0 55px rgba(255, 255, 255, 0.10);
+  }
+}
+/* Processing — same white radiate, faster (was sky-blue in reference). */
+@keyframes mv-radiate-processing {
+  0%, 100% {
+    box-shadow: var(--mv-shadow-widget), 0 0 15px rgba(255, 255, 255, 0.06), 0 0 30px rgba(255, 255, 255, 0.03);
+  }
+  50% {
+    box-shadow: var(--mv-shadow-widget), 0 0 24px rgba(255, 255, 255, 0.16), 0 0 55px rgba(255, 255, 255, 0.07);
+  }
+}
+.animate-radiate-dim { animation: mv-radiate-dim 2s ease-in-out infinite; }
+.animate-radiate-bright { animation: mv-radiate-bright 2s ease-in-out infinite; }
+.animate-radiate-processing { animation: mv-radiate-processing 1.5s ease-in-out infinite; }
+
+/* Dot pulse for the recording status dot. */
+@keyframes mv-dot-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+  50% { transform: scale(0.85); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0); }
+}
+.animate-dot-pulse { animation: mv-dot-pulse 1.5s ease-in-out infinite; }
+
+/* Processing shimmer bar (gradient sweep). Pair with a white-alpha gradient bg. */
+@keyframes mv-shimmer-bar {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer-bar { animation: mv-shimmer-bar 1.8s ease-in-out infinite; }
+
+/* Output flash — brief white bloom when result is delivered. */
+@keyframes mv-output-flash {
+  0% { box-shadow: var(--mv-shadow-widget), 0 0 0 0 rgba(255, 255, 255, 0); }
+  35% { box-shadow: var(--mv-shadow-widget), 0 0 30px 4px rgba(255, 255, 255, 0.22); }
+  100% { box-shadow: var(--mv-shadow-widget), 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+.animate-output-flash { animation: mv-output-flash 600ms var(--mv-ease-out) 1; }
+
+/* Success pop (output check). */
+@keyframes mv-success-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-success-pop { animation: mv-success-pop 320ms var(--mv-ease-spring) both; }
+
+/* Typing-indicator dot bounce (processing dots). */
+@keyframes mv-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.animate-dot-bounce { animation: mv-dot-bounce 1.4s ease-in-out infinite; }
+
+/* Fade-up entrance for list rows / cards. */
+@keyframes mv-fade-up-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up-in { animation: mv-fade-up-in var(--mv-dur-slow) var(--mv-ease-out) both; }
+
+/* slide-in-up — REQUIRED by History rows (reference referenced it but never
+   defined it; defining it here so it does not silently no-op). */
+@keyframes slide-in-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-in-up { animation: slide-in-up var(--mv-dur-slow) var(--mv-ease-out) both; }
+
+/* Undo button appear. */
+@keyframes mv-undo-appear {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-undo-appear { animation: mv-undo-appear var(--mv-dur-base) var(--mv-ease-spring) both; }
+
+/* Blinking cursor (used in any live-text affordance). */
+@keyframes mv-blink-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.animate-blink-cursor { animation: mv-blink-cursor 1s step-end infinite; }
+
+/* ── Transparent widget window helper ──
+   WidgetApp adds `widget-body` to <body>; make the document see-through so the
+   glass pill floats. Required on BOTH platforms. */
+body.widget-body {
+  background: transparent !important;
+}
