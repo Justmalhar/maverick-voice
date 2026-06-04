@@ -110,21 +110,13 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   }
 
   const steps: React.ReactNode[] = [
-    // ── Step 0: Welcome ──
+    // ── Step 0: Welcome + how it works (combined) ──
     <StepShell
       key="welcome"
-      icon={<IconBadge>{ICONS.mic}</IconBadge>}
-      title="Maverick Voice"
-      subtitle="Voice-first dictation and voice-driven editing for your whole desktop. Speak anywhere, and your words land at the cursor — no window-switching, no cleanup."
-      subtitleWide
-    />,
-
-    // ── Step 1: How it works ──
-    <StepShell
-      key="how"
       icon={<IconBadge>{ICONS.waveform}</IconBadge>}
-      title="How it works"
-      subtitle="Speak anywhere on your machine — your words land at the cursor."
+      title="Maverick Voice"
+      subtitle="Voice-first dictation for your whole desktop. Speak anywhere — your words land right at the cursor, no window-switching, no cleanup."
+      subtitleWide
       bodyWidth="lg"
     >
       <div className="grid grid-cols-2 gap-3">
