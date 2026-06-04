@@ -38,6 +38,7 @@ import type {
   OutputMode,
   DictionaryEntry,
   Snippet,
+  Theme,
 } from '../shared/types'
 
 import { APP_CONFIG } from './config'
@@ -119,6 +120,9 @@ const DEFAULT_DICTATION_KEY: DictationKey = process.platform === 'darwin' ? 'fn'
 const DEFAULT_INSTRUCTION_KEY: InstructionKey = 'caps-lock'
 
 interface StoreSchema {
+  // Dashboard appearance preference. Default 'system' (follows OS); the renderer
+  // resolves + applies it live. The HUD widget window stays dark regardless.
+  theme: Theme
   widgetPosition: 'center' | 'right'
   soundFeedback: boolean
   chunkedTranscription: boolean
@@ -144,6 +148,7 @@ interface StoreSchema {
 }
 
 const STORE_DEFAULTS: StoreSchema = {
+  theme: 'system',
   widgetPosition: 'center',
   soundFeedback: true,
   chunkedTranscription: true,
@@ -726,6 +731,15 @@ function setupIPC(): void {
   })
 
   // ─── Appearance / behaviour settings ───
+  // Theme: the renderer applies it live (resolving 'system' via matchMedia), so
+  // main only persists the preference — no window relaunch needed.
+  ipcMain.handle(IPC.GET_THEME, () => store.get('theme'))
+  ipcMain.on(IPC.SET_THEME, (_e, theme: Theme) => {
+    if (theme !== 'light' && theme !== 'dark' && theme !== 'system') return
+    console.log('[main] Theme set:', theme)
+    store.set('theme', theme)
+  })
+
   ipcMain.on(IPC.SET_WIDGET_POSITION, (_e, position: 'center' | 'right') => {
     console.log('[main] Widget position set:', position)
     if (position === 'center' || position === 'right') {

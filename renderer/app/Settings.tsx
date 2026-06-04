@@ -14,8 +14,10 @@ import type {
   LLMSettings,
   LLMProviderId,
   ProviderId,
-  ProviderModel
+  ProviderModel,
+  Theme
 } from '../../shared/types'
+import { applyTheme } from '../theme'
 
 // ─── Platform detection (renderer can't import process.platform) ───
 // Electron sets a desktop UA; the OS token is reliable enough to gate the
@@ -253,6 +255,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   const [selectedDevice, setSelectedDevice] = useState<string>('')
 
   // ── Behaviour / appearance ──
+  const [theme, setTheme] = useState<Theme>('system')
   const [outputMode, setOutputMode] = useState<'paste' | 'clipboard'>('paste')
   const [soundFeedback, setSoundFeedback] = useState(true)
   const [chunkedTranscription, setChunkedTranscription] = useState(true)
@@ -323,6 +326,12 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
       .then((saved) => loadAudioDevices(saved))
       .catch(() => loadAudioDevices())
 
+    window.electronAPI
+      .getTheme()
+      .then((v) => {
+        if (v === 'light' || v === 'dark' || v === 'system') setTheme(v)
+      })
+      .catch(() => {})
     window.electronAPI.getSoundFeedback().then(setSoundFeedback).catch(() => {})
     window.electronAPI.getChunkedTranscription().then(setChunkedTranscription).catch(() => {})
     window.electronAPI.getAutoFormat().then(setAutoFormat).catch(() => {})
@@ -406,6 +415,15 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   }
 
   // ── Behaviour / appearance handlers ──
+  function handleThemeChange(value: string) {
+    const next = value as Theme
+    setTheme(next)
+    // applyTheme persists via electronAPI.setTheme AND applies live (resolving
+    // 'system' via matchMedia, attaching/detaching the OS-change listener), so
+    // the whole dashboard re-skins immediately with no per-component edits.
+    applyTheme(next)
+  }
+
   function handleSoundFeedbackChange(value: boolean) {
     setSoundFeedback(value)
     window.electronAPI.setSoundFeedback(value)
@@ -512,6 +530,17 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 
       {/* ═══ General ═══ */}
       <Section title="General" icon={<SlidersIcon />}>
+        <SettingRow label="Theme" description="Light, dark, or follow your system appearance">
+          <Segmented
+            options={[
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+              { value: 'system', label: 'System' }
+            ]}
+            value={theme}
+            onChange={handleThemeChange}
+          />
+        </SettingRow>
         <SettingRow label="Microphone" description="">
           <select className="mv-select min-w-[200px]" value={selectedDevice} onChange={(e) => handleInputDeviceChange(e.target.value)}>
             {audioDevices.map((device) => (

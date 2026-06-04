@@ -1,88 +1,314 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Maverick Voice — DESIGN SYSTEM (tokens + materials + motion)
 
-   Identity: BLACK & WHITE 3D GLASSMORPHISM. Monochrome ONLY.
-     - Surfaces: pure black glass (#000–#0a0a0a), blur(40–60px) saturate(180%),
-       inset white edge glow.
-     - Buttons: 3D raised — outer drop + inset top highlight + inset bottom
-       shade, hover lift, active press translateY(1px).
-     - NO color accents. Semantic states are white-alpha intensities only.
-       (The single allowed exception: a faint success token kept as a near-white
-        tint, used sparingly for the output-ack check.)
+   Identity: GRAYSCALE 3D GLASSMORPHISM with LIGHT + DARK variants.
+   Strictly monochrome (white / black / grays) — NO chromatic hues.
+
+   PALETTE (name → hex):
+     Backgrounds : Black #000000 · Charcoal #1A1A1A · Onyx #262626
+     Gray ramp   : Jet #333333 · Gunmetal #404040 · Dim Gray #4D4D4D ·
+                   Granite #666666 · Slate #808080 · Silver #999999 ·
+                   Platinum #B3B3B3 · White #FFFFFF
+     Gray-alpha  : same hexes + '99' suffix (60% opacity).
+
+   DEPTH is built from the grays — NOT from pure #000:
+     • DARK  : page = Charcoal #1A1A1A; raised glass = Onyx #262626 / Jet #333333;
+               text = White / Platinum / Slate (high legibility, ≥4.5:1 / ≥3:1).
+     • LIGHT : page = white / Platinum-tinted #F4F4F5; surfaces = translucent
+               white panels w/ subtle dark borders + soft shadows; text =
+               Charcoal / Dim Gray / Granite; 3D buttons invert (light face,
+               dark text).
+
+   THEMING MECHANISM (Tailwind v4 runtime switch):
+     • All COLOR --mv-* props are declared TWICE:
+         `:root, [data-theme='dark']`  → dark values  (default = dark)
+         `[data-theme='light']`        → light values
+       so flipping `document.documentElement[data-theme]` re-skins every token.
+     • Non-color tokens (radius / fonts / motion) are declared ONCE (theme-agnostic).
+     • styles.css mirrors these via `@theme inline { --color-mv-*: var(--mv-*) }`
+       so generated Tailwind utilities resolve THROUGH the theme-switched props.
+     • The transparent HUD widget window forces `data-theme='dark'` on its root,
+       so the floating pill always reads as dark glass over arbitrary content.
+       The light-theme block below is scoped to `[data-theme='light']` and the
+       widget material reads its bg from a token, so a forced-dark root keeps it
+       dark even when the user's dashboard is in light mode.
 
    This file is imported FIRST by renderer/styles.css (which then does
-   `@import "tailwindcss";` + component classes). Builders: put the
-   Tailwind @theme token mirror in styles.css; THIS file owns the raw
-   CSS custom properties, material/button utility classes, and keyframes.
-   Every block is commented so builders re-skinning pages know the vocabulary.
+   `@import "tailwindcss";` + the @theme mirror + component classes). THIS file
+   owns the raw CSS custom properties, material/button utility classes, and
+   keyframes. Every block is commented so builders re-skinning pages know the
+   vocabulary.
 ══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  /* ─── Monochrome scale ─── */
-  /* Pure blacks for surfaces / window backgrounds. */
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK THEME (DEFAULT) — applied when no data-theme attribute is present
+   (`:root`) and explicitly under `[data-theme='dark']` (so a forced-dark
+   widget root and an OS-resolved dark dashboard share identical values).
+══════════════════════════════════════════════════════════════════════════ */
+:root,
+[data-theme='dark'] {
+  /* ─── Grayscale palette (raw hex, theme-agnostic reference values) ─── */
   --mv-black: #000000;
-  --mv-black-01: #050505;
-  --mv-black-02: #0a0a0a; /* deepest usable panel ink */
+  --mv-charcoal: #1a1a1a;
+  --mv-onyx: #262626;
+  --mv-jet: #333333;
+  --mv-gunmetal: #404040;
+  --mv-dim-gray: #4d4d4d;
+  --mv-granite: #666666;
+  --mv-slate: #808080;
+  --mv-silver: #999999;
+  --mv-platinum: #b3b3b3;
   --mv-white: #ffffff;
 
-  /* White-alpha tiers — the ENTIRE accent system. Use these for borders,
-     text, fills, hovers, and "semantic" emphasis (brighter = more important). */
-  --mv-white-04: rgba(255, 255, 255, 0.04);
-  --mv-white-08: rgba(255, 255, 255, 0.08);
-  --mv-white-12: rgba(255, 255, 255, 0.12);
-  --mv-white-24: rgba(255, 255, 255, 0.24);
-  --mv-white-48: rgba(255, 255, 255, 0.48);
-  --mv-white-72: rgba(255, 255, 255, 0.72);
+  /* Legacy near-black aliases kept so any token consumer still resolves.
+     In DARK they map onto the new charcoal/onyx depth scale. */
+  --mv-black-01: #1a1a1a; /* → charcoal */
+  --mv-black-02: #262626; /* → onyx (deepest usable raised panel ink) */
+
+  /* White-alpha tiers — edge highlights / hover veils on dark glass. */
+  --mv-white-04: rgba(255, 255, 255, 0.05);
+  --mv-white-08: rgba(255, 255, 255, 0.09);
+  --mv-white-12: rgba(255, 255, 255, 0.14);
+  --mv-white-24: rgba(255, 255, 255, 0.28);
+  --mv-white-48: rgba(255, 255, 255, 0.52);
+  --mv-white-72: rgba(255, 255, 255, 0.74);
   --mv-white-96: rgba(255, 255, 255, 0.96);
 
-  /* Black-alpha tiers — for layered drop shadows on the 3D buttons/glass. */
+  /* Black/shade-alpha tiers — layered drop shadows on the 3D buttons/glass. */
   --mv-shade-35: rgba(0, 0, 0, 0.35);
   --mv-shade-55: rgba(0, 0, 0, 0.55);
   --mv-shade-72: rgba(0, 0, 0, 0.72);
 
+  /* ─── App / window backgrounds ─── */
+  /* The page is Charcoal (NOT pure black) so glass cards lift off it. */
+  --mv-bg: #1a1a1a;
+  --mv-bg-deep: #121212; /* slightly deeper than charcoal for ambient base */
+
   /* ─── Glass surface materials ─── */
-  /* Widget HUD pill background — near-pure black glass. */
-  --mv-glass-widget-bg: rgba(0, 0, 0, 0.82);
-  /* Dashboard cards / panels — slightly lighter black glass. */
-  --mv-glass-panel-bg: rgba(0, 0, 0, 0.72);
-  /* Raised inner surface (segmented controls, inset rows). */
-  --mv-surface-raised: rgba(255, 255, 255, 0.05);
-  --mv-surface-hover: rgba(255, 255, 255, 0.08);
+  /* Widget HUD pill — DARK glass. Forced-dark root keeps this dark in light mode. */
+  --mv-glass-widget-bg: rgba(20, 20, 20, 0.82);
+  /* Dashboard cards / panels — Onyx-toned translucent glass, clearly above page. */
+  --mv-glass-panel-bg: rgba(38, 38, 38, 0.78);
+  /* Raised inner surface (segmented tracks, inset rows) — Jet. */
+  --mv-surface-raised: rgba(51, 51, 51, 0.85);
+  --mv-surface-hover: rgba(64, 64, 64, 0.9);
+  /* Solid Onyx fill for opaque controls (inputs, select, segment track). */
+  --mv-surface-solid: #262626;
+  --mv-surface-solid-raised: #333333;
 
   /* Backdrop-filter recipes (the load-bearing glass blur). */
   --mv-blur-widget: blur(40px) saturate(180%);
   --mv-blur-panel: blur(60px) saturate(180%);
 
-  /* Borders / edge glow. */
-  --mv-border: rgba(255, 255, 255, 0.10);
-  --mv-border-focus: rgba(255, 255, 255, 0.25);
-  --mv-edge-glow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  /* Borders / edge glow — from Jet/Gunmetal alpha + faint white inner edge. */
+  --mv-border: rgba(255, 255, 255, 0.12);
+  --mv-border-strong: rgba(255, 255, 255, 0.18);
+  --mv-border-focus: rgba(255, 255, 255, 0.55);
+  --mv-edge-glow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
 
-  /* Text on dark glass. */
-  --mv-text-primary: rgba(255, 255, 255, 1);
-  --mv-text-secondary: rgba(255, 255, 255, 0.65);
-  --mv-text-muted: rgba(255, 255, 255, 0.38);
+  /* ─── Text (on dark surfaces) — real legibility, not low-alpha white ───
+     primary White #FFF, secondary Platinum #B3B3B3 (~7:1 on Onyx),
+     muted Slate #808080 (~4:1 on Onyx ⇒ ≥3:1 label target met). */
+  --mv-text-primary: #ffffff;
+  --mv-text-secondary: #b3b3b3;
+  --mv-text-muted: #808080;
+  /* Text that sits on a bright (white) raised face — primary buttons/toggles. */
+  --mv-text-on-bright: #1a1a1a;
 
-  /* Semantic = white-alpha intensities (NO hues). success kept near-white. */
-  --mv-success: rgba(255, 255, 255, 0.96);
-  --mv-error: rgba(255, 255, 255, 0.78);
-  --mv-warning: rgba(255, 255, 255, 0.62);
+  /* 3D button face gradients (raised dark glass). */
+  --mv-btn-face-top: rgba(64, 64, 64, 0.9);
+  --mv-btn-face-bottom: rgba(38, 38, 38, 0.92);
+  --mv-btn-face-top-hover: rgba(77, 77, 77, 0.95);
+  --mv-btn-face-bottom-hover: rgba(51, 51, 51, 0.95);
+  --mv-btn-highlight: rgba(255, 255, 255, 0.16);
+  --mv-btn-shade: rgba(0, 0, 0, 0.45);
+  /* Primary (bright) face. */
+  --mv-btn-primary-top: rgba(255, 255, 255, 0.96);
+  --mv-btn-primary-bottom: rgba(230, 230, 230, 0.86);
+  --mv-btn-primary-top-hover: #ffffff;
+  --mv-btn-primary-bottom-hover: rgba(240, 240, 240, 0.92);
+  --mv-btn-primary-border: rgba(255, 255, 255, 0.5);
+  --mv-btn-primary-highlight: rgba(255, 255, 255, 0.9);
 
+  /* Toggle knob faces. */
+  --mv-knob-off-top: #ffffff;
+  --mv-knob-off-bottom: #cfcfcf;
+  --mv-knob-on-top: #262626;
+  --mv-knob-on-bottom: #0d0d0d;
+
+  /* ─── Shadows (depth) ─── */
+  --mv-shadow-card-drop: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --mv-shadow-card-inset: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --mv-shadow-btn-drop: rgba(0, 0, 0, 0.5);
+  --mv-shadow-inset-track: rgba(0, 0, 0, 0.45);
+  --mv-shadow-input-inset: rgba(255, 255, 255, 0.05);
+
+  /* Semantic = grayscale intensities (NO hues). success kept near-white. */
+  --mv-success: #ffffff;
+  --mv-error: #d9d9d9;
+  --mv-warning: #b3b3b3;
+
+  /* ─── Glass widget shadow (contained ring — overlay reads dark) ─── */
+  --mv-shadow-widget: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  --mv-shadow-panel: var(--mv-shadow-card-drop), var(--mv-shadow-card-inset);
+
+  /* Scrollbar. */
+  --mv-scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --mv-scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
+
+  /* Status-dot glow. */
+  --mv-dot-glow: rgba(255, 255, 255, 0.5);
+
+  /* Ambient body glow (light wells over charcoal). */
+  --mv-glow-a: rgba(255, 255, 255, 0.06);
+  --mv-glow-a-mid: rgba(255, 255, 255, 0.03);
+  --mv-glow-a-far: rgba(255, 255, 255, 0.012);
+  --mv-glow-b: rgba(255, 255, 255, 0.045);
+  --mv-glow-b-mid: rgba(255, 255, 255, 0.022);
+  --mv-glow-b-far: rgba(255, 255, 255, 0.008);
+  --mv-glow-fade: rgba(255, 255, 255, 0);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME — frosted-LIGHT glass: translucent white panels, subtle dark
+   borders, soft shadows; dark text; inverted 3D buttons (dark raised faces are
+   replaced by light faces with dark text). Scoped to [data-theme='light'] only,
+   so the forced-dark widget root never picks these up.
+══════════════════════════════════════════════════════════════════════════ */
+[data-theme='light'] {
+  /* Raw palette hexes are constant across themes (named colors don't change). */
+  --mv-black: #000000;
+  --mv-charcoal: #1a1a1a;
+  --mv-onyx: #262626;
+  --mv-jet: #333333;
+  --mv-gunmetal: #404040;
+  --mv-dim-gray: #4d4d4d;
+  --mv-granite: #666666;
+  --mv-slate: #808080;
+  --mv-silver: #999999;
+  --mv-platinum: #b3b3b3;
+  --mv-white: #ffffff;
+
+  /* Legacy near-black aliases now map to LIGHT raised surfaces so any consumer
+     that used --mv-black-02 as a "control fill" gets a light face here. */
+  --mv-black-01: #f4f4f5; /* platinum-tinted page */
+  --mv-black-02: #ffffff; /* control fill (light) */
+
+  /* White-alpha tiers are reinterpreted as DARK-alpha veils on light glass
+     (hover/active shading + subtle highlights). Names preserved for consumers. */
+  --mv-white-04: rgba(0, 0, 0, 0.04);
+  --mv-white-08: rgba(0, 0, 0, 0.06);
+  --mv-white-12: rgba(0, 0, 0, 0.1);
+  --mv-white-24: rgba(0, 0, 0, 0.2);
+  --mv-white-48: rgba(0, 0, 0, 0.42);
+  --mv-white-72: rgba(0, 0, 0, 0.62);
+  --mv-white-96: rgba(0, 0, 0, 0.88);
+
+  /* Shade tiers — softer on light. */
+  --mv-shade-35: rgba(0, 0, 0, 0.12);
+  --mv-shade-55: rgba(0, 0, 0, 0.18);
+  --mv-shade-72: rgba(0, 0, 0, 0.24);
+
+  /* ─── App / window backgrounds ─── */
+  --mv-bg: #f4f4f5; /* platinum-tinted white */
+  --mv-bg-deep: #e9e9eb;
+
+  /* ─── Glass surface materials (frosted light) ─── */
+  /* Widget bg is overridden by the dark theme on the forced-dark widget root,
+     so this light value never applies to the floating pill in practice; kept
+     consistent for completeness. */
+  --mv-glass-widget-bg: rgba(255, 255, 255, 0.78);
+  --mv-glass-panel-bg: rgba(255, 255, 255, 0.72);
+  --mv-surface-raised: rgba(255, 255, 255, 0.92);
+  --mv-surface-hover: rgba(0, 0, 0, 0.05);
+  --mv-surface-solid: #ffffff;
+  --mv-surface-solid-raised: #fafafa;
+
+  /* Blur unchanged (theme-agnostic recipe, but redeclared so it's present in
+     this scope's resolved set — keeps frosted feel identical). */
+  --mv-blur-widget: blur(40px) saturate(180%);
+  --mv-blur-panel: blur(60px) saturate(180%);
+
+  /* Borders — subtle dark hairlines (not white). */
+  --mv-border: rgba(0, 0, 0, 0.12);
+  --mv-border-strong: rgba(0, 0, 0, 0.2);
+  --mv-border-focus: rgba(26, 26, 26, 0.55);
+  --mv-edge-glow: 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+
+  /* ─── Text (on light surfaces) — primary Charcoal #1A1A1A (~15:1 on white),
+     secondary Dim Gray #4D4D4D (~7.5:1), muted Granite #666666 (~5.7:1 ⇒
+     comfortably ≥4.5:1 body / ≥3:1 label). */
+  --mv-text-primary: #1a1a1a;
+  --mv-text-secondary: #4d4d4d;
+  --mv-text-muted: #666666;
+  /* Text on a dark raised face (inverted primary button) is light. */
+  --mv-text-on-bright: #ffffff;
+
+  /* 3D button face gradients (raised LIGHT glass, dark text). */
+  --mv-btn-face-top: rgba(255, 255, 255, 0.95);
+  --mv-btn-face-bottom: rgba(244, 244, 245, 0.95);
+  --mv-btn-face-top-hover: #ffffff;
+  --mv-btn-face-bottom-hover: rgba(238, 238, 240, 0.97);
+  --mv-btn-highlight: rgba(255, 255, 255, 0.9);
+  --mv-btn-shade: rgba(0, 0, 0, 0.12);
+  /* Primary (emphasis) face inverts to DARK with light text in light theme. */
+  --mv-btn-primary-top: #333333;
+  --mv-btn-primary-bottom: #1a1a1a;
+  --mv-btn-primary-top-hover: #404040;
+  --mv-btn-primary-bottom-hover: #262626;
+  --mv-btn-primary-border: rgba(0, 0, 0, 0.45);
+  --mv-btn-primary-highlight: rgba(255, 255, 255, 0.22);
+
+  /* Toggle knob faces (light track gets a dark knob; on-state inverts). */
+  --mv-knob-off-top: #ffffff;
+  --mv-knob-off-bottom: #e2e2e2;
+  --mv-knob-on-top: #ffffff;
+  --mv-knob-on-bottom: #e6e6e6;
+
+  /* ─── Shadows (soft, light-appropriate) ─── */
+  --mv-shadow-card-drop: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --mv-shadow-card-inset: 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  --mv-shadow-btn-drop: rgba(0, 0, 0, 0.16);
+  --mv-shadow-inset-track: rgba(0, 0, 0, 0.12);
+  --mv-shadow-input-inset: rgba(255, 255, 255, 0.7);
+
+  /* Semantic = grayscale intensities (NO hues) — dark on light. */
+  --mv-success: #1a1a1a;
+  --mv-error: #4d4d4d;
+  --mv-warning: #666666;
+
+  /* Widget shadow — overridden to dark on the forced-dark widget root; light
+     value here for completeness. */
+  --mv-shadow-widget: 0 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  --mv-shadow-panel: var(--mv-shadow-card-drop), var(--mv-shadow-card-inset);
+
+  /* Scrollbar. */
+  --mv-scrollbar-thumb: rgba(0, 0, 0, 0.18);
+  --mv-scrollbar-thumb-hover: rgba(0, 0, 0, 0.34);
+
+  /* Status-dot glow (dark accent on light). */
+  --mv-dot-glow: rgba(0, 0, 0, 0.28);
+
+  /* Ambient body glow (light wells on a light page → soft white bloom). */
+  --mv-glow-a: rgba(255, 255, 255, 0.9);
+  --mv-glow-a-mid: rgba(255, 255, 255, 0.5);
+  --mv-glow-a-far: rgba(255, 255, 255, 0.2);
+  --mv-glow-b: rgba(0, 0, 0, 0.035);
+  --mv-glow-b-mid: rgba(0, 0, 0, 0.018);
+  --mv-glow-b-far: rgba(0, 0, 0, 0.006);
+  --mv-glow-fade: rgba(255, 255, 255, 0);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THEME-AGNOSTIC TOKENS — declared ONCE (sizing / radius / fonts / motion).
+══════════════════════════════════════════════════════════════════════════ */
+:root {
   /* ─── Radii ─── */
   --mv-radius-sm: 8px;
   --mv-radius-md: 14px;
   --mv-radius-lg: 20px;
   --mv-radius-xl: 24px;
   --mv-radius-pill: 9999px;
-
-  /* ─── Elevation shadows ─── */
-  /* Widget HUD: CONTAINED to the pill — a crisp 1px outer ring + inset top
-     highlight, NO blurred drop shadow. The old 0 12px 36px halo bled a soft
-     grey gradient below the pill on the transparent overlay window; the pill's
-     dark glass bg + backdrop-blur + border are enough to separate it from the
-     content behind, with nothing rendering past the rounded container. */
-  --mv-shadow-widget: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
-  --mv-shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 
   /* ─── Fonts (native, offline — no Google Fonts) ─── */
   --mv-font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', sans-serif;
@@ -101,7 +327,9 @@
    MATERIALS — glass surfaces
 ══════════════════════════════════════════════════════════════════════════ */
 
-/* Liquid-glass pill HUD widget base. Apply to the .unmute-pill replacement. */
+/* Liquid-glass pill HUD widget base. Apply to the .unmute-pill replacement.
+   NOTE: the widget window forces data-theme='dark' on its root, so this reads
+   its bg/border/shadow from the DARK token set even when the user picks light. */
 .mv-glass-widget {
   background: var(--mv-glass-widget-bg);
   -webkit-backdrop-filter: var(--mv-blur-widget);
@@ -123,9 +351,9 @@
 
 /* ══════════════════════════════════════════════════════════════════════════
    3D RAISED BUTTON — outer drop + inset top highlight + inset bottom shade.
-   Hover lifts; active presses down 1px. This is the elevated upgrade over the
-   reference flat pill. Derived from the reference KeyBadge/SegmentedControlDark
-   layered-shadow recipe, monochromed.
+   Hover lifts; active presses down 1px. Faces resolve from --mv-btn-* tokens so
+   the raised dark face (dark theme) inverts to a raised light face (light theme)
+   with dark text, automatically.
 ══════════════════════════════════════════════════════════════════════════ */
 .btn-glass {
   position: relative;
@@ -137,17 +365,16 @@
   color: var(--mv-text-primary);
   font-family: var(--mv-font-primary);
   font-weight: 500;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%),
-    var(--mv-glass-panel-bg);
+  background: linear-gradient(180deg, var(--mv-btn-face-top) 0%, var(--mv-btn-face-bottom) 100%);
   -webkit-backdrop-filter: var(--mv-blur-widget);
   backdrop-filter: var(--mv-blur-widget);
   border: 1px solid var(--mv-border);
   border-radius: var(--mv-radius-md);
   /* outer drop (depth) + inset top highlight + inset bottom shade */
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.15) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.40) inset;
+    0 4px 12px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset,
+    0 -1px 0 var(--mv-btn-shade) inset;
   cursor: pointer;
   transition:
     transform var(--mv-dur-fast) var(--mv-ease-out),
@@ -157,19 +384,26 @@
 }
 .btn-glass:hover {
   transform: translateY(-1px);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 100%),
-    var(--mv-glass-panel-bg);
+  background: linear-gradient(180deg, var(--mv-btn-face-top-hover) 0%, var(--mv-btn-face-bottom-hover) 100%);
   box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.55),
-    0 1px 0 rgba(255, 255, 255, 0.18) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.40) inset;
+    0 6px 18px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset,
+    0 -1px 0 var(--mv-btn-shade) inset;
 }
 .btn-glass:active {
   transform: translateY(1px);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.10) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.30) inset;
+    0 2px 6px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset,
+    0 -1px 0 var(--mv-btn-shade) inset;
+}
+.btn-glass:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--mv-border-focus),
+    0 4px 12px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset,
+    0 -1px 0 var(--mv-btn-shade) inset;
 }
 .btn-glass:disabled {
   opacity: 0.4;
@@ -177,18 +411,20 @@
   transform: none;
 }
 
-/* Primary emphasis variant — brighter white face (still monochrome). */
+/* Primary emphasis variant — bright white face (dark theme) / dark face
+   (light theme), text uses the contrasting --mv-text-on-bright in dark and
+   --mv-text-on-bright (light text) in light. */
 .btn-glass--primary {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.82) 100%);
-  color: var(--mv-black);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, var(--mv-btn-primary-top) 0%, var(--mv-btn-primary-bottom) 100%);
+  color: var(--mv-text-on-bright);
+  border-color: var(--mv-btn-primary-border);
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.5),
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.18) inset;
+    0 4px 14px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-primary-highlight) inset,
+    0 -1px 0 var(--mv-btn-shade) inset;
 }
 .btn-glass--primary:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 100%);
+  background: linear-gradient(180deg, var(--mv-btn-primary-top-hover) 0%, var(--mv-btn-primary-bottom-hover) 100%);
 }
 
 /* 3D key cap (for keyboard-shortcut badges in Features/Settings/Onboarding). */
@@ -201,24 +437,24 @@
   font-family: var(--mv-font-mono);
   font-size: 12px;
   color: var(--mv-text-primary);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
-    var(--mv-black-02);
+  background: linear-gradient(180deg, var(--mv-btn-face-top) 0%, var(--mv-btn-face-bottom) 100%);
   border: 1px solid var(--mv-border);
   border-radius: var(--mv-radius-sm);
   box-shadow:
-    0 3px 0 rgba(0, 0, 0, 0.6),
-    0 4px 10px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.14) inset;
+    0 3px 0 var(--mv-shade-72),
+    0 4px 10px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    MOTION — keyframes. Monochrome only; the reference sky-blue "processing"
-   glow is converted to white-alpha here.
+   glow is converted to white-alpha here. The contained edge-glow keyframes use
+   white-alpha and read correctly on both themes (a faint white ring brightening
+   over the dark widget; the dashboard cards using card-breathe are theme-aware
+   via --mv-shadow-panel).
 ══════════════════════════════════════════════════════════════════════════ */
 
-/* HUD enter/exit — MUST stay ~200ms; windowManager.hideHUD waits 220ms.
-   The HUD lives at the BOTTOM of the screen now: it rises up on enter and
-   sinks toward the Dock on exit. */
+/* HUD enter/exit — MUST stay ~200ms; windowManager.hideHUD waits 220ms. */
 @keyframes mv-hud-enter {
   0% { opacity: 0; transform: translateY(12px) scale(0.96); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -231,31 +467,30 @@
 .animate-hud-exit { animation: mv-hud-exit 200ms var(--mv-ease-out) both; }
 
 /* Recording pulse — CONTAINED edge glow (dictation = dim, instruction = bright).
-   The "alive" feel now lives in the pill's 1px ring brightening in place plus
-   the inner waveform + status dot; no outer blur halo escapes the container. */
+   The widget is always dark glass, so white-alpha rings read correctly. */
 @keyframes mv-radiate-dim {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 1px 0 rgba(255, 255, 255, 0.10) inset;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
   }
 }
 @keyframes mv-radiate-bright {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
   }
   50% {
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.26), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.28), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
   }
 }
 /* Processing — same contained edge pulse, faster. */
 @keyframes mv-radiate-processing {
   0%, 100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   }
   50% {
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.18), 0 1px 0 rgba(255, 255, 255, 0.10) inset;
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.2), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
   }
 }
 .animate-radiate-dim { animation: mv-radiate-dim 2s ease-in-out infinite; }
@@ -276,12 +511,11 @@
 }
 .animate-shimmer-bar { animation: mv-shimmer-bar 1.8s ease-in-out infinite; }
 
-/* Output flash — brief CONTAINED ring brighten when result is delivered
-   (no outer bloom escaping the pill). */
+/* Output flash — brief CONTAINED ring brighten when result is delivered. */
 @keyframes mv-output-flash {
-  0% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
-  35% { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.40), 0 1px 0 rgba(255, 255, 255, 0.16) inset; }
-  100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
+  0% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
+  35% { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.42), 0 1px 0 rgba(255, 255, 255, 0.16) inset; }
+  100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
 }
 .animate-output-flash { animation: mv-output-flash 600ms var(--mv-ease-out) 1; }
 
@@ -307,8 +541,7 @@
 }
 .animate-fade-up-in { animation: mv-fade-up-in var(--mv-dur-slow) var(--mv-ease-out) both; }
 
-/* slide-in-up — REQUIRED by History rows (reference referenced it but never
-   defined it; defining it here so it does not silently no-op). */
+/* slide-in-up — REQUIRED by History rows. */
 @keyframes slide-in-up {
   0% { opacity: 0; transform: translateY(12px); }
   100% { opacity: 1; transform: translateY(0); }

@@ -119,6 +119,10 @@ export const IPC = {
   CONFIG_GET: 'config:get',
 
   // ── Behaviour / appearance settings ────────────────────────────────────────────
+  /** R<->M () -> Theme ('light'|'dark'|'system', default 'system') (handle). */
+  GET_THEME: 'settings:get-theme',
+  /** R->M  (theme: Theme) -> persist; renderer applies live (no relaunch). */
+  SET_THEME: 'settings:theme',
   /** R->M  (position: 'center'|'right') -> setHUDPosition + persist. */
   SET_WIDGET_POSITION: 'settings:widget-position',
   /** R<->M () -> 'center'|'right' (default 'center') (handle). */

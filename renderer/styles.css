@@ -2,79 +2,106 @@
    Maverick Voice — renderer/styles.css
 
    Load order (REQUIRED):
-     1. ./styles/tokens.css  — raw --mv-* custom props, glass materials,
-        3D button classes (.btn-glass, .kbd-3d), and the motion keyframes.
+     1. ./styles/tokens.css  — raw --mv-* custom props (declared TWICE: dark
+        under `:root, [data-theme='dark']`, light under `[data-theme='light']`;
+        non-color tokens once), glass materials, 3D button classes
+        (.btn-glass, .kbd-3d), and the motion keyframes.
      2. tailwindcss          — utility engine.
-     3. @theme               — mirrors the --mv-* tokens into Tailwind color/
-        radius/font utilities so `bg-mv-glass-panel`, `text-mv-text-secondary`,
-        `border-mv-border`, `rounded-mv-xl`, `font-display`, etc. all generate.
+     3. @theme inline        — mirrors the --mv-* tokens into Tailwind color/
+        radius/font utilities VIA var() so `bg-mv-glass-panel`,
+        `text-mv-text-secondary`, `border-mv-border`, `rounded-mv-xl`,
+        `font-display`, etc. all generate AND follow the runtime theme switch.
+        `inline` is REQUIRED (Tailwind v4): without it a utility resolves the
+        var() at its definition scope, so flipping data-theme on <html> wouldn't
+        re-skin the utility classes. With `inline`, the utility emits
+        `var(--mv-*)` directly, which re-resolves at the themed scope.
      4. component / utility classes used by BOTH the dashboard window and the
-        transparent widget window (titlebar drag, glass inputs, dashboard-only
-        helper animations the reference referenced by class name).
+        transparent widget window (titlebar drag, glass inputs, segmented
+        control, toggle, scrollbars, dashboard-only helper animations).
 
-   Monochrome black-glass ONLY. No cream / ink / red / gold leak-through.
+   Grayscale ONLY (white / black / grays) — no chromatic hues. Two variants
+   (light / dark) driven entirely by the data-theme attribute on <html>.
 ══════════════════════════════════════════════════════════════════════════ */
 
 @import "./styles/tokens.css";
 @import "tailwindcss";
 
-/* ── Tailwind token mirror ──
-   Tailwind v4 reads custom properties declared inside @theme to synthesize
-   utilities. We re-expose the design tokens (defined raw in tokens.css) here so
-   the dashboard/widget can use utility classes instead of inline styles. */
-@theme {
-  /* Monochrome scale */
-  --color-mv-black: #000000;
-  --color-mv-black-01: #050505;
-  --color-mv-black-02: #0a0a0a;
-  --color-mv-white: #ffffff;
+/* ── Tailwind token mirror (INLINE) ──
+   Each utility points at the raw --mv-* prop. Because these props are redefined
+   under [data-theme='light'] / [data-theme='dark'], the generated utilities
+   adapt automatically when the attribute flips — with no per-component edits. */
+@theme inline {
+  /* Grayscale palette */
+  --color-mv-black: var(--mv-black);
+  --color-mv-charcoal: var(--mv-charcoal);
+  --color-mv-onyx: var(--mv-onyx);
+  --color-mv-jet: var(--mv-jet);
+  --color-mv-gunmetal: var(--mv-gunmetal);
+  --color-mv-dim-gray: var(--mv-dim-gray);
+  --color-mv-granite: var(--mv-granite);
+  --color-mv-slate: var(--mv-slate);
+  --color-mv-silver: var(--mv-silver);
+  --color-mv-platinum: var(--mv-platinum);
+  --color-mv-white: var(--mv-white);
 
-  /* White-alpha tiers — the entire accent system. */
-  --color-mv-white-04: rgba(255, 255, 255, 0.04);
-  --color-mv-white-08: rgba(255, 255, 255, 0.08);
-  --color-mv-white-12: rgba(255, 255, 255, 0.12);
-  --color-mv-white-24: rgba(255, 255, 255, 0.24);
-  --color-mv-white-48: rgba(255, 255, 255, 0.48);
-  --color-mv-white-72: rgba(255, 255, 255, 0.72);
-  --color-mv-white-96: rgba(255, 255, 255, 0.96);
+  /* Legacy near-black aliases (theme-mapped in tokens.css). */
+  --color-mv-black-01: var(--mv-black-01);
+  --color-mv-black-02: var(--mv-black-02);
+
+  /* White-alpha tiers (reinterpreted as dark-alpha veils in light theme). */
+  --color-mv-white-04: var(--mv-white-04);
+  --color-mv-white-08: var(--mv-white-08);
+  --color-mv-white-12: var(--mv-white-12);
+  --color-mv-white-24: var(--mv-white-24);
+  --color-mv-white-48: var(--mv-white-48);
+  --color-mv-white-72: var(--mv-white-72);
+  --color-mv-white-96: var(--mv-white-96);
+
+  /* App background */
+  --color-mv-bg: var(--mv-bg);
+  --color-mv-bg-deep: var(--mv-bg-deep);
 
   /* Glass surfaces */
-  --color-mv-glass-widget: rgba(0, 0, 0, 0.82);
-  --color-mv-glass-panel: rgba(0, 0, 0, 0.72);
-  --color-mv-surface-raised: rgba(255, 255, 255, 0.05);
-  --color-mv-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-mv-glass-widget: var(--mv-glass-widget-bg);
+  --color-mv-glass-panel: var(--mv-glass-panel-bg);
+  --color-mv-surface-raised: var(--mv-surface-raised);
+  --color-mv-surface-hover: var(--mv-surface-hover);
+  --color-mv-surface-solid: var(--mv-surface-solid);
 
   /* Borders */
-  --color-mv-border: rgba(255, 255, 255, 0.10);
-  --color-mv-border-focus: rgba(255, 255, 255, 0.25);
+  --color-mv-border: var(--mv-border);
+  --color-mv-border-strong: var(--mv-border-strong);
+  --color-mv-border-focus: var(--mv-border-focus);
 
   /* Text */
-  --color-mv-text-primary: rgba(255, 255, 255, 1);
-  --color-mv-text-secondary: rgba(255, 255, 255, 0.65);
-  --color-mv-text-muted: rgba(255, 255, 255, 0.38);
+  --color-mv-text-primary: var(--mv-text-primary);
+  --color-mv-text-secondary: var(--mv-text-secondary);
+  --color-mv-text-muted: var(--mv-text-muted);
+  --color-mv-text-on-bright: var(--mv-text-on-bright);
 
-  /* Semantic = white-alpha intensities (no hues). */
-  --color-mv-success: rgba(255, 255, 255, 0.96);
-  --color-mv-error: rgba(255, 255, 255, 0.78);
-  --color-mv-warning: rgba(255, 255, 255, 0.62);
+  /* Semantic = grayscale intensities (no hues). */
+  --color-mv-success: var(--mv-success);
+  --color-mv-error: var(--mv-error);
+  --color-mv-warning: var(--mv-warning);
 
   /* Radii */
-  --radius-mv-sm: 8px;
-  --radius-mv-md: 14px;
-  --radius-mv-lg: 20px;
-  --radius-mv-xl: 24px;
-  --radius-mv-pill: 9999px;
+  --radius-mv-sm: var(--mv-radius-sm);
+  --radius-mv-md: var(--mv-radius-md);
+  --radius-mv-lg: var(--mv-radius-lg);
+  --radius-mv-xl: var(--mv-radius-xl);
+  --radius-mv-pill: var(--mv-radius-pill);
 
   /* Fonts */
-  --font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
-  --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Menlo', ui-monospace, monospace;
+  --font-primary: var(--mv-font-primary);
+  --font-display: var(--mv-font-display);
+  --font-mono: var(--mv-font-mono);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   BASE — pure-black window. The dashboard window paints solid black; the widget
-   window overrides <body> to transparent via the `widget-body` class
-   (defined in tokens.css).
+   BASE — the dashboard window paints the theme-aware page background
+   (Charcoal in dark, Platinum-tinted white in light). The widget window
+   overrides <body> to transparent via the `widget-body` class (tokens.css) and
+   forces data-theme='dark' on its root so the floating pill stays dark glass.
 ══════════════════════════════════════════════════════════════════════════ */
 * {
   box-sizing: border-box;
@@ -88,7 +115,7 @@ body {
 }
 
 body {
-  background-color: var(--mv-black);
+  background-color: var(--mv-bg);
   color: var(--mv-text-primary);
   font-family: var(--mv-font-primary);
   -webkit-font-smoothing: antialiased;
@@ -100,14 +127,12 @@ body {
   height: 100%;
 }
 
-/* Soft ambient glow behind the dashboard so the black glass cards read as
-   floating above a deeper black. The widget body is transparent so this never
-   shows there.
-   Edge-free recipe: (1) multi-stop eased falloff (no abrupt single-stop cone),
-   (2) fade to rgba(255,255,255,0) NOT `transparent` — bare transparent is
-   rgba(0,0,0,0), so interpolating from white passes through grey and leaves a
-   dirty ring; matching the hue at zero alpha keeps the falloff clean,
-   (3) wide elliptical spread so the light bleeds rather than pools. */
+/* Soft ambient glow behind the dashboard so the glass cards read as floating
+   above a deeper surface. Theme-aware: in DARK, faint white wells over charcoal;
+   in LIGHT, soft white bloom + the faintest dark vignette over the page tint.
+   The widget body is transparent so this never shows there.
+   Edge-free recipe: multi-stop eased falloff, fade to the matching hue at zero
+   alpha (--mv-glow-fade) so no dirty grey ring forms, wide elliptical spread. */
 body:not(.widget-body)::before {
   content: '';
   position: fixed;
@@ -115,20 +140,20 @@ body:not(.widget-body)::before {
   z-index: -1;
   background:
     radial-gradient(ellipse 90% 70% at 16% 2%,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.028) 24%,
-      rgba(255, 255, 255, 0.01) 48%,
-      rgba(255, 255, 255, 0) 76%),
+      var(--mv-glow-a) 0%,
+      var(--mv-glow-a-mid) 24%,
+      var(--mv-glow-a-far) 48%,
+      var(--mv-glow-fade) 76%),
     radial-gradient(ellipse 95% 75% at 94% 104%,
-      rgba(255, 255, 255, 0.038) 0%,
-      rgba(255, 255, 255, 0.02) 26%,
-      rgba(255, 255, 255, 0.007) 50%,
-      rgba(255, 255, 255, 0) 78%),
-    var(--mv-black);
+      var(--mv-glow-b) 0%,
+      var(--mv-glow-b-mid) 26%,
+      var(--mv-glow-b-far) 50%,
+      var(--mv-glow-fade) 78%),
+    var(--mv-bg);
   pointer-events: none;
 }
 
-/* Scrollbar — monochrome, thin. */
+/* Scrollbar — theme-aware thumb. */
 ::-webkit-scrollbar {
   width: 9px;
   height: 9px;
@@ -137,14 +162,21 @@ body:not(.widget-body)::before {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--mv-white-08);
+  background: var(--mv-scrollbar-thumb);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--mv-white-24);
+  background: var(--mv-scrollbar-thumb-hover);
   background-clip: padding-box;
+}
+
+/* Global keyboard-focus ring — clearly visible in BOTH themes. Applied to any
+   focusable element that doesn't already paint its own focus-visible style. */
+:focus-visible {
+  outline: 2px solid var(--mv-border-focus);
+  outline-offset: 2px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -166,7 +198,8 @@ a {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   FORM CONTROLS — glass inputs / selects matching the 3D system.
+   FORM CONTROLS — glass inputs / selects matching the 3D system. All faces /
+   borders / text resolve from theme tokens so they invert cleanly in light.
 ══════════════════════════════════════════════════════════════════════════ */
 .mv-input {
   width: 100%;
@@ -174,20 +207,21 @@ a {
   font-family: var(--mv-font-mono);
   font-size: 12px;
   color: var(--mv-text-primary);
-  background: var(--mv-black-02);
+  background: var(--mv-surface-solid);
   border: 1px solid var(--mv-border);
   border-radius: var(--mv-radius-md);
   outline: none;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 2px 8px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 0 var(--mv-shadow-input-inset) inset, 0 2px 8px var(--mv-shadow-inset-track);
   transition: border-color var(--mv-dur-fast) var(--mv-ease-out),
     box-shadow var(--mv-dur-fast) var(--mv-ease-out);
 }
 .mv-input::placeholder {
   color: var(--mv-text-muted);
 }
-.mv-input:focus {
+.mv-input:focus,
+.mv-input:focus-visible {
   border-color: var(--mv-border-focus);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06), 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px var(--mv-border-focus), 0 2px 8px var(--mv-shadow-inset-track);
 }
 
 .mv-select {
@@ -198,34 +232,38 @@ a {
   font-size: 12px;
   font-weight: 500;
   color: var(--mv-text-primary);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%),
-    var(--mv-black-02);
+  background: linear-gradient(180deg, var(--mv-btn-face-top) 0%, var(--mv-btn-face-bottom) 100%),
+    var(--mv-surface-solid);
   border: 1px solid var(--mv-border);
   border-radius: var(--mv-radius-md);
   outline: none;
   cursor: pointer;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 3px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 0 var(--mv-btn-highlight) inset, 0 3px 10px var(--mv-shadow-inset-track);
   transition: border-color var(--mv-dur-fast) var(--mv-ease-out);
 }
-.mv-select:focus {
+.mv-select:focus,
+.mv-select:focus-visible {
   border-color: var(--mv-border-focus);
+  box-shadow: 0 0 0 3px var(--mv-border-focus), 0 3px 10px var(--mv-shadow-inset-track);
 }
 .mv-select option {
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--mv-surface-solid);
+  color: var(--mv-text-primary);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   SEGMENTED CONTROL — inset glass track with a 3D raised active pill.
+   SEGMENTED CONTROL — inset glass track with a 3D raised active pill. Active
+   pill uses the bright (dark theme) / dark (light theme) primary face with the
+   contrasting --mv-text-on-bright label.
 ══════════════════════════════════════════════════════════════════════════ */
 .mv-segment {
   display: inline-flex;
   gap: 3px;
   padding: 3px;
-  background: var(--mv-black-02);
+  background: var(--mv-surface-solid);
   border: 1px solid var(--mv-border);
   border-radius: var(--mv-radius-md);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) inset;
+  box-shadow: 0 2px 6px var(--mv-shadow-inset-track) inset;
 }
 .mv-segment__btn {
   padding: 6px 12px;
@@ -243,9 +281,11 @@ a {
 .mv-segment__btn:hover {
   color: var(--mv-text-primary);
 }
-/* Inline provider glyph inside a segmented button — sized down from the
-   lobehub default and aligned with the label. The grayscale guard lives on the
-   wrapper (utility class) to keep the strict B&W system. */
+.mv-segment__btn:focus-visible {
+  outline: 2px solid var(--mv-border-focus);
+  outline-offset: 1px;
+}
+/* Inline provider glyph inside a segmented button. */
 .mv-segment__icon {
   display: inline-flex;
   align-items: center;
@@ -257,14 +297,18 @@ a {
   height: 13px;
 }
 .mv-segment__btn--active {
-  color: var(--mv-black);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.82) 100%);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  color: var(--mv-text-on-bright);
+  background: linear-gradient(180deg, var(--mv-btn-primary-top) 0%, var(--mv-btn-primary-bottom) 100%);
+  border-color: var(--mv-btn-primary-border);
+  box-shadow: 0 2px 6px var(--mv-shadow-btn-drop), 0 1px 0 var(--mv-btn-primary-highlight) inset;
+}
+.mv-segment__btn--active:hover {
+  color: var(--mv-text-on-bright);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   TOGGLE — monochrome 3D switch.
+   TOGGLE — grayscale 3D switch. Off = inset track + light knob; on = bright
+   (dark theme) / dark (light theme) track with the inverted knob.
 ══════════════════════════════════════════════════════════════════════════ */
 .mv-toggle {
   position: relative;
@@ -272,16 +316,20 @@ a {
   height: 24px;
   border-radius: 9999px;
   border: 1px solid var(--mv-border);
-  background: var(--mv-black-02);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) inset;
+  background: var(--mv-surface-solid);
+  box-shadow: 0 2px 6px var(--mv-shadow-inset-track) inset;
   cursor: pointer;
   transition: background var(--mv-dur-base) var(--mv-ease-out),
     border-color var(--mv-dur-base) var(--mv-ease-out);
   flex-shrink: 0;
 }
+.mv-toggle:focus-visible {
+  outline: 2px solid var(--mv-border-focus);
+  outline-offset: 2px;
+}
 .mv-toggle--on {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: linear-gradient(180deg, var(--mv-btn-primary-top) 0%, var(--mv-btn-primary-bottom) 100%);
+  border-color: var(--mv-btn-primary-border);
 }
 .mv-toggle__knob {
   position: absolute;
@@ -290,16 +338,16 @@ a {
   width: 18px;
   height: 18px;
   border-radius: 9999px;
-  background: linear-gradient(180deg, #fff 0%, #d8d8d8 100%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  background: linear-gradient(180deg, var(--mv-knob-off-top) 0%, var(--mv-knob-off-bottom) 100%);
+  box-shadow: 0 2px 4px var(--mv-shade-55), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
   transition: transform var(--mv-dur-base) var(--mv-ease-spring);
 }
 .mv-toggle--on .mv-toggle__knob {
   transform: translateX(18px);
-  background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  background: linear-gradient(180deg, var(--mv-knob-on-top) 0%, var(--mv-knob-on-bottom) 100%);
+  box-shadow: 0 2px 4px var(--mv-shade-72), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
 }
-/* Disabled toggle — dimmed + non-interactive (e.g. app-aware when auto-format off). */
+/* Disabled toggle — dimmed + non-interactive. */
 .mv-toggle--disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -307,8 +355,8 @@ a {
 
 /* ══════════════════════════════════════════════════════════════════════════
    COMBO MODIFIER CHIPS — custom dictation combo picker (Dictation settings).
-   Toggleable 3D glass chips; active chip uses the bright white face like the
-   segmented active pill. Monochrome only.
+   Toggleable 3D glass chips; active chip uses the bright/dark primary face like
+   the segmented active pill. Grayscale only, theme-aware.
 ══════════════════════════════════════════════════════════════════════════ */
 .mv-combo-chips {
   display: flex;
@@ -325,16 +373,15 @@ a {
   font-size: 12px;
   font-weight: 600;
   color: var(--mv-text-secondary);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%),
-    var(--mv-black-02);
+  background: linear-gradient(180deg, var(--mv-btn-face-top) 0%, var(--mv-btn-face-bottom) 100%);
   border: 1px solid var(--mv-border);
   border-radius: var(--mv-radius-sm);
   cursor: pointer;
   user-select: none;
   box-shadow:
-    0 3px 0 rgba(0, 0, 0, 0.6),
-    0 4px 10px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.14) inset;
+    0 3px 0 var(--mv-shade-72),
+    0 4px 10px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset;
   transition:
     transform var(--mv-dur-fast) var(--mv-ease-out),
     color var(--mv-dur-fast) var(--mv-ease-out),
@@ -345,29 +392,33 @@ a {
   color: var(--mv-text-primary);
   transform: translateY(-1px);
 }
+.mv-combo-chip:focus-visible {
+  outline: 2px solid var(--mv-border-focus);
+  outline-offset: 2px;
+}
 .mv-combo-chip:active {
   transform: translateY(1px);
   box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.6),
-    0 2px 6px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.10) inset;
+    0 1px 0 var(--mv-shade-72),
+    0 2px 6px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-highlight) inset;
 }
 .mv-combo-chip--active {
-  color: var(--mv-black);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.82) 100%);
-  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--mv-text-on-bright);
+  background: linear-gradient(180deg, var(--mv-btn-primary-top) 0%, var(--mv-btn-primary-bottom) 100%);
+  border-color: var(--mv-btn-primary-border);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.45),
-    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    0 2px 6px var(--mv-shadow-btn-drop),
+    0 1px 0 var(--mv-btn-primary-highlight) inset;
 }
 .mv-combo-chip--active:hover {
-  color: var(--mv-black);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.88) 100%);
+  color: var(--mv-text-on-bright);
+  background: linear-gradient(180deg, var(--mv-btn-primary-top-hover) 0%, var(--mv-btn-primary-bottom-hover) 100%);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    ONBOARDING FOOTER — single persistent bar across all steps. Centered
-   progress dots; brightness encodes the active step. Monochrome only.
+   progress dots; brightness encodes the active step. Grayscale only.
 ══════════════════════════════════════════════════════════════════════════ */
 .onboarding-footer {
   flex-shrink: 0;
@@ -382,7 +433,7 @@ a {
 }
 .onboarding-dot--active {
   width: 18px;
-  background: var(--mv-white-96);
+  background: var(--mv-text-primary);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -435,6 +486,10 @@ a {
 .mv-disclosure__head:hover {
   background: var(--mv-white-04);
 }
+.mv-disclosure__head:focus-visible {
+  outline: 2px solid var(--mv-border-focus);
+  outline-offset: -2px;
+}
 .mv-disclosure__chevron {
   display: inline-flex;
   align-items: center;
@@ -459,25 +514,21 @@ a {
   flex-shrink: 0;
 }
 .mv-status-dot--on {
-  background: var(--mv-white-96);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  background: var(--mv-text-primary);
+  box-shadow: 0 0 8px var(--mv-dot-glow);
 }
 .mv-status-dot--off {
   background: var(--mv-white-24);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   DASHBOARD-ONLY ANIMATIONS — the reference referenced these by class name on
-   the dashboard surfaces (App loading dots, History re-processing bars). The
-   widget/HUD motion lives entirely in tokens.css. Defined here so they don't
-   silently no-op on dashboard surfaces.
+   DASHBOARD-ONLY ANIMATIONS — referenced by class name on dashboard surfaces.
+   The widget/HUD motion lives entirely in tokens.css.
 
    NOTE: this class is deliberately named `.animate-dashboard-dot-bounce` (NOT
    `.animate-dot-bounce`). tokens.css owns `.animate-dot-bounce` with a
    scale-pulse keyframe for the round HUD status dots; reusing that class name
-   here would silently override the HUD motion (translateY instead of scale)
-   because styles.css is cascaded after the tokens.css @import. Dashboard
-   surfaces use this distinct class to keep the two motions independent.
+   here would silently override the HUD motion.
 ══════════════════════════════════════════════════════════════════════════ */
 @keyframes mv-dashboard-dot-bounce {
   0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
@@ -487,10 +538,12 @@ a {
   animation: mv-dashboard-dot-bounce 1.2s ease-in-out infinite;
 }
 
-/* Soft glow ring used to mark "active / focused" glass cards. */
+/* Soft glow ring used to mark "active / focused" glass cards. Theme-aware via
+   --mv-shadow-panel; the breathe accent uses a faint white-alpha bloom that
+   reads on both surfaces. */
 @keyframes mv-card-breathe {
   0%, 100% { box-shadow: var(--mv-shadow-panel), 0 0 0 0 rgba(255, 255, 255, 0); }
-  50% { box-shadow: var(--mv-shadow-panel), 0 0 22px 0 rgba(255, 255, 255, 0.08); }
+  50% { box-shadow: var(--mv-shadow-panel), 0 0 22px 0 var(--mv-white-08); }
 }
 .animate-card-breathe {
   animation: mv-card-breathe 3s ease-in-out infinite;

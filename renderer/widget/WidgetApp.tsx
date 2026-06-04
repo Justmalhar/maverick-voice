@@ -95,6 +95,14 @@ export default function WidgetApp() {
   )
 
   useEffect(() => {
+    // FORCE the widget window dark. The transparent HUD pill reads best as dark
+    // glass over arbitrary screen content, so it must NEVER follow the user's
+    // dashboard theme. tokens.css scopes the dark token set to
+    // `:root, [data-theme='dark']`, so an explicit data-theme='dark' on this
+    // window's <html> resolves every --mv-* (glass, border, shadow) to its dark
+    // value; the `[data-theme='light']` block can never match this root. (This
+    // is a separate window/document from the dashboard — no theming conflict.)
+    document.documentElement.setAttribute('data-theme', 'dark')
     document.body.classList.add('widget-body')
     document.documentElement.style.background = 'transparent'
     return () => {

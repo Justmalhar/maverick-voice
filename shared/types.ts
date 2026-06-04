@@ -22,6 +22,16 @@ export type ActivationMode = 'tap-toggle' | 'push-to-talk' | 'double-tap-push'
 export type OutputMode = 'paste' | 'clipboard'
 
 /**
+ * Dashboard appearance preference. DEFAULT 'system'.
+ *  - 'light' / 'dark' — pin the theme.
+ *  - 'system' — follow prefers-color-scheme, updating live on OS theme change.
+ * The renderer resolves 'system' to 'dark'|'light' (via matchMedia) before
+ * applying the `data-theme` attribute on <html> (see renderer/theme.ts). The
+ * HUD widget window is ALWAYS dark regardless of this setting.
+ */
+export type Theme = 'light' | 'dark' | 'system'
+
+/**
  * The physical key that triggers DICTATION.
  *  - darwin: 'fn' (Globe) | 'right-option'
  *  - win32:  'right-ctrl' | 'right-alt'
@@ -312,6 +322,9 @@ export interface ElectronAPI {
   getAppConfig: () => Promise<AppConfig>
 
   // ── Behaviour / appearance settings (renderer <-> main) ──
+  /** Dashboard theme preference (default 'system'). Renderer applies it live; the HUD widget stays dark. */
+  getTheme: () => Promise<Theme>
+  setTheme: (theme: Theme) => void
   setWidgetPosition: (position: 'center' | 'right') => void
   getWidgetPosition: () => Promise<'center' | 'right'>
   setSoundFeedback: (enabled: boolean) => void

@@ -28,7 +28,8 @@ import type {
   OutputMode,
   DictionaryEntry,
   Snippet,
-  AppProfile
+  AppProfile,
+  Theme
 } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
@@ -161,6 +162,10 @@ const electronAPI: ElectronAPI = {
   getAppConfig: (): Promise<AppConfig> => ipcRenderer.invoke(IPC.CONFIG_GET),
 
   // ── Behaviour / appearance ──
+  getTheme: (): Promise<Theme> => ipcRenderer.invoke(IPC.GET_THEME),
+  setTheme: (theme: Theme) => {
+    ipcRenderer.send(IPC.SET_THEME, theme)
+  },
   setWidgetPosition: (position: 'center' | 'right') => {
     ipcRenderer.send(IPC.SET_WIDGET_POSITION, position)
   },
