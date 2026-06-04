@@ -23,25 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Explicitly import the Developer ID certificate into a temporary keychain
-      # so electron-builder can auto-discover it. Passing CSC_LINK directly to
-      # electron-builder silently fails on macos-14 runners.
-      - name: Import signing certificate
-        env:
-          CERTIFICATE_BASE64: ${{ secrets.CSC_LINK }}
-          P12_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-        run: |
-          CERT_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $CERT_PATH
-
-          security create-keychain -p "temp-keychain-password" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "temp-keychain-password" $KEYCHAIN_PATH
-          security import $CERT_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k "temp-keychain-password" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+      # Handles keychain creation, certificate import, and partition-list
+      # configuration correctly across all macOS runner versions.
+      - uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.CSC_LINK }}
+          p12-password: ${{ secrets.CSC_KEY_PASSWORD }}
 
       - name: Build, sign + notarize
         run: npm run dist:mac
@@ -49,10 +36,6 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Clean up keychain
-        if: always()
-        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db
 
       - name: Upload artifacts to R2
         env:
