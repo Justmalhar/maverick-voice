@@ -298,19 +298,8 @@ function Home({
 
         {/* Quick toggles */}
         <div className="mv-glass-card px-5 divide-y divide-mv-border">
-          <ToggleRow
-            label="AI auto-format"
-            desc="Fix grammar, punctuation, and paragraphs — never your meaning."
-            checked={autoFormat}
-            onChange={toggleAutoFormat}
-          />
-          <ToggleRow
-            label="Adapt to active app"
-            desc="Emails get paragraphs, IDE prompts get @file refs, chats stay casual."
-            checked={appAware}
-            disabled={!autoFormat}
-            onChange={toggleAppAware}
-          />
+          <ToggleRow label="AI auto-format" checked={autoFormat} onChange={toggleAutoFormat} />
+          <ToggleRow label="Adapt to active app" checked={appAware} disabled={!autoFormat} onChange={toggleAppAware} />
         </div>
 
         {/* Providers */}
@@ -353,23 +342,18 @@ function Stat({ value, unit }: { value: string; unit: string }) {
 
 function ToggleRow({
   label,
-  desc,
   checked,
   onChange,
   disabled
 }: {
   label: string
-  desc: string
   checked: boolean
   onChange: (v: boolean) => void
   disabled?: boolean
 }) {
   return (
     <div className={`flex items-center justify-between gap-4 py-3.5 ${disabled ? 'opacity-45' : ''}`}>
-      <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-mv-text-primary">{label}</p>
-        <p className="text-[11px] text-mv-text-secondary mt-0.5 leading-relaxed">{desc}</p>
-      </div>
+      <p className="text-[13px] font-semibold text-mv-text-primary min-w-0">{label}</p>
       <Toggle checked={checked} onChange={onChange} disabled={disabled} />
     </div>
   )
