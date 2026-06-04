@@ -637,7 +637,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
       </Section>
 
       {/* ═══ AI ═══ */}
-      <Section title="AI" icon={<WandIcon />}>
+      <Section title="LLM" icon={<WandIcon />}>
         <SettingRow
           label="AI auto-format"
           description="Clean up grammar, punctuation, and paragraphing of your dictation — meaning untouched."
@@ -731,7 +731,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           <div className="min-w-0 text-left">
             <p className="text-[13px] font-semibold text-mv-text-primary">Advanced settings</p>
             <p className="text-[11px] text-mv-text-muted mt-0.5">
-              Voice editing, custom model & endpoint, output, permissions
+              Voice editing, output, permissions
             </p>
           </div>
           <span className={`mv-disclosure__chevron ${advancedOpen ? 'mv-disclosure__chevron--open' : ''}`}>
@@ -753,30 +753,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
                 <span className="kbd-3d">Caps Lock</span>
               </SettingRow>
             )}
-
-            {/* Custom LLM model id — escape hatch for any model the endpoint serves. */}
-            <SettingRow label="Custom model" description="Override the dropdown with any model id">
-              <input
-                className="mv-input !w-[200px]"
-                placeholder="e.g. gpt-4.1"
-                value={llmSettings.model}
-                spellCheck={false}
-                autoComplete="off"
-                onChange={(e) => updateLlm({ model: e.target.value })}
-              />
-            </SettingRow>
-
-            {/* Custom OpenAI-compatible base URL (blank = provider default). */}
-            <SettingRow label="Custom API base URL" description="Point at any OpenAI-compatible endpoint">
-              <input
-                className="mv-input !w-[200px]"
-                placeholder="provider default"
-                value={llmSettings.baseUrl}
-                spellCheck={false}
-                autoComplete="off"
-                onChange={(e) => updateLlm({ baseUrl: e.target.value })}
-              />
-            </SettingRow>
 
             {/* Output mode */}
             <SettingRow label="Output mode" description="How the result is delivered">
