@@ -1,6 +1,6 @@
 {
   "name": "maverick-voice",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Voice dictation + voice-driven text editing desktop app",
   "author": "Malhar Ujawane <malhar@mobiiworld.com>",
   "main": "./dist/electron/main.js",
