@@ -111,89 +111,74 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
   const steps: React.ReactNode[] = [
     // ── Step 0: Welcome ──
-    <div key="welcome" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <BrandHero />
-      <h1 className="font-display text-3xl font-extrabold text-mv-text-primary mb-3 tracking-tight">Maverick Voice</h1>
-      <p className="text-mv-text-secondary text-[15px] max-w-md leading-relaxed">
-        Voice-first dictation and voice-driven editing for your whole desktop. Speak anywhere, and your words land at the
-        cursor — no window-switching, no cleanup.
-      </p>
-    </div>,
+    <StepShell
+      key="welcome"
+      icon={<IconBadge>{ICONS.mic}</IconBadge>}
+      title="Maverick Voice"
+      subtitle="Voice-first dictation and voice-driven editing for your whole desktop. Speak anywhere, and your words land at the cursor — no window-switching, no cleanup."
+      subtitleWide
+    />,
 
     // ── Step 1: How it works ──
-    <div key="how" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-2 tracking-tight">How it works</h2>
-      <p className="text-mv-text-secondary text-[14px] mb-8 max-w-sm leading-relaxed">
-        Speak anywhere on your machine — your words land at the cursor.
-      </p>
-      <div className="flex flex-col gap-3 w-full max-w-[400px]">
-        <FeatureCard icon={<MicGlyph />} title="Dictate" description="Tap your dictation key, speak, tap again. Raw text lands exactly where the cursor is." />
-        <FeatureCard icon={<WandGlyph />} title="AI auto-format" description="Optionally let the AI fix grammar, punctuation, and paragraphing as you dictate — without changing what you said. Turn it on anytime in Settings." />
+    <StepShell
+      key="how"
+      icon={<IconBadge>{ICONS.waveform}</IconBadge>}
+      title="How it works"
+      subtitle="Speak anywhere on your machine — your words land at the cursor."
+      bodyWidth="lg"
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <FeatureCard icon={<MicGlyph />} title="Dictate" description="Tap your key, speak, tap again. Raw text lands right at the cursor." />
+        <FeatureCard icon={<WandGlyph />} title="AI auto-format" description="Optionally let AI fix grammar and punctuation — never your meaning." />
       </div>
-    </div>,
+    </StepShell>,
 
     // ── Step 2: Privacy ──
-    <div key="privacy" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <div className="mv-glass-card w-20 h-20 !rounded-mv-xl flex items-center justify-center mb-6">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-mv-text-primary">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <polyline points="9 12 11 14 15 10" />
-        </svg>
-      </div>
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-2 tracking-tight">Your words stay yours</h2>
-      <p className="text-mv-text-secondary text-[14px] mb-8 max-w-sm leading-relaxed">
-        Maverick Voice is local-first. There's no account, no Maverick server, and nothing to sign up for.
-      </p>
-      <div className="flex flex-col gap-2.5 w-full max-w-[420px] text-left">
+    <StepShell
+      key="privacy"
+      icon={<IconBadge>{ICONS.shield}</IconBadge>}
+      title="Your words stay yours"
+      subtitle="Maverick Voice is local-first. There's no account, no Maverick server, and nothing to sign up for."
+    >
+      <div className="flex flex-col gap-2.5 text-left">
         <PrivacyBullet text="Dictation history lives only on this computer, in a local database." />
         <PrivacyBullet text={`Audio is sent only to the provider you configure — Groq for speech-to-text, OpenAI or OpenRouter for transforms.`} />
         <PrivacyBullet text={`API keys are encrypted with ${IS_MAC ? 'the macOS Keychain' : 'Windows DPAPI'} via Electron safeStorage. No accounts, no tracking.`} />
       </div>
-    </div>,
+    </StepShell>,
 
     // ── Step 3: Provider keys ──
-    <div key="keys" className="flex flex-col items-center justify-center text-center animate-fade-up-in w-full">
-      <div className="mv-glass-card w-20 h-20 !rounded-mv-xl flex items-center justify-center mb-6">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-mv-text-primary">
-          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3" />
-        </svg>
-      </div>
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-2 tracking-tight">Add your API keys</h2>
-      <p className="text-mv-text-secondary text-[14px] mb-6 max-w-md leading-relaxed">
-        Maverick Voice runs on your own keys — they stay encrypted on this machine. Add Groq for speech, and OpenAI or
-        OpenRouter for AI transforms.
-      </p>
-      <div className="flex flex-col gap-3 w-full max-w-[460px]">
+    <StepShell
+      key="keys"
+      icon={<IconBadge>{ICONS.key}</IconBadge>}
+      title="Add your API keys"
+      subtitle="Maverick Voice runs on your own keys — they stay encrypted on this machine. Add Groq for speech, and OpenAI or OpenRouter for AI transforms."
+      subtitleWide
+      bodyWidth="md"
+    >
+      <div className="flex flex-col gap-3">
         <OnboardingKeyCard provider="groq" label="Groq" sublabel="Speech-to-text" placeholder="gsk_..." consoleUrl="https://console.groq.com/keys" />
         <OnboardingKeyCard provider="openai" label="OpenAI" sublabel="AI transforms" placeholder="sk-..." consoleUrl="https://platform.openai.com/api-keys" />
         <OnboardingKeyCard provider="openrouter" label="OpenRouter" sublabel="AI transforms (alt)" placeholder="sk-or-..." consoleUrl="https://openrouter.ai/keys" />
       </div>
-      <p className="text-[11px] text-mv-text-muted mt-5 max-w-md">
+      <p className="text-[11px] text-mv-text-muted mt-5">
         Add at least a Groq key for dictation, plus one LLM key for instructions. You can add the rest later in Settings.
       </p>
-    </div>,
+    </StepShell>,
 
     // ── Step 4: Microphone permission ──
-    <div key="mic" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <div className="mv-glass-card w-20 h-20 !rounded-mv-xl flex items-center justify-center mb-6">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-mv-text-primary">
-          <rect x="9" y="1" width="6" height="12" rx="3" />
-          <path d="M5 10a7 7 0 0 0 14 0" />
-          <line x1="12" y1="17" x2="12" y2="21" />
-        </svg>
-      </div>
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-2 tracking-tight">Microphone access</h2>
-      <p className="text-mv-text-secondary text-[14px] mb-2 max-w-sm leading-relaxed">
-        Maverick Voice needs your microphone to hear what you say. Audio is processed for transcription only — never
-        recorded or stored.
-      </p>
-
+    <StepShell
+      key="mic"
+      icon={<IconBadge>{ICONS.mic}</IconBadge>}
+      title="Microphone access"
+      subtitle="Maverick Voice needs your microphone to hear what you say. Audio is processed for transcription only — never recorded or stored."
+    >
       {micGranted ? (
-        <div className="flex flex-col items-center gap-4 mt-4">
+        <div className="flex flex-col items-center gap-4">
           <GrantedPill text="Microphone access granted" />
         </div>
       ) : micStatus === 'denied' || micStatus === 'restricted' ? (
-        <div className="flex flex-col items-center gap-3 mt-4">
+        <div className="flex flex-col items-center gap-3">
           <p className="text-mv-text-muted text-[12px] mb-1 max-w-sm">
             Microphone access is turned off. Open System Settings, find <span className="font-semibold text-mv-text-primary">Maverick Voice</span> under Microphone and toggle it on.
           </p>
@@ -207,32 +192,25 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           </div>
         </div>
       ) : (
-        <button onClick={requestMicPermission} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill mt-4">
+        <button onClick={requestMicPermission} className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill">
           Grant microphone access
         </button>
       )}
-    </div>,
+    </StepShell>,
 
     // ── Step 5: Accessibility permission (macOS only — auto-granted on win32) ──
-    <div key="accessibility" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <div className="mv-glass-card w-20 h-20 !rounded-mv-xl flex items-center justify-center mb-6">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-mv-text-primary">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-        </svg>
-      </div>
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-2 tracking-tight">Accessibility permission</h2>
-      <p className="text-mv-text-secondary text-[14px] mb-2 max-w-sm leading-relaxed">
-        Maverick Voice needs Accessibility access to detect your shortcut keys and paste at the cursor. Without it, nothing
-        happens when you press your key.
-      </p>
-
+    <StepShell
+      key="accessibility"
+      icon={<IconBadge>{ICONS.gear}</IconBadge>}
+      title="Accessibility permission"
+      subtitle="Maverick Voice needs Accessibility access to detect your shortcut keys and paste at the cursor. Without it, nothing happens when you press your key."
+    >
       {accessibilityGranted ? (
-        <div className="flex flex-col items-center gap-4 mt-4">
+        <div className="flex flex-col items-center gap-4">
           <GrantedPill text="Accessibility access granted" />
         </div>
       ) : (
-        <>
+        <div className="flex flex-col items-center">
           <p className="text-mv-text-muted text-[12px] mb-6 max-w-sm">
             Click below, find <span className="font-semibold text-mv-text-primary">Maverick Voice</span> in the list and toggle it on. This screen updates automatically once you do.
           </p>
@@ -244,46 +222,54 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               I've enabled it
             </button>
           </div>
-        </>
-      )}
-    </div>,
-
-    // ── Step 6: Shortcuts (platform-aware) ──
-    <div key="shortcuts" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <h2 className="font-display text-2xl font-extrabold text-mv-text-primary mb-6 tracking-tight">Your shortcut</h2>
-      <div className="flex flex-col gap-3 mb-8 w-full max-w-[400px]">
-        <ShortcutCard keyLabel={dictationKeyLabel(dictationKey)} title="Dictation" description={`Tap ${dictationKeyLabel(dictationKey)} to start, tap again to stop.`} />
-      </div>
-      <div className="mv-glass-card px-5 py-3.5 mb-3 max-w-[400px] text-left">
-        <p className="text-[12px] text-mv-text-secondary leading-relaxed">
-          <span className="font-bold text-mv-text-primary">Pro tip:</span> turn on AI auto-format in Settings to clean up
-          grammar and punctuation as you dictate. Voice editing of selected text is also there when you want it.
-        </p>
-      </div>
-      {IS_MAC && (
-        <div className="mv-glass-card px-5 py-3.5 max-w-[400px] text-left">
-          <p className="text-[12px] text-mv-text-secondary leading-relaxed">
-            <span className="font-bold text-mv-text-primary">One macOS tweak:</span> Fn shows emoji or triggers Apple
-            Dictation by default. Set <span className="font-semibold text-mv-text-primary">Keyboard → "Press 🌐 key to" → Do Nothing</span> to free it.
-          </p>
-          <button onClick={() => window.electronAPI.openKeyboardSettings()} className="btn-glass !px-3.5 !py-1.5 !text-[11px] mt-2.5">
-            Open Keyboard Settings
-          </button>
         </div>
       )}
-    </div>,
+    </StepShell>,
+
+    // ── Step 6: Shortcuts (platform-aware) ──
+    <StepShell
+      key="shortcuts"
+      icon={<IconBadge>{ICONS.keyboard}</IconBadge>}
+      title="Your shortcut"
+      subtitle="One key to dictate anywhere. Tap to start, tap again to send."
+      bodyWidth="lg"
+    >
+      <div className="flex flex-col gap-3">
+        <ShortcutCard keyLabel={dictationKeyLabel(dictationKey)} title="Dictation" description={`Tap ${dictationKeyLabel(dictationKey)} to start, tap again to stop.`} />
+        <div className={`grid gap-3 ${IS_MAC ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <div className="mv-glass-card px-5 py-3.5 text-left">
+            <p className="text-[12px] text-mv-text-secondary leading-relaxed">
+              <span className="font-bold text-mv-text-primary">Pro tip:</span> turn on AI auto-format in Settings to clean up
+              grammar as you dictate. Voice editing of selected text lives there too.
+            </p>
+          </div>
+          {IS_MAC && (
+            <div className="mv-glass-card px-5 py-3.5 text-left">
+              <p className="text-[12px] text-mv-text-secondary leading-relaxed">
+                <span className="font-bold text-mv-text-primary">One macOS tweak:</span> set <span className="font-semibold text-mv-text-primary">Keyboard → "Press 🌐 key to" → Do Nothing</span> to free the Fn key.
+              </p>
+              <button onClick={() => window.electronAPI.openKeyboardSettings()} className="btn-glass !px-3.5 !py-1.5 !text-[11px] mt-2.5">
+                Open Keyboard Settings
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </StepShell>,
 
     // ── Step 7: Ready ──
-    <div key="ready" className="flex flex-col items-center justify-center text-center animate-fade-up-in">
-      <div className="animate-success-pop">
-        <BrandHero />
-      </div>
-      <h2 className="font-display text-3xl font-extrabold text-mv-text-primary mb-3 tracking-tight">You're all set!</h2>
-      <p className="text-mv-text-secondary text-[15px] max-w-sm leading-relaxed">
-        Press <kbd className="kbd-3d">{dictationKeyLabel(dictationKey)}</kbd> anywhere to start dictating. Your voice, your
-        words, everywhere.
-      </p>
-    </div>
+    <StepShell
+      key="ready"
+      icon={<IconBadge className="animate-success-pop">{ICONS.check}</IconBadge>}
+      title="You're all set"
+      subtitle={
+        <>
+          Press <kbd className="kbd-3d">{dictationKeyLabel(dictationKey)}</kbd> anywhere to start dictating. Your voice, your
+          words, everywhere.
+        </>
+      }
+      subtitleWide
+    />
   ]
 
   const isFirstStep = step === 0
@@ -310,9 +296,13 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </span>
       </div>
 
-      {/* Content — fixed-height region; long steps scroll inside it so the
-          footer never moves between steps. */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-10 overflow-y-auto py-6">{steps[step]}</div>
+      {/* Content — fixed-height region, TOP-ANCHORED so the icon slot + title
+          land at the same Y on every step (no vertical-centering jump between
+          icon and icon-less screens). Long steps scroll inside it; the footer
+          never moves. */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-10 py-6">
+        <div className="flex justify-center">{steps[step]}</div>
+      </div>
 
       {/* Persistent footer — identical layout/sizing on every step. Back (ghost)
           left with reserved space (hidden, not removed, on the first step),
@@ -456,17 +446,111 @@ function OnboardingKeyCard({
   )
 }
 
-/* ─── Shared sub-components ─── */
+/* ════════════════════════════════════════════════════════════════════════
+   StepShell — the ONE layout every onboarding step uses, so the icon, title,
+   and subtitle sit at identical Y positions on every screen (no jump between
+   icon and icon-less steps). Body content flows below at a consistent width;
+   the parent content region is top-anchored + scrollable.
+════════════════════════════════════════════════════════════════════════ */
+const BODY_MAX = { sm: 'max-w-[420px]', md: 'max-w-[460px]', lg: 'max-w-[640px]' } as const
 
-function BrandHero() {
+function StepShell({
+  icon,
+  title,
+  subtitle,
+  children,
+  subtitleWide,
+  bodyWidth = 'sm'
+}: {
+  icon: React.ReactNode
+  title: string
+  subtitle?: React.ReactNode
+  children?: React.ReactNode
+  /** Wider subtitle measure (md vs sm) for longer intro copy. */
+  subtitleWide?: boolean
+  /** Body column width: sm (default), md for the key cards, lg for horizontal card rows. */
+  bodyWidth?: keyof typeof BODY_MAX
+}) {
   return (
-    <div className="relative mb-8 inline-flex items-center justify-center w-24 h-24 rounded-mv-xl bg-gradient-to-b from-mv-white-12 to-mv-white-04 border border-mv-border shadow-[0_12px_40px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.2)_inset]">
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-mv-text-primary">
-        <rect x="9" y="2" width="6" height="11" rx="3" />
-        <path d="M5 10a7 7 0 0 0 14 0" />
-        <line x1="12" y1="17" x2="12" y2="21" />
-      </svg>
+    <div className="flex flex-col items-center text-center animate-fade-up-in w-full max-w-[660px]">
+      {/* Constant-height icon slot — reserved identically on every step so the
+          title lands at the same Y whether or not a step has a hero icon. */}
+      <div className="h-[68px] mb-4 flex items-center justify-center shrink-0">{icon}</div>
+      <h2 className="font-display text-[24px] leading-tight font-extrabold text-mv-text-primary mb-2 tracking-tight text-balance">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className={`text-mv-text-secondary text-[13.5px] leading-relaxed text-pretty ${subtitleWide ? 'max-w-md' : 'max-w-sm'} ${children ? 'mb-6' : ''}`}>
+          {subtitle}
+        </p>
+      )}
+      {children && <div className={`w-full ${BODY_MAX[bodyWidth]} mx-auto`}>{children}</div>}
     </div>
+  )
+}
+
+/* Uniform 80×80 glass icon badge — the constant visual anchor at the top of
+   every step. Holds a 30px monochrome glyph from ICONS. */
+function IconBadge({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={`mv-glass-card w-20 h-20 !rounded-mv-xl flex items-center justify-center text-mv-text-primary shadow-[0_12px_40px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.18)_inset] ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+/* Per-step glyphs (30px) — every step gets one so the icon slot is never empty. */
+const ICONS = {
+  mic: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2" width="6" height="11" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  ),
+  waveform: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="10" x2="4" y2="14" />
+      <line x1="8.5" y1="7" x2="8.5" y2="17" />
+      <line x1="13" y1="3" x2="13" y2="21" />
+      <line x1="17.5" y1="7" x2="17.5" y2="17" />
+      <line x1="22" y1="10" x2="22" y2="14" />
+    </svg>
+  ),
+  shield: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  ),
+  key: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3" />
+    </svg>
+  ),
+  gear: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  ),
+  keyboard: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <line x1="6" y1="10" x2="6" y2="10" />
+      <line x1="10" y1="10" x2="10" y2="10" />
+      <line x1="14" y1="10" x2="14" y2="10" />
+      <line x1="18" y1="10" x2="18" y2="10" />
+      <line x1="8" y1="14" x2="16" y2="14" />
+    </svg>
+  ),
+  check: (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="8.5 12 11 14.5 15.5 9.5" />
+    </svg>
   )
 }
 
@@ -483,15 +567,17 @@ function GrantedPill({ text }: { text: string }) {
   )
 }
 
+/* Compact vertical feature card — icon on top so two sit side-by-side in a
+   row without overflowing the short onboarding window. */
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="flex items-start gap-4 mv-glass-card p-4 text-left">
-      <div className="w-11 h-11 rounded-mv-md bg-mv-white-04 border border-mv-border flex items-center justify-center shrink-0 text-mv-text-primary">
+    <div className="flex flex-col items-start gap-2.5 mv-glass-card p-4 text-left h-full">
+      <div className="w-10 h-10 rounded-mv-md bg-mv-white-04 border border-mv-border flex items-center justify-center shrink-0 text-mv-text-primary">
         {icon}
       </div>
       <div>
-        <p className="text-[14px] font-semibold text-mv-text-primary">{title}</p>
-        <p className="text-[12px] text-mv-text-secondary mt-0.5 leading-relaxed">{description}</p>
+        <p className="text-[13.5px] font-semibold text-mv-text-primary">{title}</p>
+        <p className="text-[12px] text-mv-text-secondary mt-1 leading-relaxed">{description}</p>
       </div>
     </div>
   )

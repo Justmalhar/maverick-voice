@@ -1,0 +1,16 @@
+[      36ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/media/797e433ab948586e-s.p.0w5z4e7s8jfe5.woff2:0
+[      37ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2:0
+[      38ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/0tq04ty4142fy.css:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/3n7dm2ojtyzwn.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/turbopack-18qb7clilcvgd.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/0zds_haztaz-5.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/27jktro2p5rq9.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/3-c5bii1rqffh.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/1tgl6yetoac0z.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/3pr_m1_l5oc8n.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/11oof8oxnxiv9.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/1e_yxjc78x1ga.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/05-c3ty_6dwfk.js:0
+[      64ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3517/_next/static/chunks/14mrh2-p_w84d.js:0
+[    3096ms] [WARNING] The resource http://localhost:3517/_next/static/media/caa3a2e1cccd8315-s.p.0wgildi0cnwt9.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3517/:0
+[    3096ms] [WARNING] The resource http://localhost:3517/_next/static/media/797e433ab948586e-s.p.0w5z4e7s8jfe5.woff2 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3517/:0
