@@ -274,7 +274,7 @@ function Home({
       <div className="mb-6">
         <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight">Home</h2>
         <p className="text-[12px] text-mv-text-secondary mt-1.5 leading-relaxed max-w-md">
-          Speak anywhere and your words land at the cursor. Here's your month at a glance.
+          Speak anywhere and your words land at the cursor.
         </p>
       </div>
 
