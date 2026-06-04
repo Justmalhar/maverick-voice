@@ -271,20 +271,20 @@ function Home({
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight">Home</h2>
-        <p className="text-[12px] text-mv-text-secondary mt-1.5 leading-relaxed max-w-md">
+      <div className="mb-4">
+        <h2 className="font-display text-[22px] font-bold text-mv-text-primary tracking-tight">Home</h2>
+        <p className="text-[12px] text-mv-text-secondary mt-1 leading-relaxed max-w-md">
           Speak anywhere and your words land at the cursor.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {/* Usage this month */}
-        <div className="mv-glass-card px-6 py-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-3">This month</p>
+        <div className="mv-glass-card px-5 py-3.5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-2">This month</p>
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
-              <span className="font-display text-[34px] leading-none font-bold text-mv-text-primary tabular-nums">
+              <span className="font-display text-[28px] leading-none font-bold text-mv-text-primary tabular-nums">
                 {monthWords === null ? '—' : monthWords.toLocaleString()}
               </span>
               <span className="text-[12px] text-mv-text-muted ml-2">words dictated</span>
@@ -326,7 +326,7 @@ function Home({
         </div>
 
         {/* Hotkey */}
-        <div className="mv-glass-card px-5 py-4 flex items-center justify-between gap-3">
+        <div className="mv-glass-card px-5 py-3.5 flex items-center justify-between gap-3">
           <div>
             <p className="text-[13px] font-semibold text-mv-text-primary">{ACTIVATION_LABEL[activationMode]}</p>
             <p className="text-[11px] text-mv-text-muted mt-0.5">Your dictation shortcut</p>
@@ -365,7 +365,7 @@ function ToggleRow({
   disabled?: boolean
 }) {
   return (
-    <div className={`flex items-center justify-between gap-4 py-4 ${disabled ? 'opacity-45' : ''}`}>
+    <div className={`flex items-center justify-between gap-4 py-3.5 ${disabled ? 'opacity-45' : ''}`}>
       <div className="min-w-0">
         <p className="text-[13px] font-semibold text-mv-text-primary">{label}</p>
         <p className="text-[11px] text-mv-text-secondary mt-0.5 leading-relaxed">{desc}</p>
@@ -412,7 +412,7 @@ function ProviderRow({
   onClick: () => void
 }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 py-3 text-left transition-colors duration-150 hover:bg-mv-white-04 -mx-2 px-2 rounded-mv-sm">
+    <button onClick={onClick} className="w-full flex items-center gap-3 py-2.5 text-left transition-colors duration-150 hover:bg-mv-white-04 -mx-2 px-2 rounded-mv-sm">
       <span className="flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
         <ProviderGlyph provider={provider} />
       </span>
@@ -466,12 +466,6 @@ function SidebarButton({
           : 'text-mv-text-secondary border border-transparent hover:text-mv-text-primary hover:bg-mv-white-04'
       }`}
     >
-      {/* active rail */}
-      <span
-        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-mv-white transition-all duration-200 ${
-          active ? 'h-5 opacity-90' : 'h-0 opacity-0'
-        }`}
-      />
       <span
         className={`transition-colors duration-150 ${active ? 'text-mv-text-primary' : 'text-mv-text-muted group-hover:text-mv-text-secondary'}`}
       >
