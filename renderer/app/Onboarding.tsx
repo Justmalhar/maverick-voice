@@ -150,7 +150,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       key="keys"
       icon={<IconBadge>{ICONS.key}</IconBadge>}
       title="Add your API keys"
-      subtitle="Maverick Voice runs on your own keys — they stay encrypted on this machine. Add Groq for speech, and OpenAI or OpenRouter for AI transforms."
+      subtitle="Maverick Voice runs on your own keys. Add Groq for speech, and OpenAI or OpenRouter for AI transforms."
       subtitleWide
       bodyWidth="md"
     >
