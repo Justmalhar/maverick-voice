@@ -1,4 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+// Deep-import the MONO sub-component only — the package barrel pulls Avatar/
+// Combine variants that depend on antd, bloating the renderer bundle ~65KB.
+// The Mono component is pure React + SVG (currentColor), strictly monochrome.
+import Groq from '@lobehub/icons/es/Groq/components/Mono'
+import OpenAI from '@lobehub/icons/es/OpenAI/components/Mono'
+import OpenRouter from '@lobehub/icons/es/OpenRouter/components/Mono'
 import type { ProviderId, DictationKey } from '../../shared/types'
 
 interface OnboardingProps {
@@ -333,6 +339,20 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 /* ════════════════════════════════════════════════════════════════════════
    Onboarding per-provider key card — compact set/verify with masked status.
 ════════════════════════════════════════════════════════════════════════ */
+/** Provider brand glyph (lobehub mono base components — currentColor). */
+function ProviderGlyph({ provider }: { provider: ProviderId }) {
+  switch (provider) {
+    case 'groq':
+      return <Groq size={18} />
+    case 'openai':
+      return <OpenAI size={18} />
+    case 'openrouter':
+      return <OpenRouter size={18} />
+    default:
+      return null
+  }
+}
+
 function OnboardingKeyCard({
   provider,
   label,
@@ -389,7 +409,12 @@ function OnboardingKeyCard({
     <div className="mv-glass-card px-4 py-3.5 text-left">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2.5">
-          <span className={`mv-status-dot ${saved ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
+          {/* Provider brand icon (lobehub, mono — forced grayscale to honor the
+              strict B&W system). A tiny status dot badges the saved state. */}
+          <span className="relative flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
+            <ProviderGlyph provider={provider} />
+            <span className={`absolute -top-0.5 -right-0.5 mv-status-dot ${saved ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
+          </span>
           <div className="leading-none">
             <p className="text-[13px] font-semibold text-mv-text-primary">{label}</p>
             <p className="text-[10px] text-mv-text-muted mt-1">{sublabel}</p>
