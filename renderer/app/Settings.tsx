@@ -544,7 +544,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 
       {/* ═══ General ═══ */}
       <Section title="General" icon={<SlidersIcon />}>
-        <SettingRow label="Microphone" description="Your input device">
+        <SettingRow label="Microphone" description="">
           <select className="mv-select min-w-[200px]" value={selectedDevice} onChange={(e) => handleInputDeviceChange(e.target.value)}>
             {audioDevices.map((device) => (
               <option key={device.deviceId} value={device.deviceId}>
@@ -553,7 +553,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
             ))}
           </select>
         </SettingRow>
-        <SettingRow label="Widget position" description="Where the HUD pill appears on screen">
+        <SettingRow label="Widget position" description="">
           <Segmented
             options={[
               { value: 'center', label: 'Top center' },
@@ -563,7 +563,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
             onChange={handleWidgetPositionChange}
           />
         </SettingRow>
-        <SettingRow label="Sound feedback" description="Play sounds on start / stop" last>
+        <SettingRow label="Sound feedback" description="" last>
           <Toggle checked={soundFeedback} onChange={handleSoundFeedbackChange} />
         </SettingRow>
       </Section>
