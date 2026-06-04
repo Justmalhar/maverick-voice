@@ -658,22 +658,17 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           <Toggle checked={autoFormat} onChange={handleAutoFormatChange} />
         </SettingRow>
 
-        {/* Adapt to active app — nested under Auto-Format; only effective when on. */}
-        <div className={`pl-9 pr-5 py-4 border-b border-mv-border ${autoFormat ? '' : 'opacity-50'}`}>
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[13px] font-medium text-mv-text-primary">Adapt to active app</p>
-              <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug max-w-[360px]">
-                Emails get paragraphs, IDE prompts get @file references, chats stay casual.
-              </p>
-            </div>
-            <div className="shrink-0">
-              <Toggle
-                checked={appAwareFormatting}
-                onChange={handleAppAwareFormattingChange}
-                disabled={!autoFormat}
-              />
-            </div>
+        {/* Adapt to active app — only effective when Auto-Format is on (dimmed
+            otherwise). Aligned to the same px-5 grid as every other row. */}
+        <div className={`flex items-center justify-between px-5 py-4 gap-4 border-b border-mv-border ${autoFormat ? '' : 'opacity-50'}`}>
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-mv-text-primary">Adapt to active app</p>
+            <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug">
+              Emails get paragraphs, IDE prompts get @file references, chats stay casual.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <Toggle checked={appAwareFormatting} onChange={handleAppAwareFormattingChange} disabled={!autoFormat} />
           </div>
         </div>
 
