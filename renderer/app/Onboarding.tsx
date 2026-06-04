@@ -275,7 +275,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const primaryLabel = isLastStep ? 'Get started' : 'Continue'
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <div className="titlebar-drag absolute top-0 left-0 right-0 h-9" />
 
       {/* Progress bar */}
@@ -298,7 +298,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           land at the same Y on every step (no vertical-centering jump between
           icon and icon-less screens). Long steps scroll inside it; the footer
           never moves. */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-10 py-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-10 py-6">
         <div className="flex justify-center">{steps[step]}</div>
       </div>
 
