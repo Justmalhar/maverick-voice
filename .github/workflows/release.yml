@@ -33,6 +33,8 @@ jobs:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
         run: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          command -v aws || brew install awscli
           aws s3 sync release/ s3://$R2_BUCKET/releases/ \
             --endpoint-url "$R2_ENDPOINT" \
             --exclude "*" \
