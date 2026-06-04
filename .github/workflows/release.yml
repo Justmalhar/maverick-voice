@@ -1,7 +1,5 @@
 name: Release
 
-# Triggers on version tags: git tag v1.2.3 && git push --follow-tags
-# Or manually via Actions → Run workflow (useful for testing the pipeline).
 on:
   push:
     tags:
@@ -11,7 +9,7 @@ on:
 jobs:
   # ── macOS (arm64 DMG, signed + notarized) ─────────────────────────────
   build-mac:
-    runs-on: macos-14   # arm64 runner — matches our arm64 build target
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -23,17 +21,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Handles keychain creation, certificate import, and partition-list
-      # configuration correctly across all macOS runner versions.
-      - uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.CSC_LINK }}
-          p12-password: ${{ secrets.CSC_KEY_PASSWORD }}
+      # Verify the p12 contains both a certificate AND a private key.
+      # If this prints only "Certificate bag" with no "Key bag", the .p12
+      # was exported without the private key — re-export from Keychain Access
+      # by right-clicking the Developer ID Application certificate (not the
+      # key icon below it) and choosing Export.
+      - name: Verify p12 contains private key
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          echo "$CSC_LINK" | base64 -d > /tmp/check.p12
+          openssl pkcs12 -in /tmp/check.p12 -passin "pass:$CSC_KEY_PASSWORD" -nokeys -noout 2>&1 && echo "✓ Certificate found"
+          openssl pkcs12 -in /tmp/check.p12 -passin "pass:$CSC_KEY_PASSWORD" -nocerts -noout 2>&1 && echo "✓ Private key found"
+          rm /tmp/check.p12
 
       - name: Build, sign + notarize
         run: npm run dist:mac
         env:
-          CSC_NAME: "Malhar Anup Ujawane (R6G234T379)"
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
