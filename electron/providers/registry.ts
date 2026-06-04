@@ -6,6 +6,7 @@
 import type { STTProviderId, LLMProviderId } from '../../shared/types'
 import type { TranscriptionProvider, LLMProvider, ProviderRegistry } from './types'
 import { groqProvider } from './stt/groq'
+import { groqLLMProvider } from './llm/groq'
 import { openaiProvider } from './llm/openai'
 import { openrouterProvider } from './llm/openrouter'
 
@@ -15,6 +16,7 @@ const llmProviders = new Map<LLMProviderId, LLMProvider>()
 
 // Register providers (the single point of extension).
 sttProviders.set(groqProvider.id, groqProvider)
+llmProviders.set(groqLLMProvider.id, groqLLMProvider)
 llmProviders.set(openaiProvider.id, openaiProvider)
 llmProviders.set(openrouterProvider.id, openrouterProvider)
 

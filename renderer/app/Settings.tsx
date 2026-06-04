@@ -37,6 +37,17 @@ const STT_LANGUAGES: { value: STTSettings['language']; label: string }[] = [
   { value: 'ar', label: 'Arabic' }
 ]
 
+// Groq LLM chat models for the dropdown. 'groq' is shared with STT, so
+// listModels('groq') returns the Whisper models — these LLM models are kept as
+// a static catalogue here (the authoritative runtime list + pricing live in
+// electron/providers/llm/groq.ts and electron/config.ts).
+const GROQ_LLM_MODELS: ProviderModel[] = [
+  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B (versatile)' },
+  { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (instant)' },
+  { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B' },
+  { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B' }
+]
+
 // Platform-aware dictation key choices.
 const DICTATION_KEY_OPTIONS: { value: DictationKey; label: string }[] = IS_MAC
   ? [
@@ -377,12 +388,13 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   function handleLlmProviderChange(provider: LLMProviderId) {
     // Switching provider resets the model to that provider's first advertised
     // model so the dropdown never points at a foreign model id.
-    const models = provider === 'openai' ? openaiModels : openrouterModels
+    const models = provider === 'openai' ? openaiModels : provider === 'openrouter' ? openrouterModels : GROQ_LLM_MODELS
     const model = models[0]?.id || llmSettings.model
     updateLlm({ provider, model })
   }
 
-  const llmModels = llmSettings.provider === 'openai' ? openaiModels : openrouterModels
+  const llmModels =
+    llmSettings.provider === 'openai' ? openaiModels : llmSettings.provider === 'openrouter' ? openrouterModels : GROQ_LLM_MODELS
   const activationBlurb = ACTIVATION_MODES.find((a) => a.value === activationMode)?.blurb
 
   // Dictation picker derived state.
@@ -531,6 +543,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           <FieldRow label="LLM provider" hint="Used for auto-format and instruction edits.">
             <Segmented
               options={[
+                { value: 'groq', label: 'Groq' },
                 { value: 'openai', label: 'OpenAI' },
                 { value: 'openrouter', label: 'OpenRouter' }
               ]}

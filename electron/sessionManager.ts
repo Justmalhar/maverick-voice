@@ -232,7 +232,7 @@ class SessionManager {
 
   // Provider runtime settings (restored from electron-store by main.ts).
   private sttSettings: STTSettings = { provider: 'groq', model: 'whisper-large-v3-turbo', language: 'en' }
-  private llmSettings: LLMSettings = { provider: 'openai', model: 'gpt-4o-mini', baseUrl: '' }
+  private llmSettings: LLMSettings = { provider: 'groq', model: 'llama-3.3-70b-versatile', baseUrl: '' }
 
   // ─── Feature delta: AI auto-format + text-replacement pipeline ───
   // All OPT-IN / empty by default; pushed in by main.ts restoreSettings + IPC.

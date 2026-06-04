@@ -74,6 +74,12 @@ export const STT_PRICING: Record<string, ModelPricing> = {
 // OpenAI + OpenRouter LLM rates (USD per 1M tokens). OpenRouter slugs are keyed
 // separately because the provider records the exact slug it sent.
 export const LLM_PRICING: Record<string, ModelPricing> = {
+  // ── Groq production chat models (console.groq.com/docs/models, per 1M tokens) ──
+  'llama-3.3-70b-versatile': { perMInputTokens: 0.59, perMOutputTokens: 0.79 },
+  'llama-3.1-8b-instant': { perMInputTokens: 0.05, perMOutputTokens: 0.08 },
+  'openai/gpt-oss-120b': { perMInputTokens: 0.15, perMOutputTokens: 0.6 },
+  'openai/gpt-oss-20b': { perMInputTokens: 0.075, perMOutputTokens: 0.3 },
+
   // ── OpenAI ──
   'gpt-4o-mini': { perMInputTokens: 0.15, perMOutputTokens: 0.6 },
   'gpt-4o': { perMInputTokens: 2.5, perMOutputTokens: 10.0 },

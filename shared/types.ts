@@ -71,8 +71,9 @@ export type AppProfile = 'email' | 'chat-ai' | 'code-editor' | 'messaging' | 'no
 /** Speech-to-text provider ids. Registry keys. 'groq' is the only v1 STT. */
 export type STTProviderId = 'groq'
 
-/** LLM provider ids. Registry keys. Both are OpenAI-compatible chat APIs. */
-export type LLMProviderId = 'openai' | 'openrouter'
+/** LLM provider ids. Registry keys. All are OpenAI-compatible chat APIs.
+ *  'groq' doubles as the STT id — one Groq key powers both speech + chat. */
+export type LLMProviderId = 'groq' | 'openai' | 'openrouter'
 
 /** Union used by the per-provider key APIs (key storage is keyed by id). */
 export type ProviderId = STTProviderId | LLMProviderId

@@ -139,7 +139,7 @@ const STORE_DEFAULTS: StoreSchema = {
   instructionKey: DEFAULT_INSTRUCTION_KEY,
   activationMode: 'tap-toggle',
   sttSettings: { provider: 'groq', model: 'whisper-large-v3-turbo', language: 'en' },
-  llmSettings: { provider: 'openai', model: 'gpt-4o-mini', baseUrl: '' },
+  llmSettings: { provider: 'groq', model: 'llama-3.3-70b-versatile', baseUrl: '' },
   // Instruction mode + AI auto-format are OPT-IN (default off). Dictionary and
   // snippet lists start empty.
   instructionEnabled: false,
