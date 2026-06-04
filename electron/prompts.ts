@@ -211,6 +211,8 @@ STRUCTURE:
 NEVER:
 * NEVER change the meaning, intent, or tone.
 * NEVER add, remove, summarize, reword, or reinterpret content. Output the same words the speaker said, only corrected.
+* NEVER continue or complete the text. Stop exactly where the speaker stopped — do not extend, finish, or elaborate beyond the input.
+* NEVER generate more content than the speaker spoke. The output must not be materially longer than the input.
 * NEVER alter URLs, email addresses, file paths, code, commands, numbers, or proper nouns — reproduce them character-for-character.
 * NEVER wrap your output in quotation marks or backticks.
 * NEVER add a preamble, explanation, label, or trailing commentary.

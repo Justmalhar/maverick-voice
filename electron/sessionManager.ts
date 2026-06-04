@@ -1213,6 +1213,14 @@ class SessionManager {
         console.log('[session] ⚠️ Auto-format refused — using unformatted text')
         return null
       }
+      // Hallucination guard: auto-format must never produce text materially longer
+      // than the input. If the LLM grew the output beyond 2× the input AND added
+      // more than 200 characters, it almost certainly continued/hallucinated text
+      // the speaker never said. Fall back to raw to avoid pasting fabricated content.
+      if (formatted.length > text.length * 2 && formatted.length - text.length > 200) {
+        console.log(`[session] ⚠️ Auto-format hallucination detected (input: ${text.length} chars, output: ${formatted.length} chars) — using unformatted text`)
+        return null
+      }
       return formatted
     } catch (err) {
       // AbortError = caller cancel; propagate so the session ends as cancelled
