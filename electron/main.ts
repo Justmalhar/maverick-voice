@@ -7,7 +7,7 @@
 // manages the Escape-key ownership machine + session persistence.
 //
 // Settings live in electron-store. Provider keys live in keyStore (safeStorage).
-// There is NO remote backend, NO auth/deep-link, NO auto-updater, NO local
+// There is NO remote backend, NO auth/deep-link, NO local
 // whisper/llama — those were stripped from the reference unmute port.
 // ════════════════════════════════════════════════════════════════════════
 
@@ -76,6 +76,7 @@ import {
   getTranscriptionProvider,
   getLLMProvider,
 } from './providers/registry'
+import { initAutoUpdater } from './updater'
 
 // ════════════════════════════════════════════════════════════════════════
 // Storage folder — PIN to a stable slug.
@@ -900,6 +901,7 @@ app.whenReady().then(() => {
   createMainWindow()
   createWidgetWindow()
   createTray()
+  initAutoUpdater()
 
   initErrorLogger(() => getMainWindow())
 

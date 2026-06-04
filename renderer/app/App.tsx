@@ -92,7 +92,7 @@ export default function App() {
       <div className="titlebar-drag absolute top-0 left-0 right-0 h-9 z-30" />
 
       {/* ─── Glass sidebar ─── */}
-      <nav className="titlebar-drag w-[232px] min-w-[232px] h-full pt-12 px-3 pb-4 flex flex-col border-r border-mv-border bg-mv-glass-panel backdrop-blur-2xl">
+      <nav className="titlebar-drag w-[232px] min-w-[232px] h-full pt-12 px-3 pb-4 flex flex-col border-r border-mv-border" style={{ backgroundColor: '#0a0a0a' }}>
         {/* Brand wordmark */}
         <div className="titlebar-no-drag px-2 mb-5 pb-5 border-b border-mv-border">
           <div className="flex items-center gap-2.5">

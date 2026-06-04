@@ -34,59 +34,191 @@ interface ProfileRule {
  * THE mapping table. Add a new app by appending one row here. Identifiers are
  * stored lowercase; detectProfile lowercases its inputs before comparing.
  * Anything not matched (browsers included) falls through to 'default'.
+ *
+ * Entries are grouped by platform (macOS bundle id → Windows .exe → Linux
+ * process name) for readability. All stored lowercase.
  */
 const PROFILE_TABLE: Record<Exclude<AppProfile, 'default'>, ProfileRule[]> = {
   email: [
+    // macOS
     { id: 'com.apple.mail', kind: 'exact' },
     { id: 'com.microsoft.outlook', kind: 'exact' },
-    { id: 'com.readdle.smartemail', kind: 'exact' },
+    { id: 'com.readdle.smartemail', kind: 'exact' },         // Spark (Readdle)
+    { id: 'com.sparkmailapp.spark-desktop', kind: 'exact' }, // Spark Desktop 3.x
     { id: 'com.superhuman.electron', kind: 'exact' },
     { id: 'com.missiveapp.missive', kind: 'exact' },
+    { id: 'it.bloop.airmail2', kind: 'exact' },              // Airmail 5
+    { id: 'com.mimestream.mimestream', kind: 'exact' },      // Mimestream (Gmail-native)
+    { id: 'com.hey.hey', kind: 'exact' },                    // HEY
+    { id: 'com.postbox.postboxapp', kind: 'exact' },
+    { id: 'org.mozilla.thunderbird', kind: 'exact' },
+    // Windows
     { id: 'olk.exe', kind: 'exact' },
-    { id: 'outlook.exe', kind: 'exact' }
+    { id: 'outlook.exe', kind: 'exact' },
+    { id: 'thunderbird.exe', kind: 'exact' },
+    { id: 'postbox.exe', kind: 'exact' },
+    { id: 'hiri.exe', kind: 'exact' },
+    // Linux
+    { id: 'thunderbird', kind: 'exact' },
+    { id: 'evolution', kind: 'exact' },
+    { id: 'geary', kind: 'exact' },
+    { id: 'kmail', kind: 'exact' },
+    { id: 'claws-mail', kind: 'exact' }
   ],
   'chat-ai': [
+    // macOS
     { id: 'com.openai.chat', kind: 'exact' },
     { id: 'com.anthropic.claudefordesktop', kind: 'exact' },
     { id: 'ai.perplexity.mac', kind: 'exact' },
+    { id: 'com.poe.poe', kind: 'exact' },                    // Poe
+    { id: 'com.google.gemini', kind: 'exact' },              // Gemini desktop
+    { id: 'com.mistral.lechat', kind: 'exact' },             // Mistral Le Chat
+    // Windows
     { id: 'chatgpt.exe', kind: 'exact' },
-    { id: 'claude.exe', kind: 'exact' }
+    { id: 'claude.exe', kind: 'exact' },
+    { id: 'perplexity.exe', kind: 'exact' },
+    { id: 'poe.exe', kind: 'exact' },
+    { id: 'gemini.exe', kind: 'exact' },
+    // Linux (most use web; cover Electron wrappers by name)
+    { id: 'chatgpt', kind: 'exact' },
+    { id: 'claude', kind: 'exact' }
   ],
   'code-editor': [
+    // macOS
     { id: 'com.microsoft.vscode', kind: 'exact' },
     { id: 'com.todesktop.230313mzl4w4u92', kind: 'exact' }, // Cursor
-    { id: 'com.google.antigravity', kind: 'exact' },
+    { id: 'com.todesktop.', kind: 'prefix' },                // other Todesktop-wrapped editors
+    { id: 'com.google.antigravity', kind: 'exact' },         // Project IDX
     { id: 'dev.zed.zed', kind: 'exact' },
     { id: 'com.exafunction.windsurf', kind: 'exact' },
-    { id: 'com.jetbrains.', kind: 'prefix' }, // IntelliJ/WebStorm/PyCharm/etc.
+    { id: 'com.jetbrains.', kind: 'prefix' },                // IntelliJ/WebStorm/PyCharm/GoLand/Rider/…
     { id: 'com.sublimetext.4', kind: 'exact' },
+    { id: 'com.sublimetext.3', kind: 'exact' },
+    { id: 'com.apple.dt.xcode', kind: 'exact' },             // Xcode
+    { id: 'com.panic.nova', kind: 'exact' },                 // Nova (macOS-only)
+    { id: 'org.gnu.emacs', kind: 'exact' },
+    { id: 'com.bbedit.bbedit', kind: 'exact' },              // BBEdit
+    { id: 'com.github.atom', kind: 'exact' },
+    { id: 'dev.warp.warp', kind: 'exact' },                  // Warp terminal
+    { id: 'com.googlecode.iterm2', kind: 'exact' },          // iTerm2
+    { id: 'com.apple.terminal', kind: 'exact' },             // macOS Terminal
+    // Windows
     { id: 'code.exe', kind: 'exact' },
     { id: 'cursor.exe', kind: 'exact' },
     { id: 'antigravity.exe', kind: 'exact' },
     { id: 'windsurf.exe', kind: 'exact' },
-    { id: 'idea64.exe', kind: 'exact' }
+    { id: 'idea64.exe', kind: 'exact' },
+    { id: 'webstorm64.exe', kind: 'exact' },
+    { id: 'pycharm64.exe', kind: 'exact' },
+    { id: 'goland64.exe', kind: 'exact' },
+    { id: 'clion64.exe', kind: 'exact' },
+    { id: 'rider64.exe', kind: 'exact' },
+    { id: 'fleet64.exe', kind: 'exact' },                    // JetBrains Fleet
+    { id: 'devenv.exe', kind: 'exact' },                     // Visual Studio
+    { id: 'sublime_text.exe', kind: 'exact' },
+    { id: 'notepad++.exe', kind: 'exact' },
+    { id: 'atom.exe', kind: 'exact' },
+    { id: 'zed.exe', kind: 'exact' },
+    { id: 'wt.exe', kind: 'exact' },                         // Windows Terminal
+    { id: 'powershell.exe', kind: 'exact' },
+    { id: 'pwsh.exe', kind: 'exact' },                       // PowerShell Core
+    // Linux
+    { id: 'code', kind: 'exact' },                           // VS Code
+    { id: 'cursor', kind: 'exact' },
+    { id: 'zed', kind: 'exact' },
+    { id: 'subl', kind: 'exact' },                           // Sublime Text
+    { id: 'atom', kind: 'exact' },
+    { id: 'emacs', kind: 'exact' },
+    { id: 'nvim', kind: 'exact' },
+    { id: 'vim', kind: 'exact' },
+    { id: 'kate', kind: 'exact' },                           // KDE Advanced Text Editor
+    { id: 'gnome-terminal', kind: 'exact' },
+    { id: 'konsole', kind: 'exact' },
+    { id: 'kitty', kind: 'exact' },
+    { id: 'alacritty', kind: 'exact' },
+    { id: 'warp', kind: 'exact' }
   ],
   messaging: [
+    // macOS
     { id: 'com.tinyspeck.slackmacgap', kind: 'exact' },
     { id: 'com.hnc.discord', kind: 'exact' },
     { id: 'net.whatsapp.whatsapp', kind: 'exact' },
     { id: 'ru.keepcoder.telegram', kind: 'exact' },
     { id: 'com.microsoft.teams2', kind: 'exact' },
-    { id: 'com.apple.mobilesms', kind: 'exact' },
+    { id: 'com.microsoft.teams', kind: 'exact' },
+    { id: 'com.apple.mobilesms', kind: 'exact' },            // Messages
+    { id: 'com.facebook.archon', kind: 'exact' },            // Messenger for Mac
+    { id: 'com.skype.skype', kind: 'exact' },
+    { id: 'jp.naver.line.mac', kind: 'exact' },              // LINE
+    { id: 'org.whispersystems.signal-desktop', kind: 'exact' },
+    { id: 'com.zoom.us', kind: 'exact' },
+    { id: 'com.lark.electronapp', kind: 'exact' },           // Lark / Feishu
+    { id: 'com.viber.desktop', kind: 'exact' },
+    { id: 'com.google.chat', kind: 'exact' },                // Google Chat
+    { id: 'com.rocketchat.rocketdesktop', kind: 'exact' },   // Rocket.Chat
+    // Windows
     { id: 'slack.exe', kind: 'exact' },
     { id: 'discord.exe', kind: 'exact' },
     { id: 'teams.exe', kind: 'exact' },
     { id: 'whatsapp.exe', kind: 'exact' },
-    { id: 'telegram.exe', kind: 'exact' }
+    { id: 'telegram.exe', kind: 'exact' },
+    { id: 'signal.exe', kind: 'exact' },
+    { id: 'messenger.exe', kind: 'exact' },
+    { id: 'skype.exe', kind: 'exact' },
+    { id: 'line.exe', kind: 'exact' },
+    { id: 'zoom.exe', kind: 'exact' },
+    { id: 'viber.exe', kind: 'exact' },
+    { id: 'googlechat.exe', kind: 'exact' },
+    // Linux
+    { id: 'slack', kind: 'exact' },
+    { id: 'discord', kind: 'exact' },
+    { id: 'telegram-desktop', kind: 'exact' },
+    { id: 'signal-desktop', kind: 'exact' },
+    { id: 'teams', kind: 'exact' },
+    { id: 'teams-for-linux', kind: 'exact' },
+    { id: 'skypeforlinux', kind: 'exact' },
+    { id: 'element-desktop', kind: 'exact' },                // Matrix/Element
+    { id: 'zoom', kind: 'exact' }
   ],
   notes: [
+    // macOS
     { id: 'notion.id', kind: 'exact' },
     { id: 'md.obsidian', kind: 'exact' },
     { id: 'com.apple.notes', kind: 'exact' },
     { id: 'net.shinyfrog.bear', kind: 'exact' },
-    { id: 'com.lukilabs.lukiapp', kind: 'exact' }, // Craft
+    { id: 'com.lukilabs.lukiapp', kind: 'exact' },           // Craft
+    { id: 'com.evernote.evernote', kind: 'exact' },
+    { id: 'com.microsoft.onenote', kind: 'exact' },
+    { id: 'app.simplenote.simplenote', kind: 'exact' },
+    { id: 'com.soulmen.ulysses3', kind: 'exact' },           // Ulysses
+    { id: 'com.logseq.logseq', kind: 'exact' },
+    { id: 'com.dayoneapp.dayone', kind: 'exact' },
+    { id: 'com.roamresearch.app', kind: 'exact' },           // Roam Research
+    { id: 'app.inkdrop.inkdrop', kind: 'exact' },
+    { id: 'com.omnigroup.omnioutliner5', kind: 'exact' },
+    { id: 'com.microsoft.word', kind: 'exact' },             // Word (document editing)
+    { id: 'com.apple.iwork.pages', kind: 'exact' },          // Pages
+    // Windows
     { id: 'notion.exe', kind: 'exact' },
-    { id: 'obsidian.exe', kind: 'exact' }
+    { id: 'obsidian.exe', kind: 'exact' },
+    { id: 'onenote.exe', kind: 'exact' },
+    { id: 'evernote.exe', kind: 'exact' },
+    { id: 'logseq.exe', kind: 'exact' },
+    { id: 'joplin.exe', kind: 'exact' },
+    { id: 'typora.exe', kind: 'exact' },
+    { id: 'marktext.exe', kind: 'exact' },
+    { id: 'simplenote.exe', kind: 'exact' },
+    { id: 'winword.exe', kind: 'exact' },                    // Microsoft Word
+    // Linux
+    { id: 'obsidian', kind: 'exact' },
+    { id: 'logseq', kind: 'exact' },
+    { id: 'joplin', kind: 'exact' },
+    { id: 'zettlr', kind: 'exact' },
+    { id: 'marktext', kind: 'exact' },
+    { id: 'typora', kind: 'exact' },
+    { id: 'cherrytree', kind: 'exact' },
+    { id: 'vnote', kind: 'exact' },
+    { id: 'notion', kind: 'exact' }
   ]
 }
 

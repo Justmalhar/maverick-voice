@@ -11,8 +11,6 @@ interface WidgetProps {
   errorMessage?: string
   showDiscardHint?: boolean
   engineNotice?: string | null
-  /** Frontmost-app name for the dictation chip ("Listening · Mail"); null hides it. */
-  appName?: string | null
   onCancel: () => void
   onStop: () => void
   onUndo: () => void
@@ -46,7 +44,6 @@ export default function Widget({
   errorMessage,
   showDiscardHint = false,
   engineNotice = null,
-  appName = null,
   onStop,
   onUndo
 }: WidgetProps) {
@@ -102,8 +99,6 @@ export default function Widget({
   const isNearLimit = isRecording && timeRemaining <= WARN_THRESHOLD
 
   const modeLabel = isDictation ? 'Listening' : 'Instructing'
-  // App chip — dictation only, truncated >18 chars, hidden when absent.
-  const appChip = isDictation && appName ? (appName.length > 18 ? appName.slice(0, 18) + '…' : appName) : null
   const recordGlowClass = isDictation ? 'animate-radiate-dim' : 'animate-radiate-bright'
   // Dictation dot dim, instruction dot bright (white-alpha intensities only).
   const dotOpacity = isDictation ? 0.55 : 0.95
@@ -123,12 +118,6 @@ export default function Widget({
         <div className={`mv-glass-widget mv-pill ${recordGlowClass}`} data-mode={isInstruction ? 'instruction' : 'dictation'}>
           <span className="mv-pill-dot animate-dot-pulse" style={{ opacity: dotOpacity }} />
           <span className="mv-pill-label">{modeLabel}</span>
-          {appChip && (
-            <span className="mv-pill-app-chip" title={appName ?? undefined}>
-              <span className="mv-pill-app-sep" aria-hidden="true">·</span>
-              {appChip}
-            </span>
-          )}
           <span className="mv-pill-wave">
             <Waveform analyserNode={analyserNode} color={waveColor} width={84} height={22} />
           </span>
@@ -288,21 +277,6 @@ const mvWidgetCss = `
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--mv-text-primary);
-}
-
-/* app chip — "· Mail" next to the mode label (dictation only, white-alpha). */
-.mv-pill-app-chip {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--mv-text-muted);
-  white-space: nowrap;
-}
-.mv-pill-app-sep {
-  color: var(--mv-white-24);
 }
 
 /* live waveform slot */

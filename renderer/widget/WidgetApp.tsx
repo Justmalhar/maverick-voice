@@ -58,22 +58,14 @@ export default function WidgetApp() {
   const [errorMessage, setErrorMessage] = useState('')
   const [showDiscardHint, setShowDiscardHint] = useState(false)
   const [engineNotice, setEngineNotice] = useState<string | null>(null)
-  // App chip shown next to the mode label during dictation ("Listening · Mail").
-  // Carried in the extended RECORDING_START payload; absent for instruction /
-  // chained flows or when detection is unresolved/disabled.
-  const [appName, setAppName] = useState<string | null>(null)
   const { analyserNode, maxDurationSeconds, startRecording, stopRecording } = useAudioRecorder()
 
   // Track auto-hide timer so it can be cancelled when a new recording starts
   const autoHideRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Track the sessionId of the in-flight recording. captureFrontmostApp()
-  // re-emits RECORDING_START with the SAME sessionId once front-app detection
-  // resolves to a non-default profile (see sessionManager.captureFrontmostApp).
-  // That re-send is a metadata-only chip update — it must NOT restart the
-  // recorder (which would flush the partial first fragment and drop the opening
-  // ~0.8s of dictation audio). We dedup on this ref to treat the re-send as a
-  // chip/appName update only.
+  // Dedup RECORDING_START re-sends: captureFrontmostApp() re-emits the same
+  // sessionId once detection resolves. Guard prevents restarting the recorder
+  // (which would flush the partial first fragment and drop opening audio).
   const activeSessionIdRef = useRef<string | null>(null)
 
   const clearAutoHide = useCallback(() => {
@@ -133,18 +125,10 @@ export default function WidgetApp() {
         /* ignore — default is system default */
       })
 
-    api.onRecordingStart(async (mode, sessionId, appName?: string, _profile?: AppProfile) => {
-      // Re-entry guard: a RECORDING_START whose sessionId matches the in-flight
-      // recording is the captureFrontmostApp() metadata re-send (front-app
-      // detection resolved to a non-default profile). Treat it as a chip update
-      // ONLY — never replay the start sequence. Restarting the recorder would
-      // flush the partial first fragment and drop the opening dictation audio,
-      // and would emit a spurious second start chime.
-      if (sessionId && activeSessionIdRef.current === sessionId) {
-        // App chip is dictation-only; trim falsy to null.
-        setAppName(mode === 'dictation' && appName ? appName : null)
-        return
-      }
+    api.onRecordingStart(async (mode, sessionId, _appName?: string, _profile?: AppProfile) => {
+      // Re-entry guard: same sessionId = captureFrontmostApp() metadata re-send.
+      // Skip to avoid restarting the recorder and dropping opening audio.
+      if (sessionId && activeSessionIdRef.current === sessionId) return
 
       // Cancel any pending auto-hide from a previous session
       clearAutoHide()
@@ -153,9 +137,6 @@ export default function WidgetApp() {
 
       playClickSound('start')
       setEngineNotice(null)
-      // App chip is dictation-only; main omits it for instruction/chained flows
-      // and when detection is unresolved/disabled. Trim falsy to null.
-      setAppName(mode === 'dictation' && appName ? appName : null)
       setState(mode === 'dictation' ? 'dictation-active' : 'instruction-active')
       // Refresh the chosen input device so a Settings change applies without a
       // widget restart. Empty/unknown id => system default (pass undefined).
@@ -289,7 +270,6 @@ export default function WidgetApp() {
         errorMessage={errorMessage}
         showDiscardHint={showDiscardHint}
         engineNotice={engineNotice}
-        appName={appName}
         onCancel={handleCancel}
         onStop={handleStop}
         onUndo={handleUndo}

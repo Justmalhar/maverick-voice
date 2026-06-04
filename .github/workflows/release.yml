@@ -1,0 +1,82 @@
+name: Release
+
+# Triggers on version tags: git tag v1.2.3 && git push --follow-tags
+# Or manually via Actions → Run workflow (useful for testing the pipeline).
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  # ── macOS (arm64 DMG) ──────────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-14   # arm64 runner — matches our arm64 build target
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build + package (unsigned)
+        run: npm run dist:mac
+        env:
+          # Skip code signing in CI. Distribute a signed build manually for
+          # production releases by providing CSC_LINK + CSC_KEY_PASSWORD secrets.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload artifacts to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          # Upload DMG, blockmap, and latest-mac.yml to the releases/ prefix.
+          aws s3 sync release/ s3://$R2_BUCKET/releases/ \
+            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \
+            --exclude "*" \
+            --include "*.dmg" \
+            --include "*.dmg.blockmap" \
+            --include "latest-mac.yml" \
+            --no-progress
+
+  # ── Windows (x64 NSIS installer) ──────────────────────────────────────
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build + package
+        run: npm run dist:win
+
+      - name: Upload artifacts to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+        shell: bash
+        run: |
+          aws s3 sync release/ s3://$R2_BUCKET/releases/ \
+            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \
+            --exclude "*" \
+            --include "*.exe" \
+            --include "*.exe.blockmap" \
+            --include "latest.yml" \
+            --no-progress

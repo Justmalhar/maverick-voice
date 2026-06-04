@@ -12,8 +12,9 @@
      Gray-alpha  : same hexes + '99' suffix (60% opacity).
 
    DEPTH is built from the grays — NOT from pure #000:
-     • DARK  : page = Charcoal #1A1A1A; raised glass = Onyx #262626 / Jet #333333;
-               text = White / Platinum / Slate (high legibility, ≥4.5:1 / ≥3:1).
+     • DARK  : page = #0a0a0a (logo-matched deep black); raised glass = Onyx
+               #262626 / Jet #333333; text = White / Platinum / Slate
+               (high legibility, ≥4.5:1 / ≥3:1).
      • LIGHT : page = white / Platinum-tinted #F4F4F5; surfaces = translucent
                white panels w/ subtle dark borders + soft shadows; text =
                Charcoal / Dim Gray / Granite; 3D buttons invert (light face,
@@ -80,29 +81,29 @@
   --mv-shade-72: rgba(0, 0, 0, 0.72);
 
   /* ─── App / window backgrounds ─── */
-  /* The page is Charcoal (NOT pure black) so glass cards lift off it. */
-  --mv-bg: #1a1a1a;
-  --mv-bg-deep: #121212; /* slightly deeper than charcoal for ambient base */
+  /* Pure black matching the logo icon background and website dark mode. */
+  --mv-bg: #000000;
+  --mv-bg-deep: #000000;
 
   /* ─── Glass surface materials ─── */
   /* Widget HUD pill — DARK glass. Forced-dark root keeps this dark in light mode. */
-  --mv-glass-widget-bg: rgba(20, 20, 20, 0.82);
-  /* Dashboard cards / panels — Onyx-toned translucent glass, clearly above page. */
-  --mv-glass-panel-bg: rgba(38, 38, 38, 0.78);
-  /* Raised inner surface (segmented tracks, inset rows) — Jet. */
-  --mv-surface-raised: rgba(51, 51, 51, 0.85);
-  --mv-surface-hover: rgba(64, 64, 64, 0.9);
-  /* Solid Onyx fill for opaque controls (inputs, select, segment track). */
-  --mv-surface-solid: #262626;
-  --mv-surface-solid-raised: #333333;
+  --mv-glass-widget-bg: rgba(12, 12, 12, 0.88);
+  /* Dashboard cards / panels — very dark glass, just barely above pure black. */
+  --mv-glass-panel-bg: rgba(16, 16, 16, 0.94);
+  /* Raised inner surface (segmented tracks, inset rows). */
+  --mv-surface-raised: rgba(36, 36, 36, 0.88);
+  --mv-surface-hover: rgba(48, 48, 48, 0.92);
+  /* Solid fill for opaque controls (inputs, select, segment track). */
+  --mv-surface-solid: #141414;
+  --mv-surface-solid-raised: #1e1e1e;
 
   /* Backdrop-filter recipes (the load-bearing glass blur). */
   --mv-blur-widget: blur(40px) saturate(180%);
   --mv-blur-panel: blur(60px) saturate(180%);
 
   /* Borders / edge glow — from Jet/Gunmetal alpha + faint white inner edge. */
-  --mv-border: rgba(255, 255, 255, 0.12);
-  --mv-border-strong: rgba(255, 255, 255, 0.18);
+  --mv-border: rgba(255, 255, 255, 0.10);
+  --mv-border-strong: rgba(255, 255, 255, 0.16);
   --mv-border-focus: rgba(255, 255, 255, 0.55);
   --mv-edge-glow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
 
@@ -137,11 +138,11 @@
   --mv-knob-on-bottom: #0d0d0d;
 
   /* ─── Shadows (depth) ─── */
-  --mv-shadow-card-drop: 0 16px 48px rgba(0, 0, 0, 0.5);
-  --mv-shadow-card-inset: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-  --mv-shadow-btn-drop: rgba(0, 0, 0, 0.5);
-  --mv-shadow-inset-track: rgba(0, 0, 0, 0.45);
-  --mv-shadow-input-inset: rgba(255, 255, 255, 0.05);
+  --mv-shadow-card-drop: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --mv-shadow-card-inset: 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  --mv-shadow-btn-drop: rgba(0, 0, 0, 0.6);
+  --mv-shadow-inset-track: rgba(0, 0, 0, 0.55);
+  --mv-shadow-input-inset: rgba(255, 255, 255, 0.04);
 
   /* Semantic = grayscale intensities (NO hues). success kept near-white. */
   --mv-success: #ffffff;
@@ -159,13 +160,13 @@
   /* Status-dot glow. */
   --mv-dot-glow: rgba(255, 255, 255, 0.5);
 
-  /* Ambient body glow (light wells over charcoal). */
-  --mv-glow-a: rgba(255, 255, 255, 0.06);
-  --mv-glow-a-mid: rgba(255, 255, 255, 0.03);
-  --mv-glow-a-far: rgba(255, 255, 255, 0.012);
-  --mv-glow-b: rgba(255, 255, 255, 0.045);
-  --mv-glow-b-mid: rgba(255, 255, 255, 0.022);
-  --mv-glow-b-far: rgba(255, 255, 255, 0.008);
+  /* Ambient body glow (light wells over deep black). */
+  --mv-glow-a: rgba(255, 255, 255, 0.055);
+  --mv-glow-a-mid: rgba(255, 255, 255, 0.025);
+  --mv-glow-a-far: rgba(255, 255, 255, 0.01);
+  --mv-glow-b: rgba(255, 255, 255, 0.04);
+  --mv-glow-b-mid: rgba(255, 255, 255, 0.018);
+  --mv-glow-b-far: rgba(255, 255, 255, 0.006);
   --mv-glow-fade: rgba(255, 255, 255, 0);
 }
 
