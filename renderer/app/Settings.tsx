@@ -14,8 +14,7 @@ import type {
   LLMSettings,
   LLMProviderId,
   ProviderId,
-  ProviderModel,
-  UsageSummary
+  ProviderModel
 } from '../../shared/types'
 
 // ─── Platform detection (renderer can't import process.platform) ───
@@ -248,18 +247,7 @@ const ACTIVATION_MODES: { value: ActivationMode; label: string; blurb: string }[
   { value: 'double-tap-push', label: 'Dual mode', blurb: 'Double-tap for hands-free, or hold to push-to-talk.' }
 ]
 
-/** Estimated USD; sub-cent totals show as "<$0.01". */
-function fmtUsd(n: number | undefined): string {
-  if (n === undefined) return '—'
-  if (n <= 0) return '$0.00'
-  if (n < 0.01) return '<$0.01'
-  return '$' + n.toFixed(2)
-}
-
 export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
-  // ── Usage (compact 3-stat row) ──
-  const [usage, setUsage] = useState<UsageSummary | null>(null)
-
   // ── Audio ──
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([])
   const [selectedDevice, setSelectedDevice] = useState<string>('')
@@ -268,7 +256,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   const [outputMode, setOutputMode] = useState<'paste' | 'clipboard'>('paste')
   const [soundFeedback, setSoundFeedback] = useState(true)
   const [chunkedTranscription, setChunkedTranscription] = useState(true)
-  const [widgetPosition, setWidgetPosition] = useState<'center' | 'right'>('center')
 
   // ── AI ──
   const [autoFormat, setAutoFormat] = useState(false)
@@ -328,9 +315,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   }, [refreshPermissions])
 
   useEffect(() => {
-    // Usage stats for the compact header row.
-    window.electronAPI.getUsage().then(setUsage).catch(() => {})
-
     // Load the persisted microphone choice first, then enumerate devices so the
     // dropdown reflects the saved selection instead of resetting to the first
     // device. '' = system default (recorder passes undefined).
@@ -339,9 +323,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
       .then((saved) => loadAudioDevices(saved))
       .catch(() => loadAudioDevices())
 
-    window.electronAPI.getWidgetPosition().then((v) => {
-      if (v === 'center' || v === 'right') setWidgetPosition(v)
-    })
     window.electronAPI.getSoundFeedback().then(setSoundFeedback).catch(() => {})
     window.electronAPI.getChunkedTranscription().then(setChunkedTranscription).catch(() => {})
     window.electronAPI.getAutoFormat().then(setAutoFormat).catch(() => {})
@@ -425,12 +406,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
   }
 
   // ── Behaviour / appearance handlers ──
-  function handleWidgetPositionChange(value: string) {
-    const pos = value as 'center' | 'right'
-    setWidgetPosition(pos)
-    window.electronAPI.setWidgetPosition(pos)
-  }
-
   function handleSoundFeedbackChange(value: boolean) {
     setSoundFeedback(value)
     window.electronAPI.setSoundFeedback(value)
@@ -535,13 +510,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     <div>
       <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight mb-5">Settings</h2>
 
-      {/* ═══ Usage stats (compact, top) ═══ */}
-      <div className="mv-stat-row mb-7">
-        <StatPill label="Today" value={fmtUsd(usage?.today.cost)} />
-        <StatPill label="This month" value={fmtUsd(usage?.month.cost)} />
-        <StatPill label="All time" value={fmtUsd(usage?.allTime.cost)} />
-      </div>
-
       {/* ═══ General ═══ */}
       <Section title="General" icon={<SlidersIcon />}>
         <SettingRow label="Microphone" description="">
@@ -552,16 +520,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
               </option>
             ))}
           </select>
-        </SettingRow>
-        <SettingRow label="Widget position" description="">
-          <Segmented
-            options={[
-              { value: 'center', label: 'Top center' },
-              { value: 'right', label: 'Top right' }
-            ]}
-            value={widgetPosition}
-            onChange={handleWidgetPositionChange}
-          />
         </SettingRow>
         <SettingRow label="Sound feedback" description="" last>
           <Toggle checked={soundFeedback} onChange={handleSoundFeedbackChange} />
@@ -1103,17 +1061,6 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
 
 function Divider() {
   return <div className="h-px bg-mv-border" />
-}
-
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mv-stat-pill">
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-mv-text-muted">{label}</span>
-      <span className="font-display text-[20px] font-extrabold text-mv-text-primary tabular-nums tracking-tight mt-1">
-        {value}
-      </span>
-    </div>
-  )
 }
 
 function SettingRow({
