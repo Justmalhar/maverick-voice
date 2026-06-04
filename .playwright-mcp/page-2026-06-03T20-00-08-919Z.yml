@@ -1,0 +1,231 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Maverick Voice home" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+          - generic [ref=e12]: Maverick
+        - link "Back to getmaverick.sh" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e16]: Back to getmaverick.sh
+    - main [ref=e17]:
+      - article [ref=e18]:
+        - generic [ref=e19]:
+          - paragraph [ref=e20]: Legal
+          - heading "Privacy Policy" [level=1] [ref=e21]
+          - paragraph [ref=e22]:
+            - text: "Effective date:"
+            - time [ref=e23]: June 4, 2026
+          - paragraph [ref=e24]: Maverick Voice is built bring-your-own-key first. The desktop app sends your audio directly to the AI provider you configure — never through us, because we run no servers for it. This policy explains, plainly, what does and does not happen to your data.
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - heading "01 The short version" [level=2] [ref=e27]:
+              - generic [ref=e28]: "01"
+              - generic [ref=e29]: The short version
+            - list [ref=e31]:
+              - listitem [ref=e32]:
+                - generic [ref=e34]:
+                  - strong [ref=e35]: We have no servers for your dictation.
+                  - text: Your voice never reaches Maverick. It travels from the app on your Mac straight to the provider whose key you entered (for example Groq, OpenAI, or OpenRouter).
+              - listitem [ref=e36]:
+                - generic [ref=e38]:
+                  - strong [ref=e39]: Your API keys stay on your device,
+                  - text: encrypted in the macOS Keychain via Apple's
+                  - code [ref=e40]: safeStorage
+                  - text: . We cannot read them.
+              - listitem [ref=e41]:
+                - generic [ref=e43]:
+                  - strong [ref=e44]: Your transcript history lives in a local SQLite database
+                  - text: on your machine. It is never uploaded to us.
+              - listitem [ref=e45]:
+                - generic [ref=e47]:
+                  - strong [ref=e48]: No account, no sign-up, no telemetry
+                  - text: from the app. The marketing website uses anonymized Vercel Analytics and nothing else.
+          - generic [ref=e49]:
+            - heading "02 Who this policy covers" [level=2] [ref=e50]:
+              - generic [ref=e51]: "02"
+              - generic [ref=e52]: Who this policy covers
+            - generic [ref=e53]:
+              - paragraph [ref=e54]: "\"Maverick Voice\", \"Maverick\", \"we\", \"us\", and \"our\" refer to the Maverick Voice product and its maker, Malhar Ujawane. This policy applies to two distinct things, which are treated very differently:"
+              - list [ref=e55]:
+                - listitem [ref=e56]:
+                  - generic [ref=e58]:
+                    - strong [ref=e59]: The desktop application
+                    - text: you install on macOS (and, soon, Windows).
+                - listitem [ref=e60]:
+                  - generic [ref=e62]:
+                    - strong [ref=e63]: The website
+                    - text: at
+                    - link "getmaverick.sh" [ref=e64] [cursor=pointer]:
+                      - /url: https://getmaverick.sh
+                    - text: ", including these legal pages."
+              - paragraph [ref=e65]: Where a section applies to only one of them, we say so explicitly.
+          - generic [ref=e66]:
+            - heading "03 How your voice data flows" [level=2] [ref=e67]:
+              - generic [ref=e68]: "03"
+              - generic [ref=e69]: How your voice data flows
+            - generic [ref=e70]:
+              - paragraph [ref=e71]: "This is the most important section, so it is the most detailed. Maverick is a local, bring-your-own-key tool. When you press your hotkey and speak:"
+              - list [ref=e72]:
+                - listitem [ref=e73]:
+                  - generic [ref=e75]:
+                    - text: Audio is captured on your device and sent
+                    - strong [ref=e76]: directly
+                    - text: from the app to the speech-to-text provider you configured (Groq Whisper today), authenticated with
+                    - strong [ref=e77]: your
+                    - text: API key.
+                - listitem [ref=e78]:
+                  - generic [ref=e80]:
+                    - text: If you have AI auto-formatting enabled, the resulting transcript is sent
+                    - strong [ref=e81]: directly
+                    - text: from the app to the AI provider you chose (OpenAI or OpenRouter), again with
+                    - strong [ref=e82]: your
+                    - text: key.
+                - listitem [ref=e83]:
+                  - generic [ref=e85]: The formatted text is returned to the app and typed at your cursor. A copy is stored in your local history database on your machine.
+              - paragraph [ref=e86]:
+                - text: At
+                - strong [ref=e87]: no point
+                - text: does this audio, transcript, or formatted text pass through a Maverick server. We do not operate, host, or proxy any inference infrastructure for the app. Your data is governed by the privacy policy and terms of whichever provider you point your keys at — please review theirs, since your usage is a direct relationship between you and them.
+          - generic [ref=e88]:
+            - heading "04 API keys and local storage" [level=2] [ref=e89]:
+              - generic [ref=e90]: "04"
+              - generic [ref=e91]: API keys and local storage
+            - generic [ref=e92]:
+              - paragraph [ref=e93]: "The app needs your provider API keys to function. We treat them as the sensitive credentials they are:"
+              - list [ref=e94]:
+                - listitem [ref=e95]:
+                  - generic [ref=e97]:
+                    - text: Keys are stored encrypted in the
+                    - strong [ref=e98]: macOS Keychain
+                    - text: through Electron's
+                    - code [ref=e99]: safeStorage
+                    - text: API, which is backed by the operating system's secure enclave / login keychain. They are never written to plaintext config files and never transmitted to us.
+                - listitem [ref=e100]:
+                  - generic [ref=e102]:
+                    - text: Your
+                    - strong [ref=e103]: transcript history
+                    - text: ", usage counts, personal dictionary, and snippets are stored in a local"
+                    - strong [ref=e104]: SQLite
+                    - text: database inside the app's application- support directory on your device.
+                - listitem [ref=e105]:
+                  - generic [ref=e107]: Deleting the app, clearing its data, or removing entries from within the app removes this data from your machine. Because none of it was ever uploaded to us, there is nothing for us to delete on our side.
+          - generic [ref=e108]:
+            - heading "05 Website analytics" [level=2] [ref=e109]:
+              - generic [ref=e110]: "05"
+              - generic [ref=e111]: Website analytics
+            - generic [ref=e112]:
+              - paragraph [ref=e113]:
+                - text: The website at
+                - link "getmaverick.sh" [ref=e114] [cursor=pointer]:
+                  - /url: https://getmaverick.sh
+                - text: uses
+                - strong [ref=e115]: Vercel Analytics
+                - text: in its privacy-friendly, anonymized mode. This measures aggregate page views and performance so we can understand which pages are useful. It is the only analytics or tracking on the site.
+              - list [ref=e116]:
+                - listitem [ref=e117]:
+                  - generic [ref=e119]:
+                    - text: Vercel Analytics does
+                    - strong [ref=e120]: not
+                    - text: use cookies and does not build a cross-site profile of you. It records coarse, anonymized signals such as page path, referrer, device type, and approximate country.
+                - listitem [ref=e121]:
+                  - generic [ref=e123]:
+                    - text: We do
+                    - strong [ref=e124]: not
+                    - text: use Google Analytics, advertising pixels, session-replay tools, fingerprinting, or any third-party marketing trackers.
+                - listitem [ref=e125]:
+                  - generic [ref=e127]: The purchase flow is handled by our payment processor on its own checkout pages; payment-card details are entered there and are never seen or stored by us. Refer to that processor's privacy policy for how card data is handled.
+          - generic [ref=e128]:
+            - heading "06 What we do not collect" [level=2] [ref=e129]:
+              - generic [ref=e130]: "06"
+              - generic [ref=e131]: What we do not collect
+            - generic [ref=e132]:
+              - paragraph [ref=e133]: "To be unambiguous, Maverick does not:"
+              - list [ref=e134]:
+                - listitem [ref=e135]:
+                  - generic [ref=e137]: Create accounts or require you to register, log in, or give us an email to use the app.
+                - listitem [ref=e138]:
+                  - generic [ref=e140]: Send any app telemetry, crash analytics, usage events, or feature pings to us.
+                - listitem [ref=e141]:
+                  - generic [ref=e143]: Upload, copy, or retain your audio, transcripts, dictionary, or snippets to any Maverick-controlled server.
+                - listitem [ref=e144]:
+                  - generic [ref=e146]: Sell, rent, or share personal data with advertisers or data brokers. We have nothing to sell.
+          - generic [ref=e147]:
+            - heading "07 Children" [level=2] [ref=e148]:
+              - generic [ref=e149]: "07"
+              - generic [ref=e150]: Children
+            - paragraph [ref=e152]: Maverick Voice is a productivity tool intended for general audiences and is not directed at children under 13 (or the equivalent minimum age in your jurisdiction). We do not knowingly collect personal information from children. Since the app collects no personal data on our side, this is largely moot — but if you believe a child has provided information to us through the website, contact us and we will address it.
+          - generic [ref=e153]:
+            - heading "08 Your rights and control" [level=2] [ref=e154]:
+              - generic [ref=e155]: "08"
+              - generic [ref=e156]: Your rights and control
+            - generic [ref=e157]:
+              - paragraph [ref=e158]: "Because your dictation data lives only on your device and we hold no account for you, you are already in control: you can view, export (SQLite is an open, portable format), and delete your history and settings at any time from within the app or by removing its data directory."
+              - paragraph [ref=e159]: For the limited anonymized website analytics, you may use your browser's Do-Not-Track / privacy settings or a content blocker; since the data is anonymized and not tied to an identity, there is no per-user record for us to retrieve or erase. If you have a specific request under a law that applies to you (such as the GDPR or the DPDP Act in India), email us and we will respond in good faith.
+          - generic [ref=e160]:
+            - heading "09 Changes to this policy" [level=2] [ref=e161]:
+              - generic [ref=e162]: "09"
+              - generic [ref=e163]: Changes to this policy
+            - paragraph [ref=e165]: If the product changes in a way that affects this policy — for example, if we ever add an optional cloud feature — we will update this page and revise the effective date above. Material changes will be reflected here before the corresponding feature ships. Continued use of the app or website after an update constitutes acceptance of the revised policy.
+          - generic [ref=e166]:
+            - heading "10 Contact" [level=2] [ref=e167]:
+              - generic [ref=e168]: "10"
+              - generic [ref=e169]: Contact
+            - paragraph [ref=e171]:
+              - text: Questions about privacy? Email
+              - link "hello@getmaverick.sh" [ref=e172] [cursor=pointer]:
+                - /url: mailto:hello@getmaverick.sh
+              - text: and we will get back to you. Maverick Voice is made by Malhar Ujawane.
+    - contentinfo [ref=e173]:
+      - generic [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]:
+            - link "Maverick" [ref=e177] [cursor=pointer]:
+              - /url: /
+              - img [ref=e178]
+              - generic [ref=e184]: Maverick
+            - paragraph [ref=e185]: Speak. It types. Everywhere. App-aware voice dictation for macOS — pay once, bring your own keys.
+          - navigation "Product" [ref=e186]:
+            - heading "Product" [level=3] [ref=e187]
+            - list [ref=e188]:
+              - listitem [ref=e189]:
+                - link "Features" [ref=e190] [cursor=pointer]:
+                  - /url: /#features
+              - listitem [ref=e191]:
+                - link "How it works" [ref=e192] [cursor=pointer]:
+                  - /url: /#how
+              - listitem [ref=e193]:
+                - link "Pricing" [ref=e194] [cursor=pointer]:
+                  - /url: /#pricing
+              - listitem [ref=e195]:
+                - link "FAQ" [ref=e196] [cursor=pointer]:
+                  - /url: /#faq
+          - navigation "Legal" [ref=e197]:
+            - heading "Legal" [level=3] [ref=e198]
+            - list [ref=e199]:
+              - listitem [ref=e200]:
+                - link "Privacy" [ref=e201] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e202]:
+                - link "Terms" [ref=e203] [cursor=pointer]:
+                  - /url: /terms
+          - navigation "Connect" [ref=e204]:
+            - heading "Connect" [level=3] [ref=e205]
+            - list [ref=e206]:
+              - listitem [ref=e207]:
+                - link "X · @justmalhar" [ref=e208] [cursor=pointer]:
+                  - /url: https://x.com/justmalhar
+              - listitem [ref=e209]:
+                - link "GitHub · @justmalhar" [ref=e210] [cursor=pointer]:
+                  - /url: https://github.com/justmalhar
+              - listitem [ref=e211]:
+                - link "hello@getmaverick.sh" [ref=e212] [cursor=pointer]:
+                  - /url: mailto:hello@getmaverick.sh
+        - generic [ref=e213]:
+          - paragraph [ref=e214]: © 2026 Maverick Voice. Built by Malhar Ujawane.
+          - paragraph [ref=e215]: getmaverick.sh
+  - button "Open Next.js Dev Tools" [ref=e221] [cursor=pointer]:
+    - img [ref=e222]
+  - alert [ref=e225]

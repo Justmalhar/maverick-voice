@@ -1,0 +1,213 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Maverick Voice home" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+          - generic [ref=e12]: Maverick
+        - link "Back to getmaverick.sh" [ref=e13] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - generic [ref=e16]: Back to getmaverick.sh
+    - main [ref=e17]:
+      - article [ref=e18]:
+        - generic [ref=e19]:
+          - paragraph [ref=e20]: Legal
+          - heading "Terms of Service" [level=1] [ref=e21]
+          - paragraph [ref=e22]:
+            - text: "Effective date:"
+            - time [ref=e23]: June 4, 2026
+          - paragraph [ref=e24]: "These terms cover your purchase and use of Maverick Voice. In short: you pay $9.99 once for a personal license to use the app on your own devices, you bring and pay for your own AI provider keys, the software is provided as-is, and you can request a refund within 14 days."
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - heading "01 Agreement to these terms" [level=2] [ref=e27]:
+              - generic [ref=e28]: "01"
+              - generic [ref=e29]: Agreement to these terms
+            - paragraph [ref=e31]:
+              - text: These Terms of Service ("Terms") form a binding agreement between you and Maverick Voice, made by Malhar Ujawane ("we", "us", "our"). By purchasing, downloading, installing, or using the Maverick Voice application or the website at
+              - link "getmaverick.sh" [ref=e32] [cursor=pointer]:
+                - /url: https://getmaverick.sh
+              - text: ", you agree to these Terms. If you do not agree, do not purchase or use the software."
+          - generic [ref=e33]:
+            - heading "02 Your license" [level=2] [ref=e34]:
+              - generic [ref=e35]: "02"
+              - generic [ref=e36]: Your license
+            - generic [ref=e37]:
+              - paragraph [ref=e38]:
+                - text: For a
+                - strong [ref=e39]: one-time payment of $9.99 USD
+                - text: ", we grant you a personal, non-exclusive, non-transferable, revocable license to install and use Maverick Voice for your own use, subject to these Terms."
+              - list [ref=e40]:
+                - listitem [ref=e41]:
+                  - generic [ref=e43]:
+                    - text: The license covers use on devices that
+                    - strong [ref=e44]: you
+                    - text: own or control. It is a personal license, not a per-seat commercial or team license.
+                - listitem [ref=e45]:
+                  - generic [ref=e47]:
+                    - text: It is a
+                    - strong [ref=e48]: one-time purchase, not a subscription.
+                    - text: There is no recurring charge from us for the app itself.
+                - listitem [ref=e49]:
+                  - generic [ref=e51]: You may not resell, sublicense, rent, or redistribute the software or your license, nor remove or obscure any proprietary notices.
+                - listitem [ref=e52]:
+                  - generic [ref=e54]: You may not reverse-engineer, decompile, or attempt to extract source code except to the extent that applicable law expressly permits despite this limitation.
+          - generic [ref=e55]:
+            - heading "03 Bring-your-own keys and provider costs" [level=2] [ref=e56]:
+              - generic [ref=e57]: "03"
+              - generic [ref=e58]: Bring-your-own keys and provider costs
+            - generic [ref=e59]:
+              - paragraph [ref=e60]:
+                - text: Maverick is provider-agnostic and requires
+                - strong [ref=e61]: your own
+                - text: API keys to perform speech-to-text and AI formatting. The $9.99 you pay us covers the app only — it does not include any inference, compute, or API usage.
+              - list [ref=e62]:
+                - listitem [ref=e63]:
+                  - generic [ref=e65]:
+                    - text: You are solely responsible for obtaining provider accounts (such as Groq, OpenAI, or OpenRouter) and for
+                    - strong [ref=e66]: all costs, fees, and usage charges
+                    - text: those providers bill you. Typical usage costs are small — often pennies per hour, and a Groq key is free to start — but they are your costs, not ours.
+                - listitem [ref=e67]:
+                  - generic [ref=e69]: Your use of any provider is governed by that provider's own terms and pricing. We are not a party to, and are not responsible for, your relationship with any provider, including outages, price changes, content policies, or account suspensions.
+                - listitem [ref=e70]:
+                  - generic [ref=e72]: You are responsible for keeping your API keys secure and for any usage incurred under them.
+          - generic [ref=e73]:
+            - heading "04 Acceptable use" [level=2] [ref=e74]:
+              - generic [ref=e75]: "04"
+              - generic [ref=e76]: Acceptable use
+            - generic [ref=e77]:
+              - paragraph [ref=e78]: "You agree to use Maverick Voice lawfully. You will not:"
+              - list [ref=e79]:
+                - listitem [ref=e80]:
+                  - generic [ref=e82]: Use the app to create, transcribe, or distribute content that is illegal, infringing, or that violates the rights of others.
+                - listitem [ref=e83]:
+                  - generic [ref=e85]: Use the app in any way that violates your AI provider's acceptable-use policies.
+                - listitem [ref=e86]:
+                  - generic [ref=e88]: Attempt to interfere with, attack, or gain unauthorized access to the website or its infrastructure.
+                - listitem [ref=e89]:
+                  - generic [ref=e91]: Use the app to record or transcribe people without the consent required by the laws that apply to you.
+          - generic [ref=e92]:
+            - heading "05 Payments and refunds" [level=2] [ref=e93]:
+              - generic [ref=e94]: "05"
+              - generic [ref=e95]: Payments and refunds
+            - generic [ref=e96]:
+              - paragraph [ref=e97]: Payment for the $9.99 license is processed by our third-party payment provider. Prices are shown in USD and may exclude taxes that apply in your jurisdiction.
+              - list [ref=e98]:
+                - listitem [ref=e99]:
+                  - generic [ref=e101]:
+                    - strong [ref=e102]: 14-day refund window.
+                    - text: If Maverick isn't for you, email
+                    - link "hello@getmaverick.sh" [ref=e103] [cursor=pointer]:
+                      - /url: mailto:hello@getmaverick.sh
+                    - text: within 14 days of your purchase and we will refund your $9.99. No elaborate justification needed.
+                - listitem [ref=e104]:
+                  - generic [ref=e106]: Refunds apply to the app license fee paid to us only. We cannot refund any charges you incurred with third-party AI providers — those are billed by them, under your account.
+                - listitem [ref=e107]:
+                  - generic [ref=e109]: We may decline refund requests that are clearly abusive (for example, repeated buy-refund cycles).
+          - generic [ref=e110]:
+            - heading "06 Updates and availability" [level=2] [ref=e111]:
+              - generic [ref=e112]: "06"
+              - generic [ref=e113]: Updates and availability
+            - paragraph [ref=e115]: We may release updates, fixes, and new features at our discretion. Roadmap items mentioned on the website (such as Windows support or local/offline models) are statements of intent, not commitments, and may change. We do not guarantee that the app, the website, or any specific feature will be available uninterrupted or error-free, and third-party providers may change or discontinue the APIs the app relies on.
+          - generic [ref=e116]:
+            - heading "07 Intellectual property" [level=2] [ref=e117]:
+              - generic [ref=e118]: "07"
+              - generic [ref=e119]: Intellectual property
+            - paragraph [ref=e121]:
+              - text: The Maverick Voice software, name, logo, website, and design are owned by us and protected by applicable intellectual-property laws. These Terms grant you a license to use the app, not ownership of it. The text you dictate and the output Maverick produces from it are
+              - strong [ref=e122]: yours
+              - text: — we claim no rights over your content.
+          - generic [ref=e123]:
+            - heading "08 Disclaimer of warranties" [level=2] [ref=e124]:
+              - generic [ref=e125]: "08"
+              - generic [ref=e126]: Disclaimer of warranties
+            - paragraph [ref=e128]:
+              - text: Maverick Voice is provided
+              - strong [ref=e129]: "\"as is\""
+              - text: and
+              - strong [ref=e130]: "\"as available,\""
+              - text: without warranties of any kind, whether express, implied, or statutory, including any implied warranties of merchantability, fitness for a particular purpose, accuracy of transcription, and non-infringement, to the maximum extent permitted by law. Speech recognition and AI formatting can make mistakes; you are responsible for reviewing output before relying on it.
+          - generic [ref=e131]:
+            - heading "09 Limitation of liability" [level=2] [ref=e132]:
+              - generic [ref=e133]: "09"
+              - generic [ref=e134]: Limitation of liability
+            - paragraph [ref=e136]: To the maximum extent permitted by applicable law, we will not be liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of data, profits, or revenue, arising out of or relating to your use of (or inability to use) Maverick Voice or any third-party provider, even if advised of the possibility of such damages. Our total aggregate liability for any claim relating to the app will not exceed the amount you actually paid us for the license (i.e. $9.99).
+          - generic [ref=e137]:
+            - heading "10 Termination" [level=2] [ref=e138]:
+              - generic [ref=e139]: "10"
+              - generic [ref=e140]: Termination
+            - paragraph [ref=e142]: You may stop using the app and uninstall it at any time. We may suspend or terminate your license if you materially breach these Terms. On termination, the license granted to you ends, but the sections that by their nature should survive — including the disclaimers, limitation of liability, and governing-law provisions — continue to apply.
+          - generic [ref=e143]:
+            - heading "11 Governing law" [level=2] [ref=e144]:
+              - generic [ref=e145]: "11"
+              - generic [ref=e146]: Governing law
+            - paragraph [ref=e148]:
+              - text: These Terms are governed by and construed in accordance with the laws of
+              - strong [ref=e149]: India
+              - text: ", without regard to conflict-of-law principles. The courts located in Surat, Gujarat, India will have jurisdiction over any dispute arising from or relating to these Terms or the software, subject to any non-waivable rights you may have under the consumer-protection laws of your place of residence."
+          - generic [ref=e150]:
+            - heading "12 Changes to these terms" [level=2] [ref=e151]:
+              - generic [ref=e152]: "12"
+              - generic [ref=e153]: Changes to these terms
+            - paragraph [ref=e155]: We may revise these Terms from time to time. When we do, we will update the effective date at the top of this page. Material changes will be posted here, and continued use of the app or website after a change takes effect constitutes acceptance of the revised Terms.
+          - generic [ref=e156]:
+            - heading "13 Contact" [level=2] [ref=e157]:
+              - generic [ref=e158]: "13"
+              - generic [ref=e159]: Contact
+            - paragraph [ref=e161]:
+              - text: Questions about these Terms, or want to request a refund? Email
+              - link "hello@getmaverick.sh" [ref=e162] [cursor=pointer]:
+                - /url: mailto:hello@getmaverick.sh
+              - text: . Maverick Voice is made by Malhar Ujawane.
+    - contentinfo [ref=e163]:
+      - generic [ref=e164]:
+        - generic [ref=e165]:
+          - generic [ref=e166]:
+            - link "Maverick" [ref=e167] [cursor=pointer]:
+              - /url: /
+              - img [ref=e168]
+              - generic [ref=e174]: Maverick
+            - paragraph [ref=e175]: Speak. It types. Everywhere. App-aware voice dictation for macOS — pay once, bring your own keys.
+          - navigation "Product" [ref=e176]:
+            - heading "Product" [level=3] [ref=e177]
+            - list [ref=e178]:
+              - listitem [ref=e179]:
+                - link "Features" [ref=e180] [cursor=pointer]:
+                  - /url: /#features
+              - listitem [ref=e181]:
+                - link "How it works" [ref=e182] [cursor=pointer]:
+                  - /url: /#how
+              - listitem [ref=e183]:
+                - link "Pricing" [ref=e184] [cursor=pointer]:
+                  - /url: /#pricing
+              - listitem [ref=e185]:
+                - link "FAQ" [ref=e186] [cursor=pointer]:
+                  - /url: /#faq
+          - navigation "Legal" [ref=e187]:
+            - heading "Legal" [level=3] [ref=e188]
+            - list [ref=e189]:
+              - listitem [ref=e190]:
+                - link "Privacy" [ref=e191] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e192]:
+                - link "Terms" [ref=e193] [cursor=pointer]:
+                  - /url: /terms
+          - navigation "Connect" [ref=e194]:
+            - heading "Connect" [level=3] [ref=e195]
+            - list [ref=e196]:
+              - listitem [ref=e197]:
+                - link "X · @justmalhar" [ref=e198] [cursor=pointer]:
+                  - /url: https://x.com/justmalhar
+              - listitem [ref=e199]:
+                - link "GitHub · @justmalhar" [ref=e200] [cursor=pointer]:
+                  - /url: https://github.com/justmalhar
+              - listitem [ref=e201]:
+                - link "hello@getmaverick.sh" [ref=e202] [cursor=pointer]:
+                  - /url: mailto:hello@getmaverick.sh
+        - generic [ref=e203]:
+          - paragraph [ref=e204]: © 2026 Maverick Voice. Built by Malhar Ujawane.
+          - paragraph [ref=e205]: getmaverick.sh
+  - button "Open Next.js Dev Tools" [ref=e211] [cursor=pointer]:
+    - img [ref=e212]
+  - alert [ref=e215]

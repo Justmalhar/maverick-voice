@@ -86,7 +86,7 @@ export default function Usage() {
 
       {/* Hero cost card */}
       <div className="mv-glass-card px-6 py-8 mb-3 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.06)_0%,transparent_60%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_90%_at_50%_-10%,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.03)_30%,rgba(255,255,255,0)_72%)] pointer-events-none" />
         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-3">
           Estimated spend
         </p>

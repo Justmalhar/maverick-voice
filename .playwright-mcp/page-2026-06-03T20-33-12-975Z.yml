@@ -1,0 +1,467 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - navigation "Primary" [ref=e4]:
+        - link "Maverick Voice — home" [ref=e5] [cursor=pointer]:
+          - /url: "#top"
+          - img [ref=e6]
+          - generic [ref=e12]: Maverick
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - link "Features" [ref=e15] [cursor=pointer]:
+              - /url: "#features"
+          - listitem [ref=e16]:
+            - link "How it works" [ref=e17] [cursor=pointer]:
+              - /url: "#how"
+          - listitem [ref=e18]:
+            - link "Pricing" [ref=e19] [cursor=pointer]:
+              - /url: "#pricing"
+          - listitem [ref=e20]:
+            - link "FAQ" [ref=e21] [cursor=pointer]:
+              - /url: "#faq"
+        - link "Get Maverick" [ref=e23] [cursor=pointer]:
+          - /url: "#pricing"
+    - main [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - generic [ref=e28]: Pay once · Your keys · Mac
+          - heading "Stop typing. Start talking." [level=1] [ref=e30]
+          - paragraph [ref=e31]: Press a key, speak, and polished text lands at your cursor in any app. Maverick reads the room — emails get paragraphs, your IDE gets @file references, chat stays casual.
+          - generic [ref=e32]:
+            - link "Get Maverick — $9.99" [ref=e34] [cursor=pointer]:
+              - /url: "#pricing"
+            - link "Download for macOS" [ref=e36] [cursor=pointer]:
+              - /url: "#pricing"
+          - paragraph [ref=e37]: Apple Silicon · signed·Windows coming soon
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - generic [ref=e47]:
+              - img [ref=e800]
+              - generic [ref=e51]: Mail
+              - generic [ref=e52]: · New Message — to alex@team.com
+            - generic [ref=e804]: Hi Alex, Could you review the auth changes in userService.ts? I think the token refresh logic is off — it's renewing a b
+          - status "Maverick is ready" [ref=e799]:
+            - generic [ref=e92]: Maverick
+      - generic [ref=e93]:
+        - generic [ref=e96]:
+          - generic [ref=e97]: One voice, every surface
+          - heading "Works everywhere you type" [level=2] [ref=e98]
+          - paragraph [ref=e99]: Any app with a text field. Maverick detects where your cursor lives and formats to match.
+        - generic [ref=e100]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - img [ref=e105]
+                - generic [ref=e108]: Mail
+              - generic [ref=e109]:
+                - img [ref=e110]
+                - generic [ref=e113]: Slack
+              - generic [ref=e114]:
+                - img [ref=e115]
+                - generic [ref=e119]: Cursor
+              - generic [ref=e120]:
+                - img [ref=e121]
+                - generic [ref=e126]: VS Code
+              - generic [ref=e127]:
+                - img [ref=e128]
+                - generic [ref=e131]: Notion
+              - generic [ref=e132]:
+                - img [ref=e133]
+                - generic [ref=e136]: Chrome
+              - generic [ref=e137]:
+                - img [ref=e138]
+                - generic [ref=e141]: Discord
+              - generic [ref=e142]:
+                - img [ref=e143]
+                - generic [ref=e146]: Obsidian
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - img [ref=e149]
+                - generic [ref=e152]: Mail
+              - generic [ref=e153]:
+                - img [ref=e154]
+                - generic [ref=e157]: Slack
+              - generic [ref=e158]:
+                - img [ref=e159]
+                - generic [ref=e163]: Cursor
+              - generic [ref=e164]:
+                - img [ref=e165]
+                - generic [ref=e170]: VS Code
+              - generic [ref=e171]:
+                - img [ref=e172]
+                - generic [ref=e175]: Notion
+              - generic [ref=e176]:
+                - img [ref=e177]
+                - generic [ref=e180]: Chrome
+              - generic [ref=e181]:
+                - img [ref=e182]
+                - generic [ref=e185]: Discord
+              - generic [ref=e186]:
+                - img [ref=e187]
+                - generic [ref=e190]: Obsidian
+          - generic [ref=e192]:
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - img [ref=e195]
+                - generic [ref=e198]: Linear
+              - generic [ref=e199]:
+                - img [ref=e200]
+                - generic [ref=e205]: Figma
+              - generic [ref=e206]:
+                - img [ref=e207]
+                - generic [ref=e209]: Terminal
+              - generic [ref=e210]:
+                - img [ref=e211]
+                - generic [ref=e214]: Antigravity
+              - generic [ref=e215]:
+                - img [ref=e216]
+                - generic [ref=e218]: WhatsApp
+              - generic [ref=e219]:
+                - img [ref=e220]
+                - generic [ref=e223]: Telegram
+              - generic [ref=e224]:
+                - img [ref=e225]
+                - generic [ref=e228]: Notes
+              - generic [ref=e229]:
+                - img [ref=e230]
+                - generic [ref=e233]: Word
+            - generic [ref=e234]:
+              - generic [ref=e235]:
+                - img [ref=e236]
+                - generic [ref=e239]: Linear
+              - generic [ref=e240]:
+                - img [ref=e241]
+                - generic [ref=e246]: Figma
+              - generic [ref=e247]:
+                - img [ref=e248]
+                - generic [ref=e250]: Terminal
+              - generic [ref=e251]:
+                - img [ref=e252]
+                - generic [ref=e255]: Antigravity
+              - generic [ref=e256]:
+                - img [ref=e257]
+                - generic [ref=e259]: WhatsApp
+              - generic [ref=e260]:
+                - img [ref=e261]
+                - generic [ref=e264]: Telegram
+              - generic [ref=e265]:
+                - img [ref=e266]
+                - generic [ref=e269]: Notes
+              - generic [ref=e270]:
+                - img [ref=e271]
+                - generic [ref=e274]: Word
+      - generic [ref=e276]:
+        - generic [ref=e278]:
+          - generic: "01"
+          - generic [ref=e279]:
+            - generic [ref=e280]: The math
+            - heading "You speak 3–4× faster than you type." [level=2] [ref=e281]
+            - paragraph [ref=e282]: A practiced typist hits about 40 words a minute. Talking, you cruise past 150 — and Maverick lands it as finished, formatted text.
+        - generic [ref=e285]:
+          - generic [ref=e287]:
+            - generic [ref=e288]: Keyboard
+            - generic [ref=e289]:
+              - generic [ref=e290]: "40"
+              - generic [ref=e291]: wpm
+          - generic [ref=e294]:
+            - generic [ref=e295]: Voice
+            - generic [ref=e296]:
+              - generic [ref=e297]: 150+
+              - generic [ref=e298]: wpm
+          - paragraph [ref=e301]: That is a draft email, a code prompt, or a page of notes — in the time it takes to type a sentence.
+      - generic [ref=e302]:
+        - generic [ref=e303]:
+          - generic: "02"
+          - generic [ref=e304]:
+            - generic [ref=e305]: App-aware AI formatting
+            - heading "One voice. Formatted for the room." [level=2] [ref=e306]
+            - paragraph [ref=e307]: Maverick detects the app under your cursor and shapes the output to match — same words spoken, four different finished results.
+        - figure [ref=e309]:
+          - img [ref=e311]
+          - generic [ref=e314]:
+            - generic [ref=e315]: You said
+            - blockquote [ref=e316]: “hey can you review the auth changes in user service dot ts I think the token refresh logic is off”
+        - generic [ref=e318]:
+          - tablist [ref=e319]:
+            - tab "Email" [ref=e320]:
+              - img
+              - text: Email
+            - tab "IDE" [active] [selected] [ref=e321]:
+              - img
+              - text: IDE
+            - tab "Chat" [ref=e322]:
+              - img
+              - text: Chat
+            - tab "Notes" [ref=e323]:
+              - img
+              - text: Notes
+          - tabpanel "IDE" [ref=e806]:
+            - generic [ref=e808]:
+              - generic [ref=e814]: Cursor — Composer
+              - generic [ref=e816]:
+                - paragraph [ref=e817]:
+                  - text: Review the auth changes in
+                  - generic [ref=e818]: "@userService.ts"
+                  - text: .
+                - paragraph [ref=e819]:
+                  - text: The
+                  - code [ref=e820]: refreshToken()
+                  - text: flow looks off — it never re-checks
+                  - code [ref=e821]: expiresAt
+                  - text: before reusing the cached
+                  - code [ref=e822]: accessToken
+                  - text: .
+                - paragraph [ref=e823]: "// suspect: stale token returned on the fast path"
+        - paragraph [ref=e343]: Maverick reads the room. One voice, formatted for wherever your cursor lives.
+      - generic [ref=e344]:
+        - generic [ref=e345]:
+          - generic: "03"
+          - generic [ref=e346]:
+            - generic [ref=e347]: Everything in the box
+            - heading "Not a wrapper. A toolkit." [level=2] [ref=e348]
+            - paragraph [ref=e349]: One $9.99 purchase ships the whole feature set — no tiers, no add-ons, no upsells.
+        - generic [ref=e350]:
+          - generic [ref=e352]:
+            - generic [ref=e353]:
+              - generic [ref=e354]:
+                - img [ref=e356]
+                - heading "Edit by voice" [level=3] [ref=e359]
+              - paragraph [ref=e360]: Select text anywhere, tap Caps Lock, and tell Maverick what to do — “make this a bullet list,” “tighten this up,” “translate to Spanish.” Opt-in, and it only ever touches what you highlighted.
+            - generic [ref=e361]:
+              - generic [ref=e362]: selected
+              - generic [ref=e363]: →
+              - generic [ref=e364]: “make this a bullet list”
+              - generic "⇪" [ref=e365]
+          - generic [ref=e367]:
+            - generic [ref=e368]:
+              - generic [ref=e369]:
+                - img [ref=e371]
+                - heading "Hotkeys & combos" [level=3] [ref=e373]
+              - paragraph [ref=e374]: Hold Fn by default, or bind any key or modifier combo. Tap-toggle, push-to-talk, or double-tap-push — whatever fits your hands.
+            - button "Toggle the Command Shift hotkey combo" [ref=e376]:
+              - generic "fn" [ref=e377]
+              - generic [ref=e378]: or
+              - generic [ref=e379]:
+                - generic "⌘" [ref=e380]
+                - generic "⇧" [ref=e381]
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - img [ref=e386]
+              - heading "Personal dictionary" [level=3] [ref=e389]
+            - paragraph [ref=e390]: Names, acronyms, weird spellings — teach them once. Maverick fixes the text and biases the speech model so it stops mishearing them.
+          - generic [ref=e392]:
+            - generic [ref=e393]:
+              - img [ref=e395]
+              - heading "Snippets" [level=3] [ref=e398]
+            - paragraph [ref=e399]: Say “my linkedin” and your full URL appears. Map any phrase to text you paste all the time.
+          - generic [ref=e401]:
+            - generic [ref=e402]:
+              - img [ref=e404]
+              - heading "Provider-agnostic" [level=3] [ref=e414]
+            - paragraph [ref=e415]: Groq Whisper for speech today; OpenAI and OpenRouter for AI formatting — any model, your keys, swappable anytime.
+          - generic [ref=e417]:
+            - generic [ref=e418]:
+              - img [ref=e420]
+              - heading "History & usage" [level=3] [ref=e424]
+            - paragraph [ref=e425]: Every transcript kept locally in SQLite, with token and cost estimates so you always know what you’re spending.
+      - generic [ref=e426]:
+        - generic [ref=e427]:
+          - generic: "04"
+          - generic [ref=e428]:
+            - generic [ref=e429]: How it works
+            - heading "Running in 60 seconds." [level=2] [ref=e430]
+            - paragraph [ref=e431]: No account, no setup wizard maze. Bring a key, pick a hotkey, and start talking.
+        - list [ref=e434]:
+          - listitem [ref=e435]:
+            - generic [ref=e436]:
+              - generic: "01"
+              - img [ref=e438]
+              - generic [ref=e441]:
+                - heading "Get your free Groq key" [level=3] [ref=e442]
+                - paragraph [ref=e443]:
+                  - text: Sign up at
+                  - link "console.groq.com" [ref=e444] [cursor=pointer]:
+                    - /url: https://console.groq.com
+                  - text: and paste the key in. Takes about 60 seconds and the free tier covers plenty of dictation.
+          - listitem [ref=e445]:
+            - generic [ref=e446]:
+              - generic: "02"
+              - img [ref=e448]
+              - generic [ref=e451]:
+                - heading "Tap your hotkey and speak" [level=3] [ref=e452]
+                - paragraph [ref=e453]: Hold Fn — or your own combo — and talk naturally. Pause, ramble, list things out loud; Maverick keeps up at 150+ words a minute.
+          - listitem [ref=e454]:
+            - generic [ref=e455]:
+              - generic: "03"
+              - img [ref=e457]
+              - generic [ref=e460]:
+                - heading "Watch text land anywhere" [level=3] [ref=e461]
+                - paragraph [ref=e462]: Polished, app-aware text drops straight at your cursor — in your email, editor, chat, or notes. No copy-paste, no window switching.
+        - paragraph [ref=e464]: First-run onboarding handles microphone and accessibility permissions for you — no Terminal, no fiddling with System Settings.
+      - generic [ref=e466]:
+        - generic [ref=e467]:
+          - generic: "05"
+          - generic [ref=e468]:
+            - generic [ref=e469]: Privacy
+            - heading "Yours, not ours." [level=2] [ref=e470]
+            - paragraph [ref=e471]: Most dictation apps route your voice through their cloud. Maverick has no cloud — your audio, your keys, and your history stay on your machine and your chosen provider.
+        - generic [ref=e472]:
+          - generic [ref=e474]:
+            - img [ref=e476]
+            - generic [ref=e479]:
+              - heading "No servers, by design" [level=3] [ref=e480]
+              - paragraph [ref=e481]: Your voice never touches our infrastructure — we don't have any. Audio streams only to the provider you configured.
+          - generic [ref=e483]:
+            - img [ref=e485]
+            - generic [ref=e488]:
+              - heading "Keys in your Keychain" [level=3] [ref=e489]
+              - paragraph [ref=e490]: API keys are encrypted at rest in the macOS Keychain via safeStorage. They live on your Mac, never in a cloud of ours.
+          - generic [ref=e492]:
+            - img [ref=e494]
+            - generic [ref=e498]:
+              - heading "History stays local" [level=3] [ref=e499]
+              - paragraph [ref=e500]: Every transcript is written to a local SQLite database on your machine. Search it, export it, or wipe it — it's yours.
+          - generic [ref=e502]:
+            - img [ref=e504]
+            - generic [ref=e509]:
+              - heading "Zero telemetry" [level=3] [ref=e510]
+              - paragraph [ref=e511]: No account, no sign-in, no analytics inside the app, no phone-home. There is nothing to opt out of because nothing is collected.
+        - paragraph [ref=e513]: The website you're reading uses anonymized Vercel Analytics — and nothing else. The app itself ships with none.
+      - generic [ref=e515]:
+        - generic [ref=e516]:
+          - generic: "06"
+          - generic [ref=e517]:
+            - generic [ref=e518]: Pricing
+            - heading "One price. Yours forever." [level=2] [ref=e519]
+            - paragraph [ref=e520]: No subscription. No account. Buy it once, keep it across every 1.x update, and pay your provider directly — typically pennies an hour.
+        - generic [ref=e522]:
+          - generic [ref=e523]:
+            - generic [ref=e524]:
+              - generic [ref=e525]: $9.99
+              - generic [ref=e526]: one-time
+            - paragraph [ref=e527]: Everything below is in the box. No tiers, no add-ons, no second invoice — ever.
+          - generic [ref=e528]:
+            - generic [ref=e529]: A single year, side by side
+            - generic [ref=e530]:
+              - generic [ref=e531]: Maverick Voice
+              - generic [ref=e532]:
+                - generic [ref=e533]: $9.99
+                - generic [ref=e534]: once
+            - generic [ref=e535]:
+              - generic [ref=e536]: Subscription dictation apps
+              - generic [ref=e537]:
+                - generic [ref=e538]: $96–144
+                - generic [ref=e539]: per year
+            - paragraph [ref=e540]: Maverick pays for itself in under a month — then never asks again.
+        - generic [ref=e542]:
+          - generic [ref=e543]:
+            - generic [ref=e544]:
+              - img [ref=e546]
+              - generic [ref=e548]: App-aware AI formatting — email, IDE, chat & notes
+            - generic [ref=e549]:
+              - img [ref=e551]
+              - generic [ref=e553]: Tap-toggle, push-to-talk & double-tap-push modes
+            - generic [ref=e554]:
+              - img [ref=e556]
+              - generic [ref=e558]: Edit selected text by voice (Caps Lock to instruct)
+            - generic [ref=e559]:
+              - img [ref=e561]
+              - generic [ref=e563]: Personal dictionary that also biases the speech model
+            - generic [ref=e564]:
+              - img [ref=e566]
+              - generic [ref=e568]: Snippets — say a phrase, expand to anything
+            - generic [ref=e569]:
+              - img [ref=e571]
+              - generic [ref=e573]: Custom hotkeys & modifier combos
+            - generic [ref=e574]:
+              - img [ref=e576]
+              - generic [ref=e578]: Local history, usage stats & search
+            - generic [ref=e579]:
+              - img [ref=e581]
+              - generic [ref=e583]: Free updates across the entire 1.x line
+          - generic [ref=e584]:
+            - generic [ref=e585]:
+              - img [ref=e586]
+              - generic [ref=e589]: Bring your own API keys. A Groq key is free to start, and typical usage costs pennies.
+            - generic [ref=e590]:
+              - img [ref=e591]
+              - generic [ref=e594]: macOS on Apple Silicon today. Windows is coming soon.
+          - generic [ref=e595]:
+            - link "Get Maverick — $9.99" [ref=e597] [cursor=pointer]:
+              - /url: https://buy.getmaverick.sh
+            - link "Download for macOS" [ref=e598] [cursor=pointer]:
+              - /url: https://buy.getmaverick.sh
+          - paragraph [ref=e599]: Apple Silicon · signed · macOS 13+
+      - generic [ref=e601]:
+        - generic [ref=e603]:
+          - generic [ref=e604]: FAQ
+          - heading "Questions, answered." [level=2] [ref=e605]
+          - paragraph [ref=e606]: Everything you'd want to know before you buy — straight, no asterisks.
+        - generic [ref=e609]:
+          - heading "Do I need a subscription?" [level=3] [ref=e611]:
+            - button "Do I need a subscription?" [ref=e612]:
+              - generic [ref=e613]: Do I need a subscription?
+          - heading "What does it actually cost to run?" [level=3] [ref=e618]:
+            - button "What does it actually cost to run?" [ref=e619]:
+              - generic [ref=e620]: What does it actually cost to run?
+          - heading "Which apps does it work in?" [level=3] [ref=e625]:
+            - button "Which apps does it work in?" [ref=e626]:
+              - generic [ref=e627]: Which apps does it work in?
+          - heading "Is my audio stored anywhere?" [level=3] [ref=e632]:
+            - button "Is my audio stored anywhere?" [ref=e633]:
+              - generic [ref=e634]: Is my audio stored anywhere?
+          - heading "Which AI models can I use?" [level=3] [ref=e639]:
+            - button "Which AI models can I use?" [ref=e640]:
+              - generic [ref=e641]: Which AI models can I use?
+          - heading "Does it work offline?" [level=3] [ref=e646]:
+            - button "Does it work offline?" [ref=e647]:
+              - generic [ref=e648]: Does it work offline?
+          - heading "Mac or Windows?" [level=3] [ref=e653]:
+            - button "Mac or Windows?" [ref=e654]:
+              - generic [ref=e655]: Mac or Windows?
+          - heading "How is this different from built-in macOS dictation?" [level=3] [ref=e660]:
+            - button "How is this different from built-in macOS dictation?" [ref=e661]:
+              - generic [ref=e662]: How is this different from built-in macOS dictation?
+        - paragraph [ref=e667]:
+          - text: Still curious? Email
+          - link "hello@getmaverick.sh" [ref=e668] [cursor=pointer]:
+            - /url: mailto:hello@getmaverick.sh
+          - text: .
+      - generic [ref=e673]:
+        - img [ref=e675]
+        - heading "Your keyboard called. It's tired." [level=2] [ref=e681]
+        - paragraph [ref=e682]: Speak. It types. Everywhere. Pay once, keep your keys, and let Maverick format the words for wherever your cursor lives.
+        - generic [ref=e683]:
+          - link "Get Maverick — $9.99" [ref=e685] [cursor=pointer]:
+            - /url: https://buy.getmaverick.sh
+          - link "Read the FAQ" [ref=e686] [cursor=pointer]:
+            - /url: "#faq"
+        - paragraph [ref=e687]: One-time purchase · macOS 13+ · Apple Silicon · signed
+    - contentinfo [ref=e688]:
+      - generic [ref=e689]:
+        - generic [ref=e690]:
+          - link "Maverick·Speak. It types. Everywhere." [ref=e691] [cursor=pointer]:
+            - /url: /
+            - img [ref=e692]
+            - generic [ref=e698]: Maverick·Speak. It types. Everywhere.
+          - navigation "Footer" [ref=e699]:
+            - link "Pricing" [ref=e700] [cursor=pointer]:
+              - /url: /#pricing
+            - link "FAQ" [ref=e701] [cursor=pointer]:
+              - /url: /#faq
+            - link "Privacy" [ref=e702] [cursor=pointer]:
+              - /url: /privacy
+            - link "Terms" [ref=e703] [cursor=pointer]:
+              - /url: /terms
+            - link "X" [ref=e704] [cursor=pointer]:
+              - /url: https://x.com/justmalhar
+            - link "GitHub" [ref=e705] [cursor=pointer]:
+              - /url: https://github.com/justmalhar
+            - link "hello@getmaverick.sh" [ref=e706] [cursor=pointer]:
+              - /url: mailto:hello@getmaverick.sh
+        - generic [ref=e707]:
+          - paragraph [ref=e708]: © 2026 Maverick Voice. Built by Malhar Ujawane.
+          - paragraph [ref=e709]: getmaverick.sh
+  - button "Open Next.js Dev Tools" [ref=e722] [cursor=pointer]:
+    - img [ref=e723]
+  - alert [ref=e726]

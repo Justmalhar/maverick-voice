@@ -100,17 +100,30 @@ body {
   height: 100%;
 }
 
-/* Subtle radial vignette behind the dashboard so the black glass cards read as
+/* Soft ambient glow behind the dashboard so the black glass cards read as
    floating above a deeper black. The widget body is transparent so this never
-   shows there. */
+   shows there.
+   Edge-free recipe: (1) multi-stop eased falloff (no abrupt single-stop cone),
+   (2) fade to rgba(255,255,255,0) NOT `transparent` — bare transparent is
+   rgba(0,0,0,0), so interpolating from white passes through grey and leaves a
+   dirty ring; matching the hue at zero alpha keeps the falloff clean,
+   (3) wide elliptical spread so the light bleeds rather than pools. */
 body:not(.widget-body)::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.045) 0%, transparent 42%),
-    radial-gradient(circle at 92% 100%, rgba(255, 255, 255, 0.03) 0%, transparent 46%),
+    radial-gradient(ellipse 90% 70% at 16% 2%,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.028) 24%,
+      rgba(255, 255, 255, 0.01) 48%,
+      rgba(255, 255, 255, 0) 76%),
+    radial-gradient(ellipse 95% 75% at 94% 104%,
+      rgba(255, 255, 255, 0.038) 0%,
+      rgba(255, 255, 255, 0.02) 26%,
+      rgba(255, 255, 255, 0.007) 50%,
+      rgba(255, 255, 255, 0) 78%),
     var(--mv-black);
   pointer-events: none;
 }
