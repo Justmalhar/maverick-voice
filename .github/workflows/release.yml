@@ -23,12 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build + package (unsigned)
+      - name: Build, sign + notarize
         run: npm run dist:mac
         env:
-          # Skip code signing in CI. Distribute a signed build manually for
-          # production releases by providing CSC_LINK + CSC_KEY_PASSWORD secrets.
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload artifacts to R2
         env:

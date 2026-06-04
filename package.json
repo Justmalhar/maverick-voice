@@ -72,7 +72,7 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": false,
+      "notarize": true,
       "extendInfo": {
         "NSMicrophoneUsageDescription": "Maverick Voice uses your microphone to transcribe what you say into text.",
         "NSAppleEventsUsageDescription": "Maverick Voice uses System Events to paste transcribed text at your cursor."
