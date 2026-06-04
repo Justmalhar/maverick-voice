@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
-import type { DictationKey } from '../../shared/types'
+// Deep-import the MONO sub-components (avoids the antd-pulling barrel) — same
+// pattern as Onboarding/Settings; strictly monochrome via currentColor.
+import Groq from '@lobehub/icons/es/Groq/components/Mono'
+import OpenAI from '@lobehub/icons/es/OpenAI/components/Mono'
+import OpenRouter from '@lobehub/icons/es/OpenRouter/components/Mono'
+import type { DictationKey, UsageSummary, ActivationMode, DictationBinding, ProviderId } from '../../shared/types'
 import History from './History'
 import Dictionary from './Dictionary'
 import Snippets from './Snippets'
@@ -171,8 +176,33 @@ export default function App() {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   Home — concise landing + the folded Voice/features explainer.
+   Home — at-a-glance dashboard: this month's usage, quick toggles, provider
+   key status, and the active hotkey. The real version of the marketing
+   ProductShot. All data is read live from the main process.
 ════════════════════════════════════════════════════════════════════════ */
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.userAgent)
+
+const ACTIVATION_LABEL: Record<ActivationMode, string> = {
+  'tap-toggle': 'Tap to toggle',
+  'push-to-talk': 'Push to talk',
+  'double-tap-push': 'Dual mode'
+}
+
+/** Short keycap label for a combo modifier (⌘ on mac, Win/Ctrl/… on win32). */
+function modCap(mod: string): string {
+  const mac: Record<string, string> = { cmd: '⌘', ctrl: '⌃', option: '⌥', shift: '⇧', fn: 'fn' }
+  const win: Record<string, string> = { cmd: 'Win', ctrl: 'Ctrl', option: 'Alt', shift: 'Shift', fn: 'fn' }
+  return (IS_MAC ? mac : win)[mod] || mod
+}
+
+/** Estimated USD; sub-cent totals show as "<$0.01". */
+function fmtUsd(n: number | undefined): string {
+  if (n === undefined) return '—'
+  if (n <= 0) return '$0.00'
+  if (n < 0.01) return '<$0.01'
+  return '$' + n.toFixed(2)
+}
 
 function Home({
   dictationKey,
@@ -181,97 +211,237 @@ function Home({
   dictationKey: DictationKey
   onNavigate: (tab: Tab) => void
 }) {
-  const dictLabel = dictationKeyLabel(dictationKey)
+  const [usage, setUsage] = useState<UsageSummary | null>(null)
+  const [monthWords, setMonthWords] = useState<number | null>(null)
+  const [autoFormat, setAutoFormat] = useState(false)
+  const [appAware, setAppAware] = useState(true)
+  const [activationMode, setActivationMode] = useState<ActivationMode>('tap-toggle')
+  const [binding, setBinding] = useState<DictationBinding | null>(null)
+  const [keys, setKeys] = useState<Record<'groq' | 'openai' | 'openrouter', boolean>>({
+    groq: false,
+    openai: false,
+    openrouter: false
+  })
+
+  useEffect(() => {
+    const api = window.electronAPI
+    api.getUsage().then(setUsage).catch(() => {})
+    api.getAutoFormat().then(setAutoFormat).catch(() => {})
+    api.getAppAwareFormatting().then(setAppAware).catch(() => {})
+    api.getActivationMode().then((m) => setActivationMode(m as ActivationMode)).catch(() => {})
+    api.getDictationBinding().then(setBinding).catch(() => {})
+    ;(['groq', 'openai', 'openrouter'] as const).forEach((p) =>
+      api
+        .getProviderKeyStatus(p)
+        .then((s) => setKeys((k) => ({ ...k, [p]: s.hasKey })))
+        .catch(() => {})
+    )
+    // Approximate words dictated this month from saved transcripts (the app
+    // tracks cost/tokens/seconds; word count is derived for the familiar stat).
+    api
+      .getSessions()
+      .then((sessions) => {
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+        let words = 0
+        for (const s of sessions) {
+          if (s.createdAt < monthStart) continue
+          const text = s.output || s.dictationTranscript || ''
+          if (text) words += text.trim().split(/\s+/).filter(Boolean).length
+        }
+        setMonthWords(words)
+      })
+      .catch(() => {})
+  }, [])
+
+  function toggleAutoFormat(v: boolean) {
+    setAutoFormat(v)
+    window.electronAPI.setAutoFormat(v)
+  }
+  function toggleAppAware(v: boolean) {
+    setAppAware(v)
+    window.electronAPI.setAppAwareFormatting(v)
+  }
+
+  const minutes = usage ? Math.round(usage.month.sttSeconds / 60) : null
+  const caps =
+    binding?.type === 'combo'
+      ? binding.mods.map(modCap)
+      : [dictationKeyLabel(binding?.type === 'key' ? binding.key : dictationKey)]
 
   return (
     <div>
       <div className="mb-6">
-        <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight">
-          Maverick Voice
-        </h2>
+        <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight">Home</h2>
         <p className="text-[12px] text-mv-text-secondary mt-1.5 leading-relaxed max-w-md">
-          Speak anywhere on your desktop and your words land at the cursor — no window-switching, no
-          cleanup.
+          Speak anywhere and your words land at the cursor. Here's your month at a glance.
         </p>
       </div>
 
       <div className="flex flex-col gap-3">
-        <FeatureCard
-          icon={<MicGlyph />}
-          title="Dictate"
-          description="Tap your dictation key, speak, tap again. Raw text lands exactly where the cursor is."
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <kbd className="kbd-3d">{dictLabel}</kbd>
-            <span className="text-[11px] text-mv-text-muted">speak, tap again to stop</span>
+        {/* Usage this month */}
+        <div className="mv-glass-card px-6 py-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-3">This month</p>
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <div>
+              <span className="font-display text-[34px] leading-none font-bold text-mv-text-primary tabular-nums">
+                {monthWords === null ? '—' : monthWords.toLocaleString()}
+              </span>
+              <span className="text-[12px] text-mv-text-muted ml-2">words dictated</span>
+            </div>
+            <div className="flex items-end gap-5">
+              <Stat value={minutes === null ? '—' : String(minutes)} unit="min" />
+              <Stat value={fmtUsd(usage?.month.cost)} unit="est. cost" />
+            </div>
           </div>
-        </FeatureCard>
+        </div>
 
-        <FeatureCard
-          icon={<SparkGlyph />}
-          title="AI auto-format"
-          description="Optionally let the AI fix grammar, punctuation, and paragraphing — without changing what you said."
-        >
-          <button
-            onClick={() => onNavigate('settings')}
-            className="btn-glass !px-3.5 !py-1.5 !text-[11px]"
-          >
-            Enable in Settings
-          </button>
-        </FeatureCard>
+        {/* Quick toggles */}
+        <div className="mv-glass-card px-5 divide-y divide-mv-border">
+          <ToggleRow
+            label="AI auto-format"
+            desc="Fix grammar, punctuation, and paragraphs — never your meaning."
+            checked={autoFormat}
+            onChange={toggleAutoFormat}
+          />
+          <ToggleRow
+            label="Adapt to active app"
+            desc="Emails get paragraphs, IDE prompts get @file refs, chats stay casual."
+            checked={appAware}
+            disabled={!autoFormat}
+            onChange={toggleAppAware}
+          />
+        </div>
 
-        <FeatureCard
-          icon={<DictionaryIcon size={18} />}
-          title="Dictionary & Snippets"
-          description="Teach Maverick the words it mishears, and expand short spoken triggers into longer text."
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => onNavigate('dictionary')}
-              className="btn-glass !px-3.5 !py-1.5 !text-[11px]"
-            >
-              Dictionary
-            </button>
-            <button
-              onClick={() => onNavigate('snippets')}
-              className="btn-glass !px-3.5 !py-1.5 !text-[11px]"
-            >
-              Snippets
-            </button>
+        {/* Providers */}
+        <div className="mv-glass-card px-5 pt-3 pb-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-1 px-0.5">
+            Providers · your keys
+          </p>
+          <div className="divide-y divide-mv-border">
+            <ProviderRow provider="groq" name="Groq" sub="Speech · Whisper" connected={keys.groq} onClick={() => onNavigate('settings')} />
+            <ProviderRow provider="openai" name="OpenAI" sub="AI formatting" connected={keys.openai} onClick={() => onNavigate('settings')} />
+            <ProviderRow provider="openrouter" name="OpenRouter" sub="AI formatting · any model" connected={keys.openrouter} optional onClick={() => onNavigate('settings')} />
           </div>
-        </FeatureCard>
+        </div>
+
+        {/* Hotkey */}
+        <div className="mv-glass-card px-5 py-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[13px] font-semibold text-mv-text-primary">{ACTIVATION_LABEL[activationMode]}</p>
+            <p className="text-[11px] text-mv-text-muted mt-0.5">Your dictation shortcut</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {caps.map((c, i) => (
+              <kbd key={i} className="kbd-3d">{c}</kbd>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-  children
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-  children?: React.ReactNode
-}) {
+function Stat({ value, unit }: { value: string; unit: string }) {
   return (
-    <div className="mv-glass-card px-5 py-5">
-      <div className="flex items-start gap-4">
-        <span className="w-10 h-10 rounded-mv-md bg-mv-white-04 border border-mv-border flex items-center justify-center text-mv-text-secondary shrink-0">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <h3 className="font-display text-[15px] font-bold text-mv-text-primary tracking-tight">
-            {title}
-          </h3>
-          <p className="text-[12px] text-mv-text-secondary leading-relaxed mt-1.5">{description}</p>
-          {children && <div className="mt-3">{children}</div>}
-        </div>
-      </div>
+    <div className="text-right">
+      <span className="font-display text-[20px] leading-none font-bold text-mv-text-primary tabular-nums">{value}</span>
+      <span className="text-[11px] text-mv-text-muted ml-1.5">{unit}</span>
     </div>
   )
+}
+
+function ToggleRow({
+  label,
+  desc,
+  checked,
+  onChange,
+  disabled
+}: {
+  label: string
+  desc: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <div className={`flex items-center justify-between gap-4 py-4 ${disabled ? 'opacity-45' : ''}`}>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-mv-text-primary">{label}</p>
+        <p className="text-[11px] text-mv-text-secondary mt-0.5 leading-relaxed">{desc}</p>
+      </div>
+      <Toggle checked={checked} onChange={onChange} disabled={disabled} />
+    </div>
+  )
+}
+
+function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative shrink-0 w-[42px] h-[24px] rounded-full border transition-colors duration-200 ${
+        checked ? 'bg-mv-white-24 border-mv-border-focus' : 'bg-mv-white-04 border-mv-border'
+      } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span
+        className={`absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full bg-mv-white shadow-[0_1px_3px_rgba(0,0,0,0.5)] transition-all duration-200 ${
+          checked ? 'left-[21px]' : 'left-[3px]'
+        }`}
+      />
+    </button>
+  )
+}
+
+function ProviderRow({
+  provider,
+  name,
+  sub,
+  connected,
+  optional,
+  onClick
+}: {
+  provider: ProviderId
+  name: string
+  sub: string
+  connected: boolean
+  optional?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button onClick={onClick} className="w-full flex items-center gap-3 py-3 text-left transition-colors duration-150 hover:bg-mv-white-04 -mx-2 px-2 rounded-mv-sm">
+      <span className="flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
+        <ProviderGlyph provider={provider} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold text-mv-text-primary">{name}</p>
+        <p className="text-[10.5px] text-mv-text-muted mt-0.5">{sub}</p>
+      </div>
+      <span className="flex items-center gap-1.5 text-[11px] font-medium shrink-0">
+        <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-mv-white' : 'bg-mv-white-24'}`} />
+        <span className={connected ? 'text-mv-text-secondary' : 'text-mv-text-muted'}>
+          {connected ? 'Connected' : optional ? 'Optional' : 'Not set'}
+        </span>
+      </span>
+    </button>
+  )
+}
+
+/** Provider brand glyph (lobehub mono base components — currentColor). */
+function ProviderGlyph({ provider }: { provider: ProviderId }) {
+  switch (provider) {
+    case 'groq':
+      return <Groq size={18} />
+    case 'openai':
+      return <OpenAI size={18} />
+    case 'openrouter':
+      return <OpenRouter size={18} />
+    default:
+      return null
+  }
 }
 
 /* ─── Sidebar pieces ─── */
@@ -375,23 +545,3 @@ function SettingsIcon() {
   )
 }
 
-/* ─── Home glyphs ─── */
-
-function MicGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="1" width="6" height="12" rx="3" />
-      <path d="M5 10a7 7 0 0 0 14 0" />
-      <line x1="12" y1="17" x2="12" y2="21" />
-    </svg>
-  )
-}
-
-function SparkGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l1.8 4.6L18.4 9.4 13.8 11.2 12 15.8 10.2 11.2 5.6 9.4 10.2 7.6 12 3z" />
-      <path d="M19 15l.7 1.8L21.5 17.5 19.7 18.2 19 20l-.7-1.8L16.5 17.5 18.3 16.8 19 15z" />
-    </svg>
-  )
-}
