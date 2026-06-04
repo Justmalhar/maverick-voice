@@ -1,4 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+// Deep-import the MONO sub-component only — the package barrel pulls Avatar/
+// Combine variants that depend on antd, bloating the renderer bundle. The Mono
+// component is pure React + SVG (currentColor), strictly monochrome.
+import Groq from '@lobehub/icons/es/Groq/components/Mono'
+import OpenAI from '@lobehub/icons/es/OpenAI/components/Mono'
+import OpenRouter from '@lobehub/icons/es/OpenRouter/components/Mono'
 import type {
   DictationKey,
   DictationBinding,
@@ -6,7 +12,6 @@ import type {
   ActivationMode,
   STTSettings,
   LLMSettings,
-  STTProviderId,
   LLMProviderId,
   ProviderId,
   ProviderModel,
@@ -28,14 +33,136 @@ interface SettingsProps {
   onDictationKeyChange?: (key: DictationKey) => void
 }
 
-// Static language options for the Groq STT card.
-const STT_LANGUAGES: { value: STTSettings['language']; label: string }[] = [
+// Full Whisper large-v3 language set (~99 languages) for the STT hint dropdown.
+// value = ISO-639-1 code forwarded verbatim to Groq; 'auto' first => detect.
+// Native <select> type-to-search makes the long list navigable.
+const STT_LANGUAGES: { value: string; label: string }[] = [
   { value: 'auto', label: 'Auto-detect' },
   { value: 'en', label: 'English' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'de', label: 'German' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'ru', label: 'Russian' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'fr', label: 'French' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'tr', label: 'Turkish' },
+  { value: 'pl', label: 'Polish' },
+  { value: 'ca', label: 'Catalan' },
+  { value: 'nl', label: 'Dutch' },
+  { value: 'ar', label: 'Arabic' },
+  { value: 'sv', label: 'Swedish' },
+  { value: 'it', label: 'Italian' },
+  { value: 'id', label: 'Indonesian' },
   { value: 'hi', label: 'Hindi' },
+  { value: 'fi', label: 'Finnish' },
+  { value: 'vi', label: 'Vietnamese' },
+  { value: 'he', label: 'Hebrew' },
+  { value: 'uk', label: 'Ukrainian' },
+  { value: 'el', label: 'Greek' },
+  { value: 'ms', label: 'Malay' },
+  { value: 'cs', label: 'Czech' },
+  { value: 'ro', label: 'Romanian' },
+  { value: 'da', label: 'Danish' },
+  { value: 'hu', label: 'Hungarian' },
+  { value: 'ta', label: 'Tamil' },
+  { value: 'no', label: 'Norwegian' },
+  { value: 'th', label: 'Thai' },
+  { value: 'ur', label: 'Urdu' },
+  { value: 'hr', label: 'Croatian' },
+  { value: 'bg', label: 'Bulgarian' },
+  { value: 'lt', label: 'Lithuanian' },
+  { value: 'la', label: 'Latin' },
+  { value: 'mi', label: 'Maori' },
+  { value: 'ml', label: 'Malayalam' },
+  { value: 'cy', label: 'Welsh' },
+  { value: 'sk', label: 'Slovak' },
+  { value: 'te', label: 'Telugu' },
+  { value: 'fa', label: 'Persian' },
+  { value: 'lv', label: 'Latvian' },
+  { value: 'bn', label: 'Bengali' },
+  { value: 'sr', label: 'Serbian' },
+  { value: 'az', label: 'Azerbaijani' },
+  { value: 'sl', label: 'Slovenian' },
+  { value: 'kn', label: 'Kannada' },
+  { value: 'et', label: 'Estonian' },
+  { value: 'mk', label: 'Macedonian' },
+  { value: 'br', label: 'Breton' },
+  { value: 'eu', label: 'Basque' },
+  { value: 'is', label: 'Icelandic' },
+  { value: 'hy', label: 'Armenian' },
+  { value: 'ne', label: 'Nepali' },
+  { value: 'mn', label: 'Mongolian' },
+  { value: 'bs', label: 'Bosnian' },
+  { value: 'kk', label: 'Kazakh' },
+  { value: 'sq', label: 'Albanian' },
+  { value: 'sw', label: 'Swahili' },
+  { value: 'gl', label: 'Galician' },
+  { value: 'mr', label: 'Marathi' },
+  { value: 'pa', label: 'Punjabi' },
+  { value: 'si', label: 'Sinhala' },
+  { value: 'km', label: 'Khmer' },
+  { value: 'sn', label: 'Shona' },
+  { value: 'yo', label: 'Yoruba' },
+  { value: 'so', label: 'Somali' },
+  { value: 'af', label: 'Afrikaans' },
+  { value: 'oc', label: 'Occitan' },
+  { value: 'ka', label: 'Georgian' },
+  { value: 'be', label: 'Belarusian' },
+  { value: 'tg', label: 'Tajik' },
+  { value: 'sd', label: 'Sindhi' },
   { value: 'gu', label: 'Gujarati' },
-  { value: 'ar', label: 'Arabic' }
+  { value: 'am', label: 'Amharic' },
+  { value: 'yi', label: 'Yiddish' },
+  { value: 'lo', label: 'Lao' },
+  { value: 'uz', label: 'Uzbek' },
+  { value: 'fo', label: 'Faroese' },
+  { value: 'ht', label: 'Haitian Creole' },
+  { value: 'ps', label: 'Pashto' },
+  { value: 'tk', label: 'Turkmen' },
+  { value: 'nn', label: 'Norwegian Nynorsk' },
+  { value: 'mt', label: 'Maltese' },
+  { value: 'sa', label: 'Sanskrit' },
+  { value: 'lb', label: 'Luxembourgish' },
+  { value: 'my', label: 'Burmese' },
+  { value: 'bo', label: 'Tibetan' },
+  { value: 'tl', label: 'Tagalog' },
+  { value: 'mg', label: 'Malagasy' },
+  { value: 'as', label: 'Assamese' },
+  { value: 'tt', label: 'Tatar' },
+  { value: 'haw', label: 'Hawaiian' },
+  { value: 'ln', label: 'Lingala' },
+  { value: 'ha', label: 'Hausa' },
+  { value: 'ba', label: 'Bashkir' },
+  { value: 'jw', label: 'Javanese' },
+  { value: 'su', label: 'Sundanese' },
+  { value: 'yue', label: 'Cantonese' }
 ]
+
+/** Provider brand glyph (lobehub mono base components — currentColor). */
+function ProviderGlyph({ provider }: { provider: ProviderId }) {
+  switch (provider) {
+    case 'groq':
+      return <Groq size={18} />
+    case 'openai':
+      return <OpenAI size={18} />
+    case 'openrouter':
+      return <OpenRouter size={18} />
+    default:
+      return null
+  }
+}
+
+/** Plain glass chip wrapping a provider glyph — engine/context affordance
+ *  (no status dot). Grayscale-forced to stay strictly monochrome. */
+function ProviderChip({ provider }: { provider: ProviderId }) {
+  return (
+    <span className="flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
+      <ProviderGlyph provider={provider} />
+    </span>
+  )
+}
 
 // Groq LLM chat models for the dropdown. 'groq' is shared with STT, so
 // listModels('groq') returns the Whisper models — these LLM models are kept as
@@ -495,19 +622,31 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
         <SettingRow label="Activation mode" description={activationBlurb || ''}>
           <Segmented options={ACTIVATION_MODES} value={activationMode} onChange={handleActivationModeChange} />
         </SettingRow>
-        <SettingRow label="Language" description="Speech recognition language hint" last>
+        <div className="flex items-center justify-between px-5 py-4 gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ProviderChip provider="groq" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-mv-text-primary">Language</p>
+              <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug">Speech recognition hint · Groq Whisper</p>
+            </div>
+          </div>
           <select
-            className="mv-select min-w-[160px]"
+            className="mv-select min-w-[160px] shrink-0"
             value={sttSettings.language}
-            onChange={(e) => updateStt({ language: e.target.value as STTSettings['language'] })}
+            onChange={(e) => updateStt({ language: e.target.value })}
           >
             {STT_LANGUAGES.map((l) => (
               <option key={l.value} value={l.value}>
                 {l.label}
               </option>
             ))}
+            {/* Keep an unrecognized stored code selectable rather than silently
+                resetting it to the first option. */}
+            {!STT_LANGUAGES.some((l) => l.value === sttSettings.language) && (
+              <option value={sttSettings.language}>{sttSettings.language}</option>
+            )}
           </select>
-        </SettingRow>
+        </div>
       </Section>
 
       {/* ═══ AI ═══ */}
@@ -538,58 +677,56 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           </div>
         </div>
 
-        {/* LLM provider + model (always visible) */}
-        <div className="px-5 py-4 border-b border-mv-border">
-          <FieldRow label="LLM provider" hint="Used for auto-format and instruction edits.">
-            <Segmented
-              options={[
-                { value: 'groq', label: 'Groq' },
-                { value: 'openai', label: 'OpenAI' },
-                { value: 'openrouter', label: 'OpenRouter' }
-              ]}
-              value={llmSettings.provider}
-              onChange={(v) => handleLlmProviderChange(v as LLMProviderId)}
-            />
-          </FieldRow>
-          <FieldRow label="Model">
-            <select className="mv-select min-w-[200px]" value={llmSettings.model} onChange={(e) => updateLlm({ model: e.target.value })}>
-              {llmModels.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-              {/* allow a custom model id (escape hatch) to remain selected */}
-              {!llmModels.some((m) => m.id === llmSettings.model) && (
-                <option value={llmSettings.model}>{llmSettings.model} (custom)</option>
-              )}
-            </select>
-          </FieldRow>
-          <FieldRow label="Custom model" hint="Type any model id this endpoint serves." last>
-            <input
-              className="mv-input !w-[200px]"
-              placeholder="e.g. gpt-4.1"
-              value={llmSettings.model}
-              spellCheck={false}
-              autoComplete="off"
-              onChange={(e) => updateLlm({ model: e.target.value })}
-            />
-          </FieldRow>
-        </div>
+        {/* LLM provider + model — the engine that powers auto-format & edits. */}
+        <SettingRow label="LLM provider" description="Powers auto-format and voice edits">
+          <Segmented
+            options={[
+              { value: 'groq', label: 'Groq', icon: <ProviderGlyph provider="groq" /> },
+              { value: 'openai', label: 'OpenAI', icon: <ProviderGlyph provider="openai" /> },
+              { value: 'openrouter', label: 'OpenRouter', icon: <ProviderGlyph provider="openrouter" /> }
+            ]}
+            value={llmSettings.provider}
+            onChange={(v) => handleLlmProviderChange(v as LLMProviderId)}
+          />
+        </SettingRow>
+        <SettingRow label="Model" description="Chat model used for AI passes" last>
+          <select className="mv-select min-w-[200px]" value={llmSettings.model} onChange={(e) => updateLlm({ model: e.target.value })}>
+            {llmModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+            {/* allow a custom model id (escape hatch) to remain selected */}
+            {!llmModels.some((m) => m.id === llmSettings.model) && (
+              <option value={llmSettings.model}>{llmSettings.model} (custom)</option>
+            )}
+          </select>
+        </SettingRow>
+      </Section>
 
-        {/* API keys — Groq required for dictation; OpenAI/OpenRouter for AI. */}
+      {/* ═══ Providers & keys (unified) ═══ */}
+      <Section title="Providers & keys" icon={<KeyIcon />}>
         <ProviderKeyRow
           provider="groq"
           label="Groq"
-          tag="Required for dictation"
+          sublabel="Speech-to-text · LLM"
+          tag="Required"
           placeholder="gsk_..."
           consoleUrl="https://console.groq.com/keys"
         />
         <Divider />
-        <ProviderKeyRow provider="openai" label="OpenAI" placeholder="sk-..." consoleUrl="https://platform.openai.com/api-keys" />
+        <ProviderKeyRow
+          provider="openai"
+          label="OpenAI"
+          sublabel="AI auto-format & edits"
+          placeholder="sk-..."
+          consoleUrl="https://platform.openai.com/api-keys"
+        />
         <Divider />
         <ProviderKeyRow
           provider="openrouter"
           label="OpenRouter"
+          sublabel="AI auto-format & edits"
           placeholder="sk-or-..."
           consoleUrl="https://openrouter.ai/keys"
           last
@@ -612,7 +749,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           <div className="min-w-0 text-left">
             <p className="text-[13px] font-semibold text-mv-text-primary">Advanced settings</p>
             <p className="text-[11px] text-mv-text-muted mt-0.5">
-              Edit-with-voice, output mode, transcription, permissions
+              Voice editing, custom model & endpoint, output, permissions
             </p>
           </div>
           <span className={`mv-disclosure__chevron ${advancedOpen ? 'mv-disclosure__chevron--open' : ''}`}>
@@ -635,6 +772,30 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
               </SettingRow>
             )}
 
+            {/* Custom LLM model id — escape hatch for any model the endpoint serves. */}
+            <SettingRow label="Custom model" description="Override the dropdown with any model id">
+              <input
+                className="mv-input !w-[200px]"
+                placeholder="e.g. gpt-4.1"
+                value={llmSettings.model}
+                spellCheck={false}
+                autoComplete="off"
+                onChange={(e) => updateLlm({ model: e.target.value })}
+              />
+            </SettingRow>
+
+            {/* Custom OpenAI-compatible base URL (blank = provider default). */}
+            <SettingRow label="Custom API base URL" description="Point at any OpenAI-compatible endpoint">
+              <input
+                className="mv-input !w-[200px]"
+                placeholder="provider default"
+                value={llmSettings.baseUrl}
+                spellCheck={false}
+                autoComplete="off"
+                onChange={(e) => updateLlm({ baseUrl: e.target.value })}
+              />
+            </SettingRow>
+
             {/* Output mode */}
             <SettingRow label="Output mode" description="How the result is delivered">
               <Segmented
@@ -650,14 +811,13 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
             {/* Chunked transcription */}
             <SettingRow
               label="Chunked transcription"
-              description="Stream long recordings to the model in VAD-split chunks"
-              last={!IS_MAC}
+              description="Stream long recordings in VAD-split chunks"
             >
               <Toggle checked={chunkedTranscription} onChange={handleChunkedChange} />
             </SettingRow>
 
             {/* STT model (advanced — most users keep the default) */}
-            <SettingRow label="Transcription model" description="Groq Whisper variant used for speech-to-text" last={!IS_MAC}>
+            <SettingRow label="Transcription model" description="Groq Whisper variant for speech-to-text" last={!IS_MAC}>
               <select className="mv-select min-w-[200px]" value={sttSettings.model} onChange={(e) => updateStt({ model: e.target.value })}>
                 {sttModels.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -754,6 +914,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 function ProviderKeyRow({
   provider,
   label,
+  sublabel,
   tag,
   placeholder,
   consoleUrl,
@@ -761,6 +922,7 @@ function ProviderKeyRow({
 }: {
   provider: ProviderId
   label: string
+  sublabel?: string
   tag?: string
   placeholder: string
   consoleUrl: string
@@ -832,17 +994,26 @@ function ProviderKeyRow({
   }
 
   return (
-    <div className={`px-5 py-4 ${last ? '' : ''}`}>
+    <div className="px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className={`mv-status-dot ${masked ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
-          <span className="text-[13px] font-semibold text-mv-text-primary shrink-0">{label}</span>
-          {tag && (
-            <span className="text-[9px] font-bold uppercase tracking-wider text-mv-text-muted bg-mv-white-04 border border-mv-border rounded-mv-sm px-1.5 py-0.5 shrink-0">
-              {tag}
-            </span>
-          )}
-          <span className="text-[12px] text-mv-text-muted font-mono truncate">{masked || 'Not set'}</span>
+          {/* Provider brand icon (lobehub, mono — forced grayscale to honor the
+              strict B&W system). A tiny status dot badges the saved state. */}
+          <span className="relative flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
+            <ProviderGlyph provider={provider} />
+            <span className={`absolute -top-0.5 -right-0.5 mv-status-dot ${masked ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-mv-text-primary">{label}</span>
+              {tag && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-mv-text-muted bg-mv-white-04 border border-mv-border rounded-mv-sm px-1.5 py-0.5 shrink-0">
+                  {tag}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-mv-text-muted font-mono truncate mt-0.5">{masked || sublabel || 'Not set'}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {!editing && (
@@ -972,35 +1143,12 @@ function SettingRow({
   )
 }
 
-/** Inline field row inside a card body (no card-edge divider). */
-function FieldRow({
-  label,
-  hint,
-  children,
-  last
-}: {
-  label: string
-  hint?: string
-  children: React.ReactNode
-  last?: boolean
-}) {
-  return (
-    <div className={`flex items-center justify-between gap-4 py-2.5 ${last ? '' : 'border-b border-mv-white-04'}`}>
-      <div className="min-w-0">
-        <p className="text-[12px] font-medium text-mv-text-secondary">{label}</p>
-        {hint && <p className="text-[10.5px] text-mv-text-muted mt-0.5 max-w-[240px] leading-snug">{hint}</p>}
-      </div>
-      <div className="shrink-0">{children}</div>
-    </div>
-  )
-}
-
 function Segmented({
   options,
   value,
   onChange
 }: {
-  options: { value: string; label: string }[]
+  options: { value: string; label: string; icon?: React.ReactNode }[]
   value: string
   onChange: (value: string) => void
 }) {
@@ -1012,6 +1160,7 @@ function Segmented({
           onClick={() => onChange(opt.value)}
           className={`mv-segment__btn ${value === opt.value ? 'mv-segment__btn--active' : ''}`}
         >
+          {opt.icon && <span className="mv-segment__icon [&_svg]:grayscale">{opt.icon}</span>}
           {opt.label}
         </button>
       ))}
@@ -1138,6 +1287,15 @@ function CogIcon() {
     <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="2.2" />
       <path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.6 3.4l-1.1 1.1M4.5 11.5l-1.1 1.1M12.6 12.6l-1.1-1.1M4.5 4.5L3.4 3.4" />
+    </svg>
+  )
+}
+
+function KeyIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="11" r="3" />
+      <path d="M7.1 8.9 13.5 2.5M11 5l1.5 1.5M9.5 6.5 11 8" />
     </svg>
   )
 }

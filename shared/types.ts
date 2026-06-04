@@ -83,8 +83,13 @@ export interface STTSettings {
   provider: STTProviderId
   /** Exact model string sent to the provider AND used for usage pricing. */
   model: string
-  /** STT language hint; 'auto' lets the model detect. */
-  language: 'auto' | 'en' | 'hi' | 'gu' | 'ar'
+  /**
+   * STT language hint. An ISO-639-1 code (e.g. 'en', 'hi', 'gu') forwarded
+   * verbatim to the provider, OR 'auto' to let the model detect. Whisper
+   * large-v3 supports ~99 languages; the Settings dropdown lists them all.
+   * The Groq STT provider skips the hint when 'auto'.
+   */
+  language: string
 }
 
 /** LLM runtime settings persisted in electron-store. */

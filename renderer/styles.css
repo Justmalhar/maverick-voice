@@ -243,6 +243,19 @@ a {
 .mv-segment__btn:hover {
   color: var(--mv-text-primary);
 }
+/* Inline provider glyph inside a segmented button — sized down from the
+   lobehub default and aligned with the label. The grayscale guard lives on the
+   wrapper (utility class) to keep the strict B&W system. */
+.mv-segment__icon {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.mv-segment__icon svg {
+  width: 13px;
+  height: 13px;
+}
 .mv-segment__btn--active {
   color: var(--mv-black);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.82) 100%);
