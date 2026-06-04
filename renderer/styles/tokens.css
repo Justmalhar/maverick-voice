@@ -76,7 +76,12 @@
   --mv-radius-pill: 9999px;
 
   /* ─── Elevation shadows ─── */
-  --mv-shadow-widget: 0 12px 36px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  /* Widget HUD: CONTAINED to the pill — a crisp 1px outer ring + inset top
+     highlight, NO blurred drop shadow. The old 0 12px 36px halo bled a soft
+     grey gradient below the pill on the transparent overlay window; the pill's
+     dark glass bg + backdrop-blur + border are enough to separate it from the
+     content behind, with nothing rendering past the rounded container. */
+  --mv-shadow-widget: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   --mv-shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 
   /* ─── Fonts (native, offline — no Google Fonts) ─── */
@@ -225,30 +230,32 @@
 .animate-hud-enter { animation: mv-hud-enter var(--mv-dur-base) var(--mv-ease-spring) both; }
 .animate-hud-exit { animation: mv-hud-exit 200ms var(--mv-ease-out) both; }
 
-/* Recording pulse — radiating white glow (dictation = dim, instruction = bright). */
+/* Recording pulse — CONTAINED edge glow (dictation = dim, instruction = bright).
+   The "alive" feel now lives in the pill's 1px ring brightening in place plus
+   the inner waveform + status dot; no outer blur halo escapes the container. */
 @keyframes mv-radiate-dim {
   0%, 100% {
-    box-shadow: var(--mv-shadow-widget), 0 0 15px rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   }
   50% {
-    box-shadow: var(--mv-shadow-widget), 0 0 28px rgba(255, 255, 255, 0.18), 0 0 50px rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 1px 0 rgba(255, 255, 255, 0.10) inset;
   }
 }
 @keyframes mv-radiate-bright {
   0%, 100% {
-    box-shadow: var(--mv-shadow-widget), 0 0 15px rgba(255, 255, 255, 0.10), 0 0 30px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
   }
   50% {
-    box-shadow: var(--mv-shadow-widget), 0 0 22px rgba(255, 255, 255, 0.25), 0 0 55px rgba(255, 255, 255, 0.10);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.26), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
   }
 }
-/* Processing — same white radiate, faster (was sky-blue in reference). */
+/* Processing — same contained edge pulse, faster. */
 @keyframes mv-radiate-processing {
   0%, 100% {
-    box-shadow: var(--mv-shadow-widget), 0 0 15px rgba(255, 255, 255, 0.06), 0 0 30px rgba(255, 255, 255, 0.03);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   }
   50% {
-    box-shadow: var(--mv-shadow-widget), 0 0 24px rgba(255, 255, 255, 0.16), 0 0 55px rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.18), 0 1px 0 rgba(255, 255, 255, 0.10) inset;
   }
 }
 .animate-radiate-dim { animation: mv-radiate-dim 2s ease-in-out infinite; }
@@ -269,11 +276,12 @@
 }
 .animate-shimmer-bar { animation: mv-shimmer-bar 1.8s ease-in-out infinite; }
 
-/* Output flash — brief white bloom when result is delivered. */
+/* Output flash — brief CONTAINED ring brighten when result is delivered
+   (no outer bloom escaping the pill). */
 @keyframes mv-output-flash {
-  0% { box-shadow: var(--mv-shadow-widget), 0 0 0 0 rgba(255, 255, 255, 0); }
-  35% { box-shadow: var(--mv-shadow-widget), 0 0 30px 4px rgba(255, 255, 255, 0.22); }
-  100% { box-shadow: var(--mv-shadow-widget), 0 0 0 0 rgba(255, 255, 255, 0); }
+  0% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
+  35% { box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.40), 0 1px 0 rgba(255, 255, 255, 0.16) inset; }
+  100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 0 rgba(255, 255, 255, 0.06) inset; }
 }
 .animate-output-flash { animation: mv-output-flash 600ms var(--mv-ease-out) 1; }
 
