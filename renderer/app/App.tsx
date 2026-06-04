@@ -313,12 +313,15 @@ function SidebarButton({
 }
 
 function BrandMark() {
+  // The Maverick waveform mark (from waveform.svg), white on the glass badge.
   return (
     <span className="relative inline-flex items-center justify-center w-9 h-9 rounded-mv-md bg-gradient-to-b from-mv-white-12 to-mv-white-04 border border-mv-border shadow-[0_3px_10px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.15)_inset]">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-mv-text-primary">
-        <rect x="9" y="2" width="6" height="11" rx="3" />
-        <path d="M5 10a7 7 0 0 0 14 0" />
-        <line x1="12" y1="17" x2="12" y2="21" />
+      <svg width="19" height="16" viewBox="0 0 40 32" fill="currentColor" className="text-mv-white">
+        <rect x="1" y="11" width="5" height="10" rx="2.5" />
+        <rect x="9" y="6" width="5" height="20" rx="2.5" />
+        <rect x="17" y="0" width="5" height="32" rx="2.5" />
+        <rect x="25" y="6" width="5" height="20" rx="2.5" />
+        <rect x="33" y="11" width="5" height="10" rx="2.5" />
       </svg>
     </span>
   )
