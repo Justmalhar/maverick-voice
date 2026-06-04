@@ -77,6 +77,20 @@ import {
 } from './providers/registry'
 
 // ════════════════════════════════════════════════════════════════════════
+// Storage folder — PIN to a stable slug.
+//
+// app.getName() differs by environment: in dev it's the package.json `name`
+// ("maverick-voice"), but the packaged app reports the electron-builder
+// productName ("Maverick Voice"), so without pinning, dev and the shipped app
+// would use SEPARATE userData folders (…/maverick-voice vs …/Maverick Voice)
+// and keys/history/settings wouldn't carry over. Pin it once, before anything
+// (electron-store, keyStore, db, the single-instance lock) reads userData, so
+// EVERYTHING lives in ~/Library/Application Support/maverick-voice on every
+// platform. The display name stays "Maverick Voice".
+// ════════════════════════════════════════════════════════════════════════
+app.setPath('userData', path.join(app.getPath('appData'), 'maverick-voice'))
+
+// ════════════════════════════════════════════════════════════════════════
 // Single-instance lock — a second launch focuses the existing window.
 // ════════════════════════════════════════════════════════════════════════
 
