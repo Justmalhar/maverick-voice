@@ -157,7 +157,9 @@ export default function App() {
       </nav>
 
       {/* ─── Content ─── */}
-      <main className="flex-1 h-full overflow-y-auto pt-11 px-10">
+      {/* Home fits above the fold by design → clip it (no scroll); the other
+          tabs (History/Dictionary/Snippets/Settings) still scroll. */}
+      <main className={`flex-1 h-full pt-11 px-10 ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <div className="max-w-2xl mx-auto pb-12">
           {/* key forces the entrance animation to replay on tab change */}
           <div key={activeTab} className="animate-view-enter">
