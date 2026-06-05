@@ -25,7 +25,8 @@ jobs:
           elif brew list python@3.11 &>/dev/null 2>&1; then
             echo "PYTHON=$(brew --prefix python@3.11)/bin/python3.11" >> "$GITHUB_ENV"
           else
-            brew install python@3.11
+            # post-install pip bootstrap sometimes fails but the interpreter is still usable
+            brew install python@3.11 || true
             echo "PYTHON=$(brew --prefix python@3.11)/bin/python3.11" >> "$GITHUB_ENV"
           fi
 
