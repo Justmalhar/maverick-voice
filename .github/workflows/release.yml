@@ -25,7 +25,8 @@ jobs:
           elif brew list python@3.11 &>/dev/null 2>&1; then
             echo "PYTHON=$(brew --prefix python@3.11)/bin/python3.11" >> "$GITHUB_ENV"
           else
-            brew install python@3.11
+            # post-install pip bootstrap sometimes fails but the interpreter is still usable
+            brew install python@3.11 || true
             echo "PYTHON=$(brew --prefix python@3.11)/bin/python3.11" >> "$GITHUB_ENV"
           fi
 
@@ -45,6 +46,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
         run: node scripts/upload-r2.mjs
 
   # ── Windows (x64 NSIS installer) ──────────────────────────────────────
@@ -70,4 +72,5 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
         run: node scripts/upload-r2.mjs

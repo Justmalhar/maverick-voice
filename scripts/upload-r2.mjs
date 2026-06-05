@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Upload release artifacts to Cloudflare R2.
 // Required env vars: R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT, R2_BUCKET_NAME
-// Optional: RELEASE_DIR (default: ./release)
+// Optional: RELEASE_DIR (default: ./release), R2_PUBLIC_URL (enables downloads.json manifest upload)
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { readFileSync, readdirSync } from 'fs'
@@ -37,3 +37,28 @@ for (const file of files) {
 }
 
 console.log('Upload complete.')
+
+// Upload downloads.json manifest so the website always links to the latest build.
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL
+if (!R2_PUBLIC_URL) {
+  console.warn('⚠ R2_PUBLIC_URL not set — skipping downloads.json manifest upload')
+} else {
+  const pkg = JSON.parse(readFileSync('./package.json', 'utf8'))
+  const version = pkg.version
+  const productName = pkg.build?.productName ?? pkg.name
+  const macFile = encodeURIComponent(`${productName}-${version}-arm64.dmg`)
+  const winFile = encodeURIComponent(`${productName}-${version}-x64.exe`)
+  const manifest = JSON.stringify({
+    version,
+    mac: `${R2_PUBLIC_URL}/releases/${macFile}`,
+    win: `${R2_PUBLIC_URL}/releases/${winFile}`,
+  }, null, 2)
+  await client.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: 'downloads.json',
+    Body: manifest,
+    ContentType: 'application/json',
+    CacheControl: 'no-cache, no-store, must-revalidate',
+  }))
+  console.log(`✓ downloads.json  (version ${version})`)
+}
