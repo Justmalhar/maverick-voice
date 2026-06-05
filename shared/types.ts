@@ -200,11 +200,16 @@ export type WidgetState =
 
 // ─── Dictionary / Snippets (text-replacement pipeline) ────────────────────
 
-/** A spoken-word fix applied to dictation AND instruction transcripts: replace `from` with `to`. */
+/**
+ * A spoken-word fix applied to dictation AND instruction transcripts.
+ * When `to` is provided: replaces `from` with `to` in the transcript.
+ * When `to` is absent: teaches the STT model the correct spelling of `from`
+ * (vocabulary hint) without replacing anything.
+ */
 export interface DictionaryEntry {
   id: string
   from: string
-  to: string
+  to?: string
 }
 
 /** A spoken trigger expanded inline into longer `content` (e.g. "my linkedin" -> a URL). */

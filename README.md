@@ -1,5 +1,7 @@
 # Maverick Voice
 
+![Maverick Voice](https://raw.githubusercontent.com/Justmalhar/maverick-voice/main/demo/demo.png)
+
 **Speak. It types. Speak again. It edits.**
 
 Maverick Voice is a cross-platform (macOS + Windows) voice dictation and

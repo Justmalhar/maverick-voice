@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { WidgetState } from '../../shared/types'
+import { WIDGET, FORMATTING } from '../../shared/copy'
 import Waveform from './Waveform'
 
 interface WidgetProps {
@@ -189,8 +190,10 @@ export default function Widget({
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </span>
-          <span className="mv-pill-fallback-text">{fallbackMessage || 'Formatting unavailable — pasted raw'}</span>
-          <span className="mv-pill-output-text">{outputPreview}</span>
+          <span className="mv-pill-error-content">
+            <span className="mv-pill-fallback-text">{fallbackMessage || WIDGET.FALLBACK_DEFAULT}</span>
+            <span className="mv-pill-error-hint">{FORMATTING.HISTORY_HINT}</span>
+          </span>
         </div>
       )}
 
@@ -212,9 +215,9 @@ export default function Widget({
             </svg>
           </span>
           <span className="mv-pill-error-content">
-            <span className="mv-pill-error-text">{errorMessage || 'Something went wrong'}</span>
+            <span className="mv-pill-error-text">{errorMessage || WIDGET.ERROR_DEFAULT}</span>
             {!errorMessage?.includes('limit reached') && (
-              <span className="mv-pill-error-hint">Retry from History to regenerate</span>
+              <span className="mv-pill-error-hint">{WIDGET.ERROR_RETRY_HINT}</span>
             )}
           </span>
         </div>

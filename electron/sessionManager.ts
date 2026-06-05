@@ -12,6 +12,7 @@ import { simplifyError } from './errorUtils'
 import { getFrontmostApp } from './frontmostApp'
 import { detectProfile } from './appProfiles'
 import { IPC } from '../shared/ipc'
+import { FORMATTING } from '../shared/copy'
 import type {
   SessionMode,
   STTSettings,
@@ -129,10 +130,13 @@ export function applyDictionary(text: string, entries: DictionaryEntry[]): strin
     .sort((a, b) => b.from.length - a.from.length)
   let out = text
   for (const entry of ordered) {
+    // Vocabulary-only entries (no `to`) teach the STT model the spelling but
+    // don't replace anything in the transcript.
+    if (entry.to === undefined) continue
     const re = boundaryPattern(escapeRegex(entry.from.trim()))
     // Use a replacer function so `$` sequences in `to` (e.g. a price) are not
     // interpreted as regex backreferences.
-    out = out.replace(re, () => entry.to)
+    out = out.replace(re, () => entry.to!)
   }
   return out
 }
@@ -169,9 +173,10 @@ function applyReplacements(text: string, dictionary: DictionaryEntry[], snippets
 }
 
 /**
- * STT vocabulary biasing hint built from the dictionary `to` values, joined and
- * capped to ~200 chars. Passed as the Whisper `prompt` so Groq biases toward
- * the user's corrected spellings. Bounded by the dictionary (distinct from the
+ * STT vocabulary biasing hint built from the dictionary, joined and capped to
+ * ~200 chars. Uses `to` (the corrected spelling) when set, or `from` for
+ * vocabulary-only entries. Passed as the Whisper `prompt` so Groq biases toward
+ * these spellings. Bounded by the dictionary (distinct from the
  * silence-parroting concern that bans an arbitrary prompt).
  */
 const STT_PROMPT_HINT_MAX = 200
@@ -180,7 +185,7 @@ function buildSttPromptHint(dictionary: DictionaryEntry[]): string | undefined {
   const seen = new Set<string>()
   const terms: string[] = []
   for (const e of dictionary) {
-    const term = e?.to?.trim()
+    const term = (e?.to?.trim() || e?.from?.trim())
     if (!term) continue
     const key = term.toLowerCase()
     if (seen.has(key)) continue
@@ -315,8 +320,8 @@ class SessionManager {
    */
   private formattingNotice(): string {
     return hasApiKey(this.llmSettings.provider)
-      ? 'Formatting needs internet — pasted raw'
-      : 'Formatting needs an API key — pasted raw'
+      ? FORMATTING.FAILED_HAS_KEY
+      : FORMATTING.FAILED_NO_KEY
   }
 
   setOutputMode(mode: 'paste' | 'clipboard'): void {

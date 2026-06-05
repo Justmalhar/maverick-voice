@@ -3,6 +3,7 @@ import Widget from './Widget'
 import { useAudioRecorder } from './useAudioRecorder'
 import type { WidgetState, AppProfile } from '../../shared/types'
 import { IPC } from '../../shared/ipc'
+import { WIDGET } from '../../shared/copy'
 
 // ─── Sound Feedback (Web Audio API) ───
 let soundEnabled = true // default on; loaded from settings on mount
@@ -148,7 +149,7 @@ export default function WidgetApp() {
       try {
         await startRecording(selectedInputDeviceId || undefined, mode, sessionId)
       } catch {
-        setErrorMessage('Mic error. Check settings.')
+        setErrorMessage(WIDGET.MIC_START_FAILED)
         setState('error')
         scheduleAutoHide(3000)
       }
@@ -177,7 +178,7 @@ export default function WidgetApp() {
       playClickSound('stop')
       const preview = text.length > 50 ? text.slice(0, 50) + '...' : text
       setOutputPreview(preview)
-      setFallbackMessage(message || 'Formatting unavailable — pasted raw')
+      setFallbackMessage(message || WIDGET.FALLBACK_DEFAULT)
       setState('output-fallback')
       setShowDiscardHint(false)
       scheduleAutoHide(4000)
