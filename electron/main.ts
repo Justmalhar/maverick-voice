@@ -25,6 +25,7 @@ import path from 'path'
 import { existsSync } from 'fs'
 import Store from 'electron-store'
 import { IPC } from '../shared/ipc'
+import { RETRY } from '../shared/copy'
 import type {
   STTSettings,
   LLMSettings,
@@ -382,7 +383,7 @@ async function retrySessionFromAudio(sessionId: string): Promise<void> {
   try {
     // 1. Load the session row.
     const dbSession = getSession(sessionId)
-    if (!dbSession) throw new Error('Session not found')
+    if (!dbSession) throw new Error(RETRY.SESSION_NOT_FOUND)
 
     // 2. Resolve the on-disk audio. A CHUNKED dictation never writes a single
     //    '<id>-dictation' file — it persists per-chunk WebM files (and only the
@@ -398,7 +399,7 @@ async function retrySessionFromAudio(sessionId: string): Promise<void> {
           loadAudioFile(sessionId + '-dictation-final')
         : null
     if (chunkBuffers.length === 0 && !singleBuffer) {
-      throw new Error('Audio file not found or unreadable')
+      throw new Error(RETRY.AUDIO_MISSING)
     }
 
     // 3. Tell the renderer the retry has started.
@@ -407,7 +408,7 @@ async function retrySessionFromAudio(sessionId: string): Promise<void> {
     // 4. Need a key for the configured STT provider.
     const stt = sessionManager.getSTTSettings()
     if (!hasApiKey(stt.provider)) {
-      throw new Error(`Add your ${stt.provider} API key in Settings to retry.`)
+      throw new Error(`Add your ${stt.provider} API key in Settings to retry`)
     }
 
     // 5. Re-transcribe via the configured STT provider. Chunk files are
@@ -449,7 +450,7 @@ async function retrySessionFromAudio(sessionId: string): Promise<void> {
 
     console.log('[retry] Transcript:', JSON.stringify(transcript))
     if (!transcript || transcript.trim() === '' || transcript === '[BLANK_AUDIO]') {
-      throw new Error('Audio could not be transcribed (empty or blank)')
+      throw new Error(RETRY.NO_SPEECH)
     }
 
     // 6. Raw-by-default: retry just re-transcribes and cleans (never the LLM).
@@ -475,7 +476,7 @@ async function retrySessionFromAudio(sessionId: string): Promise<void> {
 
     console.log('[retry] ✅ Session retried successfully:', sessionId)
   } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : 'Retry failed'
+    const errorMsg = err instanceof Error ? err.message : RETRY.FAILED
     console.error('[retry] ❌ Error:', errorMsg)
     broadcastError('session', errorMsg)
 

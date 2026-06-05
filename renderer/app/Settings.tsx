@@ -18,6 +18,7 @@ import type {
   Theme
 } from '../../shared/types'
 import { applyTheme } from '../theme'
+import { KEY_TEST } from '../../shared/copy'
 
 // ─── Platform detection (renderer can't import process.platform) ───
 // Electron sets a desktop UA; the OS token is reliable enough to gate the
@@ -935,9 +936,9 @@ function ProviderKeyRow({
       // Test the typed key if present, otherwise the stored key (sent as '' →
       // main routes to the stored key for that provider).
       const res = await window.electronAPI.testProviderKey(provider, key)
-      setMsg(res.ok ? { text: 'Key is valid.', type: 'ok' } : { text: res.error || 'Key failed', type: 'err' })
+      setMsg(res.ok ? { text: 'Key is valid.', type: 'ok' } : { text: res.error || KEY_TEST.SERVICE_ERROR, type: 'err' })
     } catch {
-      setMsg({ text: 'Could not reach provider', type: 'err' })
+      setMsg({ text: KEY_TEST.NETWORK_ERROR, type: 'err' })
     } finally {
       setBusy(false)
     }

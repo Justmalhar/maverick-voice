@@ -19,6 +19,7 @@ import {
   type CompleteResult,
   type KeyTestResult,
 } from '../types'
+import { KEY_TEST } from '../../../shared/copy'
 
 const DEFAULT_BASE_URL = 'https://api.groq.com/openai/v1'
 
@@ -117,7 +118,7 @@ async function complete(opts: CompleteOptions, key: string, signal?: AbortSignal
 /** Validate a candidate API key with a lightweight GET {baseUrl}/models call. */
 async function testKey(key: string, baseUrl?: string): Promise<KeyTestResult> {
   const trimmed = (key || '').trim()
-  if (!trimmed) return { ok: false, error: 'Key is empty' }
+  if (!trimmed) return { ok: false, error: KEY_TEST.EMPTY }
   const url = `${normalizeBaseUrl(baseUrl)}/models`
   try {
     const res = await undiciFetch(url, {
@@ -126,10 +127,10 @@ async function testKey(key: string, baseUrl?: string): Promise<KeyTestResult> {
       dispatcher: agent,
     } as any)
     if (res.ok) return { ok: true }
-    if (res.status === 401) return { ok: false, error: 'Invalid API key' }
-    return { ok: false, error: `Groq returned ${res.status}` }
+    if (res.status === 401) return { ok: false, error: KEY_TEST.INVALID }
+    return { ok: false, error: KEY_TEST.SERVICE_ERROR }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Network error' }
+    return { ok: false, error: KEY_TEST.NETWORK_ERROR }
   }
 }
 

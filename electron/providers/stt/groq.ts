@@ -17,6 +17,7 @@ import {
   type TranscribeResult,
   type KeyTestResult,
 } from '../types'
+import { KEY_TEST } from '../../../shared/copy'
 
 const STT_URL = 'https://api.groq.com/openai/v1/audio/transcriptions'
 const MODELS_URL = 'https://api.groq.com/openai/v1/models'
@@ -104,7 +105,7 @@ async function transcribe(
 /** Validate a candidate API key with a lightweight GET /models call. */
 async function testKey(key: string): Promise<KeyTestResult> {
   const trimmed = (key || '').trim()
-  if (!trimmed) return { ok: false, error: 'Key is empty' }
+  if (!trimmed) return { ok: false, error: KEY_TEST.EMPTY }
   try {
     const res = await undiciFetch(MODELS_URL, {
       method: 'GET',
@@ -112,10 +113,10 @@ async function testKey(key: string): Promise<KeyTestResult> {
       dispatcher: agent,
     } as any)
     if (res.ok) return { ok: true }
-    if (res.status === 401) return { ok: false, error: 'Invalid API key' }
-    return { ok: false, error: `Groq returned ${res.status}` }
+    if (res.status === 401) return { ok: false, error: KEY_TEST.INVALID }
+    return { ok: false, error: KEY_TEST.SERVICE_ERROR }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Network error' }
+    return { ok: false, error: KEY_TEST.NETWORK_ERROR }
   }
 }
 

@@ -54,8 +54,8 @@ export default function Dictionary() {
 
   const addEntry = useCallback(() => {
     const from = draftFrom.trim()
-    const to = draftTo.trim()
-    if (!from || !to) return
+    if (!from) return
+    const to = draftTo.trim() || undefined
     setEntries((prev) => [...prev, { id: crypto.randomUUID(), from, to }])
     setDraftFrom('')
     setDraftTo('')
@@ -94,14 +94,14 @@ export default function Dictionary() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') addEntry()
             }}
-            placeholder="Maverick"
+            placeholder="Maverick (optional)"
             spellCheck={false}
             autoComplete="off"
             className="mv-input flex-1"
           />
           <button
             onClick={addEntry}
-            disabled={!draftFrom.trim() || !draftTo.trim()}
+            disabled={!draftFrom.trim()}
             className="btn-glass btn-glass--primary !px-4 !py-2.5 !text-[12px] whitespace-nowrap"
           >
             Add
@@ -158,11 +158,12 @@ function DictionaryRow({
       />
       <ArrowGlyph />
       <input
-        value={entry.to}
-        onChange={(e) => onUpdate(entry.id, { to: e.target.value })}
+        value={entry.to ?? ''}
+        onChange={(e) => onUpdate(entry.id, { to: e.target.value || undefined })}
         spellCheck={false}
         autoComplete="off"
-        className="mv-input flex-1"
+        placeholder="vocabulary"
+        className="mv-input flex-1 placeholder:text-mv-text-muted placeholder:italic"
         aria-label="Replace with"
       />
       <button
@@ -186,7 +187,7 @@ function PageHeader() {
         Dictionary
       </h2>
       <p className="text-[11px] text-mv-text-muted mt-1.5">
-        Fix words the AI mishears. Each rule is swapped in your transcript before it lands.
+        Teach the AI your vocabulary. Add a replacement to fix mishears, or leave it blank to just register the spelling.
       </p>
     </div>
   )
@@ -213,10 +214,10 @@ function EmptyState() {
       </div>
       <p className="font-display font-bold text-mv-text-primary text-lg mb-1.5">No words yet</p>
       <p className="text-mv-text-secondary text-sm max-w-[320px] leading-relaxed">
-        Words the AI gets wrong — e.g.{' '}
-        <span className="font-mono text-mv-text-primary">mavrik</span>{' '}
+        Fix mishears (<span className="font-mono text-mv-text-primary">mavrik</span>{' '}
         <span className="text-mv-text-muted">→</span>{' '}
-        <span className="font-mono text-mv-text-primary">Maverick</span>.
+        <span className="font-mono text-mv-text-primary">Maverick</span>) or add names and
+        terms so the AI recognises them.
       </p>
     </div>
   )
