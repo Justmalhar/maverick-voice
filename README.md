@@ -79,6 +79,25 @@ is delivered to your cursor through the clipboard + synthesized paste.
 
 ---
 
+## Platforms
+
+| | macOS | Windows |
+|---|---|---|
+| **Architecture** | Apple Silicon (arm64) | x64 |
+| **Minimum OS** | macOS 12 Monterey | Windows 10 / 11 |
+| **Installer** | `.dmg` | NSIS `.exe` |
+| **Dictation key** | Fn / Globe *(default)* or Right Option | Right Ctrl *(default)* or Right Alt |
+| **Instruction key** | Caps Lock | Caps Lock |
+| **Global key listener** | Swift helper (compiled at build time) | `uiohook-napi` |
+| **Clipboard / paste** | `osascript` + System Events | PowerShell `SendKeys` |
+| **Key storage** | macOS Keychain (via `safeStorage`) | Windows DPAPI (via `safeStorage`) |
+| **Permissions required** | Microphone, Accessibility, Input Monitoring | Microphone (OS prompt on first use) |
+| **Cross-compile** | Build on macOS | Build on Windows |
+
+> Linux is not currently supported — the Swift native helper and `osascript` paste path are macOS-only, and the Windows path relies on `uiohook-napi` + PowerShell. A Linux port would require replacing both seams.
+
+---
+
 ## Requirements
 
 - **macOS** (Apple Silicon, arm64) or **Windows** (x64)
