@@ -6,9 +6,11 @@
 import type { STTProviderId, LLMProviderId } from '../../shared/types'
 import type { TranscriptionProvider, LLMProvider, ProviderRegistry } from './types'
 import { groqProvider } from './stt/groq'
+import { proxySTTProvider } from './stt/proxy'
 import { groqLLMProvider } from './llm/groq'
 import { openaiProvider } from './llm/openai'
 import { openrouterProvider } from './llm/openrouter'
+import { proxyLLMProvider } from './llm/proxy'
 
 // ─── Internal maps ───
 const sttProviders = new Map<STTProviderId, TranscriptionProvider>()
@@ -16,9 +18,11 @@ const llmProviders = new Map<LLMProviderId, LLMProvider>()
 
 // Register providers (the single point of extension).
 sttProviders.set(groqProvider.id, groqProvider)
+sttProviders.set(proxySTTProvider.id, proxySTTProvider)
 llmProviders.set(groqLLMProvider.id, groqLLMProvider)
 llmProviders.set(openaiProvider.id, openaiProvider)
 llmProviders.set(openrouterProvider.id, openrouterProvider)
+llmProviders.set(proxyLLMProvider.id, proxyLLMProvider)
 
 /** Resolve an STT provider by id. Throws a clear error on an unknown id. */
 export function getTranscriptionProvider(id: STTProviderId): TranscriptionProvider {

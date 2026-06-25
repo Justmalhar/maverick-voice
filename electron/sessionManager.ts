@@ -237,7 +237,7 @@ class SessionManager {
 
   // Provider runtime settings (restored from electron-store by main.ts).
   private sttSettings: STTSettings = { provider: 'groq', model: 'whisper-large-v3-turbo', language: 'en' }
-  private llmSettings: LLMSettings = { provider: 'groq', model: 'llama-3.3-70b-versatile', baseUrl: '' }
+  private llmSettings: LLMSettings = { provider: 'groq', model: 'llama-3.1-8b-instant', baseUrl: '' }
 
   // ─── Feature delta: AI auto-format + text-replacement pipeline ───
   // All OPT-IN / empty by default; pushed in by main.ts restoreSettings + IPC.
@@ -319,9 +319,8 @@ class SessionManager {
    * "formatting failed".
    */
   private formattingNotice(): string {
-    return hasApiKey(this.llmSettings.provider)
-      ? FORMATTING.FAILED_HAS_KEY
-      : FORMATTING.FAILED_NO_KEY
+    const hasKey = this.llmSettings.provider === 'proxy' || hasApiKey(this.llmSettings.provider)
+    return hasKey ? FORMATTING.FAILED_HAS_KEY : FORMATTING.FAILED_NO_KEY
   }
 
   setOutputMode(mode: 'paste' | 'clipboard'): void {
@@ -635,19 +634,20 @@ class SessionManager {
    */
   private async transcribeBuffer(buffer: Buffer, signal?: AbortSignal): Promise<string> {
     const stt = this.sttSettings
-    if (!hasApiKey(stt.provider)) {
+    const isProxySTT = stt.provider === 'proxy'
+    if (!isProxySTT && !hasApiKey(stt.provider)) {
       throw new Error(`No API key set for "${stt.provider}". Add your key in Settings.`)
     }
     const provider = getTranscriptionProvider(stt.provider)
-    const key = getApiKey(stt.provider)!
-    // Vocabulary biasing: feed the dictionary `to` values as the Whisper prompt
-    // hint so the STT provider biases toward the user's corrected spellings.
+    const key = isProxySTT ? '' : getApiKey(stt.provider)!
+    const vocabHint = buildSttPromptHint(this.dictionary)
+    console.log(`[session] STT: ${stt.provider}/${stt.model} | ${buffer.byteLength} bytes${vocabHint ? ` | vocab hint: "${vocabHint.substring(0, 60)}${vocabHint.length > 60 ? '…' : ''}"` : ''}`)
     const result = await provider.transcribe(
       buffer,
       {
         model: stt.model,
         language: stt.language === 'auto' ? undefined : stt.language,
-        prompt: buildSttPromptHint(this.dictionary),
+        prompt: vocabHint,
         mimeType: 'audio/webm',
       },
       key,
@@ -671,9 +671,11 @@ class SessionManager {
     signal?: AbortSignal
   ): Promise<string> {
     const llm = this.llmSettings
-    if (!hasApiKey(llm.provider)) {
+    const isProxyLLM = llm.provider === 'proxy'
+    if (!isProxyLLM && !hasApiKey(llm.provider)) {
       throw new Error(`No API key set for "${llm.provider}". Add your key in Settings.`)
     }
+    console.log(`[session] LLM transform (${flowType}): ${llm.provider}/${llm.model}`)
     const { system, user, temperature } = assembleTransformMessages(
       flowType,
       content,
@@ -682,7 +684,7 @@ class SessionManager {
       chunked
     )
     const provider = getLLMProvider(llm.provider)
-    const key = getApiKey(llm.provider)!
+    const key = isProxyLLM ? '' : getApiKey(llm.provider)!
     const result = await provider.complete(
       {
         model: llm.model,
@@ -911,8 +913,9 @@ class SessionManager {
         console.log('[session] Transcribing DICTATION audio (single buffer)...')
         const t0 = Date.now()
         session.dictationTranscript = await this.transcribeBuffer(session.dictationAudio, controller.signal)
-        transcribeMs += Date.now() - t0
-        console.log(`[session] ⏱ Dictation transcribe: ${Date.now() - t0}ms`)
+        const dtMs = Date.now() - t0
+        transcribeMs += dtMs
+        console.log(`[session] ⏱ Dictation transcribe: ${dtMs}ms`)
         console.log('[session] Dictation transcript:', JSON.stringify(session.dictationTranscript))
       } else {
         console.log('[session] No dictation audio to transcribe')
@@ -939,16 +942,20 @@ class SessionManager {
       // flow's later cleanTranscript() call is idempotent on already-clean text.
       if (session.dictationTranscript) {
         const cleaned = cleanTranscript(session.dictationTranscript)
-        session.dictationTranscript = applyReplacements(cleaned, this.dictionary, this.snippets)
-        console.log('[session] Dictation transcript after dictionary/snippets:', JSON.stringify(session.dictationTranscript))
+        const replaced = applyReplacements(cleaned, this.dictionary, this.snippets)
+        if (replaced !== cleaned) {
+          console.log('[session] Dictionary/snippets applied to dictation — before:', JSON.stringify(cleaned))
+          console.log('[session] Dictionary/snippets applied to dictation — after:', JSON.stringify(replaced))
+        }
+        session.dictationTranscript = replaced
       }
       if (session.instructionTranscript) {
-        session.instructionTranscript = applyReplacements(
-          session.instructionTranscript,
-          this.dictionary,
-          this.snippets
-        )
-        console.log('[session] Instruction transcript after dictionary/snippets:', JSON.stringify(session.instructionTranscript))
+        const replaced = applyReplacements(session.instructionTranscript, this.dictionary, this.snippets)
+        if (replaced !== session.instructionTranscript) {
+          console.log('[session] Dictionary/snippets applied to instruction — before:', JSON.stringify(session.instructionTranscript))
+          console.log('[session] Dictionary/snippets applied to instruction — after:', JSON.stringify(replaced))
+        }
+        session.instructionTranscript = replaced
       }
 
       // Guard: if all transcripts are empty/junk (e.g. just punctuation from
@@ -986,10 +993,7 @@ class SessionManager {
             if (this.autoFormat && dictationOutput.trim()) {
               const formatProfile = this.appAwareFormatting ? session.profile : 'default'
               console.log(
-                '[session] Dictation flow — running AI auto-format pass (profile:',
-                formatProfile,
-                this.appAwareFormatting ? '' : '— app-aware off',
-                ')'
+                `[session] Dictation flow — AI auto-format (profile: ${formatProfile}${this.appAwareFormatting ? '' : ', app-aware off'})`
               )
               const formatted = await this.runAutoFormat(dictationOutput, formatProfile, controller.signal)
               if (formatted) {
@@ -1189,13 +1193,15 @@ class SessionManager {
     signal?: AbortSignal
   ): Promise<string | null> {
     const llm = this.llmSettings
-    if (!hasApiKey(llm.provider)) {
+    const isProxyAutoFormat = llm.provider === 'proxy'
+    if (!isProxyAutoFormat && !hasApiKey(llm.provider)) {
       console.log('[session] ⚠️ Auto-format skipped — no API key for', llm.provider)
       return null
     }
+    console.log(`[session] LLM auto-format: ${llm.provider}/${llm.model} | ${text.length} chars in`)
     try {
       const provider = getLLMProvider(llm.provider)
-      const key = getApiKey(llm.provider)!
+      const key = isProxyAutoFormat ? '' : getApiKey(llm.provider)!
       const result = await provider.complete(
         {
           model: llm.model,

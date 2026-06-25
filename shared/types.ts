@@ -78,15 +78,22 @@ export type AppProfile = 'email' | 'chat-ai' | 'code-editor' | 'messaging' | 'no
 
 // ─── Provider identifiers ─────────────────────────────────────────────────
 
-/** Speech-to-text provider ids. Registry keys. 'groq' is the only v1 STT. */
-export type STTProviderId = 'groq'
+/** Speech-to-text provider ids. Registry keys. */
+export type STTProviderId = 'groq' | 'proxy'
 
-/** LLM provider ids. Registry keys. All are OpenAI-compatible chat APIs.
- *  'groq' doubles as the STT id — one Groq key powers both speech + chat. */
-export type LLMProviderId = 'groq' | 'openai' | 'openrouter'
+/** LLM provider ids. Registry keys. All are OpenAI-compatible chat APIs. */
+export type LLMProviderId = 'groq' | 'openai' | 'openrouter' | 'proxy'
 
 /** Union used by the per-provider key APIs (key storage is keyed by id). */
 export type ProviderId = STTProviderId | LLMProviderId
+
+/** Authentication status reported to the renderer. */
+export interface ProxyAuthStatus {
+  loggedIn: boolean
+  email: string | null
+  displayName: string | null
+  tier: string | null
+}
 
 /** STT runtime settings persisted in electron-store. */
 export interface STTSettings {
@@ -381,6 +388,16 @@ export interface ElectronAPI {
   getInstructionKey: () => Promise<InstructionKey>
   setActivationMode: (mode: ActivationMode) => void
   getActivationMode: () => Promise<ActivationMode>
+
+  // ── Proxy auth (Google SSO) ──
+  /** Open the system browser to start Google OAuth login. */
+  authLogin: () => void
+  /** Clear stored tokens (logout). */
+  authLogout: () => void
+  /** Get the current proxy auth status (loggedIn, email, tier). */
+  getAuthStatus: () => Promise<ProxyAuthStatus>
+  /** Listen for auth status changes (login / logout). */
+  onAuthStatusChange: (callback: (status: ProxyAuthStatus) => void) => void
 
   // ── Cleanup (renderer-local) ──
   removeAllListeners: (channel: string) => void

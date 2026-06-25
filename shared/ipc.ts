@@ -192,7 +192,17 @@ export const IPC = {
 
   // ── Developer error log ───────────────────────────────────────────────────────────
   /** M->R  (entry: ErrorEntry) — errorLogger.broadcastError to main window Developer view. */
-  DEV_ERROR_LOG: 'dev:error-log'
+  DEV_ERROR_LOG: 'dev:error-log',
+
+  // ── Proxy auth (Google SSO) ───────────────────────────────────────────────────────
+  /** R->M  () — open system browser to Google OAuth login page. */
+  AUTH_LOGIN: 'auth:login',
+  /** R->M  () — clear stored tokens (logout). */
+  AUTH_LOGOUT: 'auth:logout',
+  /** R<->M () -> ProxyAuthStatus (handle). */
+  AUTH_STATUS: 'auth:status',
+  /** M->R  (status: ProxyAuthStatus) — pushed after login or logout completes. */
+  AUTH_STATUS_CHANGE: 'auth:status-change',
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

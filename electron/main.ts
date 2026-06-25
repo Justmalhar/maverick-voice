@@ -78,6 +78,12 @@ import {
   getLLMProvider,
 } from './providers/registry'
 import { initAutoUpdater } from './updater'
+import {
+  openLoginBrowser,
+  clearSession,
+  getAuthStatus,
+  handleDeepLink,
+} from './auth'
 
 // ════════════════════════════════════════════════════════════════════════
 // Storage folder — PIN to a stable slug.
@@ -97,17 +103,43 @@ app.setPath('userData', path.join(app.getPath('appData'), 'maverick-voice'))
 // Single-instance lock — a second launch focuses the existing window.
 // ════════════════════════════════════════════════════════════════════════
 
+// Register the maverick-voice:// custom protocol so the OS routes OAuth
+// callback deep links back into this app. Must happen before the single-
+// instance lock so the second-instance path can inspect the argv URLs.
+if (process.platform !== 'darwin') {
+  app.setAsDefaultProtocolClient('maverick-voice')
+}
+
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
 }
 
-app.on('second-instance', () => {
+// Windows/Linux: deep links arrive as a new launch with the URL in argv.
+app.on('second-instance', (_event, argv) => {
   const win = getMainWindow()
   if (win) {
     if (win.isMinimized()) win.restore()
     win.show()
     win.focus()
+  }
+  // Find the deep-link URL in the argv array.
+  const deepLink = argv.find((arg) => arg.startsWith('maverick-voice://'))
+  if (deepLink) {
+    const status = handleDeepLink(deepLink)
+    if (status) {
+      win?.webContents.send(IPC.AUTH_STATUS_CHANGE, status)
+    }
+  }
+})
+
+// macOS: deep links arrive via open-url (app already running).
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (!url.startsWith('maverick-voice://')) return
+  const status = handleDeepLink(url)
+  if (status) {
+    getMainWindow()?.webContents.send(IPC.AUTH_STATUS_CHANGE, status)
   }
 })
 
@@ -160,7 +192,7 @@ const STORE_DEFAULTS: StoreSchema = {
   instructionKey: DEFAULT_INSTRUCTION_KEY,
   activationMode: 'tap-toggle',
   sttSettings: { provider: 'groq', model: 'whisper-large-v3-turbo', language: 'en' },
-  llmSettings: { provider: 'groq', model: 'llama-3.3-70b-versatile', baseUrl: '' },
+  llmSettings: { provider: 'groq', model: 'llama-3.1-8b-instant', baseUrl: '' },
   // Instruction mode + AI auto-format are OPT-IN (default off). Dictionary and
   // snippet lists start empty.
   instructionEnabled: false,
@@ -880,6 +912,16 @@ function setupIPC(): void {
     sessionManager.setSnippets(list)
     store.set('snippets', list)
   })
+
+  // ─── Proxy auth (Google SSO) ───
+  ipcMain.on(IPC.AUTH_LOGIN, () => {
+    openLoginBrowser()
+  })
+  ipcMain.on(IPC.AUTH_LOGOUT, () => {
+    clearSession()
+    getMainWindow()?.webContents.send(IPC.AUTH_STATUS_CHANGE, getAuthStatus())
+  })
+  ipcMain.handle(IPC.AUTH_STATUS, () => getAuthStatus())
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -887,6 +929,11 @@ function setupIPC(): void {
 // ════════════════════════════════════════════════════════════════════════
 
 app.whenReady().then(() => {
+  // macOS custom protocol registration (must happen after app is ready).
+  if (process.platform === 'darwin') {
+    app.setAsDefaultProtocolClient('maverick-voice')
+  }
+
   // Dev runs show the generic Electron Dock icon (the packaged bundle carries
   // its own); brand the Dock/Cmd+Tab entry so the app is recognizable in dev.
   if (process.platform === 'darwin' && !app.isPackaged) {

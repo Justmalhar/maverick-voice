@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react'
-// Deep-import the MONO sub-components (avoids the antd-pulling barrel) — same
-// pattern as Onboarding/Settings; strictly monochrome via currentColor.
-import Groq from '@lobehub/icons/es/Groq/components/Mono'
-import OpenAI from '@lobehub/icons/es/OpenAI/components/Mono'
-import OpenRouter from '@lobehub/icons/es/OpenRouter/components/Mono'
-import type { DictationKey, UsageSummary, ActivationMode, DictationBinding, ProviderId } from '../../shared/types'
+import type { DictationKey, UsageSummary, ActivationMode, DictationBinding, ProxyAuthStatus } from '../../shared/types'
 import History from './History'
 import Dictionary from './Dictionary'
 import Snippets from './Snippets'
 import Settings from './Settings'
 import Onboarding from './Onboarding'
+import SettingsAccountSection from './settings/SettingsAccountSection'
 
 // Final nav set (June 2026 delta): Home, History, Dictionary, Snippets,
 // Settings. Usage + Privacy were folded into Settings; the Voice/"Features"
 // explainer is now a concise block inside Home.
-type Tab = 'home' | 'history' | 'dictionary' | 'snippets' | 'settings'
+type Tab = 'home' | 'history' | 'dictionary' | 'snippets' | 'account' | 'settings'
 
 type AppView = 'loading' | 'onboarding' | 'main'
 
@@ -92,7 +88,7 @@ export default function App() {
       <div className="titlebar-drag absolute top-0 left-0 right-0 h-9 z-30" />
 
       {/* ─── Glass sidebar ─── */}
-      <nav className="titlebar-drag w-[232px] min-w-[232px] h-full pt-12 px-3 pb-4 flex flex-col border-r border-mv-border" style={{ backgroundColor: '#0a0a0a' }}>
+      <nav className="titlebar-drag w-[232px] min-w-[232px] h-full pt-12 px-3 pb-4 flex flex-col border-r border-mv-border bg-mv-bg-deep">
         {/* Brand wordmark */}
         <div className="titlebar-no-drag px-2 mb-5 pb-5 border-b border-mv-border">
           <div className="flex items-center gap-2.5">
@@ -135,6 +131,12 @@ export default function App() {
             onClick={() => setActiveTab('snippets')}
           />
           <SidebarButton
+            icon={<AccountIcon />}
+            label="Account"
+            active={activeTab === 'account'}
+            onClick={() => setActiveTab('account')}
+          />
+          <SidebarButton
             icon={<SettingsIcon />}
             label="Settings"
             active={activeTab === 'settings'}
@@ -169,6 +171,12 @@ export default function App() {
             {activeTab === 'history' && <History dictationKey={dictationKey} />}
             {activeTab === 'dictionary' && <Dictionary />}
             {activeTab === 'snippets' && <Snippets />}
+            {activeTab === 'account' && (
+              <div>
+                <h2 className="font-display text-[24px] font-bold text-mv-text-primary tracking-tight mb-5">Account</h2>
+                <SettingsAccountSection />
+              </div>
+            )}
             {activeTab === 'settings' && <Settings onDictationKeyChange={setDictationKey} />}
           </div>
         </div>
@@ -219,11 +227,7 @@ function Home({
   const [appAware, setAppAware] = useState(true)
   const [activationMode, setActivationMode] = useState<ActivationMode>('tap-toggle')
   const [binding, setBinding] = useState<DictationBinding | null>(null)
-  const [keys, setKeys] = useState<Record<'groq' | 'openai' | 'openrouter', boolean>>({
-    groq: false,
-    openai: false,
-    openrouter: false
-  })
+  const [authStatus, setAuthStatus] = useState<ProxyAuthStatus | null>(null)
 
   useEffect(() => {
     const api = window.electronAPI
@@ -232,14 +236,9 @@ function Home({
     api.getAppAwareFormatting().then(setAppAware).catch(() => {})
     api.getActivationMode().then((m) => setActivationMode(m as ActivationMode)).catch(() => {})
     api.getDictationBinding().then(setBinding).catch(() => {})
-    ;(['groq', 'openai', 'openrouter'] as const).forEach((p) =>
-      api
-        .getProviderKeyStatus(p)
-        .then((s) => setKeys((k) => ({ ...k, [p]: s.hasKey })))
-        .catch(() => {})
-    )
-    // Approximate words dictated this month from saved transcripts (the app
-    // tracks cost/tokens/seconds; word count is derived for the familiar stat).
+    api.getAuthStatus().then(setAuthStatus).catch(() => {})
+    api.onAuthStatusChange(setAuthStatus)
+    // Approximate words dictated this month from saved transcripts.
     api
       .getSessions()
       .then((sessions) => {
@@ -254,6 +253,7 @@ function Home({
         setMonthWords(words)
       })
       .catch(() => {})
+    return () => api.removeAllListeners('auth:status-change')
   }, [])
 
   function toggleAutoFormat(v: boolean) {
@@ -304,17 +304,33 @@ function Home({
           <ToggleRow label="Adapt to active app" checked={appAware} disabled={!autoFormat} onChange={toggleAppAware} />
         </div>
 
-        {/* Providers */}
-        <div className="mv-glass-card px-5 pt-3 pb-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-1 px-0.5">
-            Providers · your keys
-          </p>
-          <div className="divide-y divide-mv-border">
-            <ProviderRow provider="groq" name="Groq" sub="Speech · Whisper" connected={keys.groq} onClick={() => onNavigate('settings')} />
-            <ProviderRow provider="openai" name="OpenAI" sub="AI formatting" connected={keys.openai} onClick={() => onNavigate('settings')} />
-            <ProviderRow provider="openrouter" name="OpenRouter" sub="AI formatting · any model" connected={keys.openrouter} optional onClick={() => onNavigate('settings')} />
+        {/* Proxy account status */}
+        <button
+          onClick={() => onNavigate('account')}
+          className="mv-glass-card px-5 py-3.5 flex items-center justify-between gap-3 w-full text-left hover:bg-mv-white-04 transition-colors duration-150"
+        >
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-mv-text-muted mb-1">Account</p>
+            {authStatus?.loggedIn ? (
+              <>
+                <p className="text-[13px] font-semibold text-mv-text-primary truncate">
+                  {authStatus.displayName ?? authStatus.email ?? 'Signed in'}
+                </p>
+                {authStatus.email && authStatus.displayName && (
+                  <p className="text-[11px] text-mv-text-muted mt-0.5 truncate">{authStatus.email}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-[13px] font-semibold text-mv-text-muted">Not signed in</p>
+            )}
           </div>
-        </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className={`w-1.5 h-1.5 rounded-full ${authStatus?.loggedIn ? 'bg-mv-white' : 'bg-mv-white-24'}`} />
+            <span className={`text-[11px] font-medium ${authStatus?.loggedIn ? 'text-mv-text-secondary' : 'text-mv-text-muted'}`}>
+              {authStatus?.loggedIn ? authStatus.tier ?? 'free' : 'Sign in →'}
+            </span>
+          </div>
+        </button>
 
         {/* Hotkey */}
         <div className="mv-glass-card px-5 py-3.5 flex items-center justify-between gap-3">
@@ -382,54 +398,6 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
   )
 }
 
-function ProviderRow({
-  provider,
-  name,
-  sub,
-  connected,
-  optional,
-  onClick
-}: {
-  provider: ProviderId
-  name: string
-  sub: string
-  connected: boolean
-  optional?: boolean
-  onClick: () => void
-}) {
-  return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 py-2.5 text-left transition-colors duration-150 hover:bg-mv-white-04 -mx-2 px-2 rounded-mv-sm">
-      <span className="flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
-        <ProviderGlyph provider={provider} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-semibold text-mv-text-primary">{name}</p>
-        <p className="text-[10.5px] text-mv-text-muted mt-0.5">{sub}</p>
-      </div>
-      <span className="flex items-center gap-1.5 text-[11px] font-medium shrink-0">
-        <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-mv-white' : 'bg-mv-white-24'}`} />
-        <span className={connected ? 'text-mv-text-secondary' : 'text-mv-text-muted'}>
-          {connected ? 'Connected' : optional ? 'Optional' : 'Not set'}
-        </span>
-      </span>
-    </button>
-  )
-}
-
-/** Provider brand glyph (lobehub mono base components — currentColor). */
-function ProviderGlyph({ provider }: { provider: ProviderId }) {
-  switch (provider) {
-    case 'groq':
-      return <Groq size={18} />
-    case 'openai':
-      return <OpenAI size={18} />
-    case 'openrouter':
-      return <OpenRouter size={18} />
-    default:
-      return null
-  }
-}
-
 /* ─── Sidebar pieces ─── */
 
 function SidebarButton({
@@ -448,7 +416,7 @@ function SidebarButton({
       onClick={onClick}
       className={`titlebar-no-drag group relative flex items-center gap-3 text-left px-3 py-2.5 rounded-mv-md text-[13px] font-medium select-none transition-all duration-150 ${
         active
-          ? 'text-mv-text-primary bg-mv-surface-raised border border-mv-border shadow-[0_2px_8px_rgba(0,0,0,0.4),0_1px_0_rgba(255,255,255,0.08)_inset]'
+          ? 'text-mv-text-primary bg-mv-surface-raised border border-mv-border shadow-[0_2px_8px_rgba(0,0,0,0.15)]'
           : 'text-mv-text-secondary border border-transparent hover:text-mv-text-primary hover:bg-mv-white-04'
       }`}
     >
@@ -512,6 +480,15 @@ function SnippetsIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="8.5 1.5 3 9 7.5 9 7 14.5 13 6.5 8 6.5 8.5 1.5" />
+    </svg>
+  )
+}
+
+function AccountIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="5.5" r="2.5" />
+      <path d="M2.5 13.5c0-3.038 2.462-5 5.5-5s5.5 1.962 5.5 5" />
     </svg>
   )
 }

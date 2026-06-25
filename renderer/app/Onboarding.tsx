@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-// Deep-import the MONO sub-component only — the package barrel pulls Avatar/
-// Combine variants that depend on antd, bloating the renderer bundle ~65KB.
-// The Mono component is pure React + SVG (currentColor), strictly monochrome.
-import Groq from '@lobehub/icons/es/Groq/components/Mono'
-import OpenAI from '@lobehub/icons/es/OpenAI/components/Mono'
-import OpenRouter from '@lobehub/icons/es/OpenRouter/components/Mono'
-import type { ProviderId, DictationKey } from '../../shared/types'
+import type { DictationKey, ProxyAuthStatus } from '../../shared/types'
 
 interface OnboardingProps {
   onComplete: () => void
@@ -34,6 +28,9 @@ function dictationKeyLabel(key: DictationKey): string {
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0)
   const [dictationKey, setDictationKey] = useState<DictationKey>(IS_MAC ? 'fn' : 'right-ctrl')
+  const [authStatus, setAuthStatus] = useState<ProxyAuthStatus | null>(null)
+  const [checkingA11y, setCheckingA11y] = useState(false)
+  const [a11yNotDetected, setA11yNotDetected] = useState(false)
 
   // ─── Microphone permission ───
   const [micStatus, setMicStatus] = useState<MicStatus>(IS_MAC ? 'unknown' : 'granted')
@@ -68,6 +65,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     if (!granted) window.electronAPI.openAccessibilitySettings()
   }
 
+  // macOS doesn't always reflect the accessibility grant immediately.
+  // Retry up to 3 times with increasing delays before giving up.
+  async function checkA11yEnabled() {
+    setCheckingA11y(true)
+    setA11yNotDetected(false)
+    const delays = [300, 800, 1500]
+    for (const delay of delays) {
+      await new Promise((r) => setTimeout(r, delay))
+      const granted = await refreshAccessibilityStatus()
+      if (granted) {
+        setCheckingA11y(false)
+        return
+      }
+    }
+    setCheckingA11y(false)
+    setA11yNotDetected(true)
+  }
+
   async function requestMicPermission() {
     const granted = await window.electronAPI.requestMicPermission()
     if (granted) {
@@ -90,6 +105,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       })
       .catch(() => {})
 
+    window.electronAPI.getAuthStatus().then(setAuthStatus).catch(() => {})
+    window.electronAPI.onAuthStatusChange(setAuthStatus)
+
     if (!IS_MAC) return
     refreshMicStatus()
     refreshAccessibilityStatus()
@@ -98,7 +116,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       refreshAccessibilityStatus()
     }
     window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.electronAPI.removeAllListeners('auth:status-change')
+    }
   }, [refreshMicStatus, refreshAccessibilityStatus])
 
   function next() {
@@ -131,37 +152,50 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       </div>
     </StepShell>,
 
+    // ── Step 1: Sign in ──
+    <StepShell
+      key="signin"
+      icon={<IconBadge>{ICONS.key}</IconBadge>}
+      title="Sign in to get started"
+      subtitle="Your Google account unlocks dictation and AI formatting — no API keys or configuration required."
+      subtitleWide
+    >
+      {authStatus?.loggedIn ? (
+        <div className="flex flex-col items-center gap-3">
+          <GrantedPill text={`Signed in as ${authStatus.displayName ?? authStatus.email ?? 'you'}`} />
+          {authStatus.email && authStatus.displayName && (
+            <p className="text-[12px] text-mv-text-muted">{authStatus.email}</p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-4">
+          <button
+            type="button"
+            onClick={() => window.electronAPI.authLogin()}
+            className="btn-glass btn-glass--primary !px-10 !py-3.5 !text-[14px] !rounded-mv-pill flex items-center gap-2.5"
+          >
+            <GoogleIcon />
+            Sign in with Google
+          </button>
+          <p className="text-[11px] text-mv-text-muted max-w-xs text-center leading-relaxed">
+            A browser window will open — sign in and return here. You can also sign in later from the Account tab.
+          </p>
+        </div>
+      )}
+    </StepShell>,
+
     // ── Step 2: Privacy ──
     <StepShell
       key="privacy"
       icon={<IconBadge>{ICONS.shield}</IconBadge>}
       title="Your words stay yours"
-      subtitle="Maverick Voice is local-first. There's no account, no Maverick server, and nothing to sign up for."
+      subtitle="Audio is routed through a managed proxy — never stored on Maverick servers."
     >
       <div className="flex flex-col gap-2.5 text-left">
-        <PrivacyBullet text="Dictation history lives only on this computer, in a local database." />
-        <PrivacyBullet text={`Audio is sent only to the provider you configure — Groq for speech-to-text, OpenAI or OpenRouter for transforms.`} />
-        <PrivacyBullet text={`API keys are encrypted with ${IS_MAC ? 'the macOS Keychain' : 'Windows DPAPI'} via Electron safeStorage. No accounts, no tracking.`} />
+        <PrivacyBullet text="Dictation history stays on this computer in a local database — never uploaded." />
+        <PrivacyBullet text="Audio is sent only to the proxy for transcription and formatting, then immediately discarded." />
+        <PrivacyBullet text={`Your session token is encrypted with ${IS_MAC ? 'the macOS Keychain' : 'Windows DPAPI'} via Electron safeStorage.`} />
       </div>
-    </StepShell>,
-
-    // ── Step 3: Provider keys ──
-    <StepShell
-      key="keys"
-      icon={<IconBadge>{ICONS.key}</IconBadge>}
-      title="Add your API keys"
-      subtitle="Maverick Voice runs on your own keys. Add Groq for speech, and OpenAI or OpenRouter for AI transforms."
-      subtitleWide
-      bodyWidth="md"
-    >
-      <div className="flex flex-col gap-3">
-        <OnboardingKeyCard provider="groq" label="Groq" sublabel="Speech-to-text" placeholder="gsk_..." consoleUrl="https://console.groq.com/keys" />
-        <OnboardingKeyCard provider="openai" label="OpenAI" sublabel="AI transforms" placeholder="sk-..." consoleUrl="https://platform.openai.com/api-keys" />
-        <OnboardingKeyCard provider="openrouter" label="OpenRouter" sublabel="AI transforms (alt)" placeholder="sk-or-..." consoleUrl="https://openrouter.ai/keys" />
-      </div>
-      <p className="text-[11px] text-mv-text-muted mt-5">
-        Add at least a Groq key for dictation, plus one LLM key for instructions. You can add the rest later in Settings.
-      </p>
     </StepShell>,
 
     // ── Step 4: Microphone permission ──
@@ -216,10 +250,19 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             <button onClick={requestAccessibility} className="btn-glass !px-6 !py-3 !text-[13px] !rounded-mv-pill">
               Open System Settings
             </button>
-            <button onClick={refreshAccessibilityStatus} className="btn-glass btn-glass--primary !px-8 !py-3 !text-[13px] !rounded-mv-pill">
-              I've enabled it
+            <button
+              onClick={checkA11yEnabled}
+              disabled={checkingA11y}
+              className="btn-glass btn-glass--primary !px-8 !py-3 !text-[13px] !rounded-mv-pill disabled:opacity-50"
+            >
+              {checkingA11y ? 'Checking…' : 'I\'ve enabled it'}
             </button>
           </div>
+          {a11yNotDetected && (
+            <p className="text-mv-text-muted text-[11px] mt-3 text-center max-w-xs">
+              Not detected yet — you can continue and enable it later in System Settings.
+            </p>
+          )}
         </div>
       )}
     </StepShell>,
@@ -336,130 +379,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   )
 }
 
-/* ════════════════════════════════════════════════════════════════════════
-   Onboarding per-provider key card — compact set/verify with masked status.
-════════════════════════════════════════════════════════════════════════ */
-/** Provider brand glyph (lobehub mono base components — currentColor). */
-function ProviderGlyph({ provider }: { provider: ProviderId }) {
-  switch (provider) {
-    case 'groq':
-      return <Groq size={18} />
-    case 'openai':
-      return <OpenAI size={18} />
-    case 'openrouter':
-      return <OpenRouter size={18} />
-    default:
-      return null
-  }
-}
-
-function OnboardingKeyCard({
-  provider,
-  label,
-  sublabel,
-  placeholder,
-  consoleUrl
-}: {
-  provider: ProviderId
-  label: string
-  sublabel: string
-  placeholder: string
-  consoleUrl: string
-}) {
-  const [saved, setSaved] = useState(false)
-  const [input, setInput] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    window.electronAPI
-      .getProviderKeyStatus(provider)
-      .then((s) => {
-        if (s.hasKey) setSaved(true)
-      })
-      .catch(() => {})
-  }, [provider])
-
-  async function saveKey() {
-    const key = input.trim()
-    if (!key || busy) return
-    setBusy(true)
-    setError(null)
-    try {
-      const test = await window.electronAPI.testProviderKey(provider, key)
-      if (!test.ok) {
-        setError(test.error || "That key didn't work. Double-check and try again.")
-        return
-      }
-      const res = await window.electronAPI.setProviderKey(provider, key)
-      if (res.success) {
-        setSaved(true)
-        setInput('')
-      } else {
-        setError(res.error || "Couldn't save the key.")
-      }
-    } catch {
-      setError('Something went wrong saving the key.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
+function GoogleIcon() {
   return (
-    <div className="mv-glass-card px-4 py-3.5 text-left">
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2.5">
-          {/* Provider brand icon (lobehub, mono — forced grayscale to honor the
-              strict B&W system). A tiny status dot badges the saved state. */}
-          <span className="relative flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
-            <ProviderGlyph provider={provider} />
-            <span className={`absolute -top-0.5 -right-0.5 mv-status-dot ${saved ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
-          </span>
-          <div className="leading-none">
-            <p className="text-[13px] font-semibold text-mv-text-primary">{label}</p>
-            <p className="text-[10px] text-mv-text-muted mt-1">{sublabel}</p>
-          </div>
-        </div>
-        {saved ? (
-          <span className="text-[11px] font-semibold text-mv-text-primary flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Verified
-          </span>
-        ) : (
-          <button onClick={() => window.electronAPI.openExternal(consoleUrl)} className="text-[11px] text-mv-text-muted hover:text-mv-text-primary transition-colors underline underline-offset-2">
-            Get key →
-          </button>
-        )}
-      </div>
-
-      {!saved && (
-        <>
-          <div className="flex items-center gap-2">
-            <input
-              type="password"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value)
-                setError(null)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveKey()
-              }}
-              placeholder={placeholder}
-              spellCheck={false}
-              autoComplete="off"
-              className="mv-input flex-1"
-            />
-            <button onClick={saveKey} disabled={!input.trim() || busy} className="btn-glass btn-glass--primary !px-4 !py-2.5 !text-[12px] whitespace-nowrap">
-              {busy ? 'Verifying…' : 'Save'}
-            </button>
-          </div>
-          {error && <p className="text-[11px] text-mv-text-secondary mt-2">{error}</p>}
-        </>
-      )}
-    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
   )
 }
 

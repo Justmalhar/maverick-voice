@@ -29,7 +29,8 @@ import type {
   DictionaryEntry,
   Snippet,
   AppProfile,
-  Theme
+  Theme,
+  ProxyAuthStatus,
 } from '../shared/types'
 
 const electronAPI: ElectronAPI = {
@@ -229,6 +230,18 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send(IPC.SET_ACTIVATION_MODE, mode)
   },
   getActivationMode: (): Promise<ActivationMode> => ipcRenderer.invoke(IPC.GET_ACTIVATION_MODE),
+
+  // ── Proxy auth (Google SSO) ──
+  authLogin: () => {
+    ipcRenderer.send(IPC.AUTH_LOGIN)
+  },
+  authLogout: () => {
+    ipcRenderer.send(IPC.AUTH_LOGOUT)
+  },
+  getAuthStatus: () => ipcRenderer.invoke(IPC.AUTH_STATUS),
+  onAuthStatusChange: (callback) => {
+    ipcRenderer.on(IPC.AUTH_STATUS_CHANGE, (_e, status) => callback(status))
+  },
 
   // ── Cleanup ──
   removeAllListeners: (channel: string) => {

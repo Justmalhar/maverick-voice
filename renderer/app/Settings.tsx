@@ -1,24 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-// Deep-import the MONO sub-component only — the package barrel pulls Avatar/
-// Combine variants that depend on antd, bloating the renderer bundle. The Mono
-// component is pure React + SVG (currentColor), strictly monochrome.
-import Groq from '@lobehub/icons/es/Groq/components/Mono'
-import OpenAI from '@lobehub/icons/es/OpenAI/components/Mono'
-import OpenRouter from '@lobehub/icons/es/OpenRouter/components/Mono'
 import type {
   DictationKey,
   DictationBinding,
   ModifierKey,
   ActivationMode,
   STTSettings,
-  LLMSettings,
-  LLMProviderId,
-  ProviderId,
-  ProviderModel,
   Theme
 } from '../../shared/types'
 import { applyTheme } from '../theme'
-import { KEY_TEST } from '../../shared/copy'
+import SettingsAccountSection from './settings/SettingsAccountSection'
 
 // ─── Platform detection (renderer can't import process.platform) ───
 // Electron sets a desktop UA; the OS token is reliable enough to gate the
@@ -142,41 +132,6 @@ const STT_LANGUAGES: { value: string; label: string }[] = [
   { value: 'yue', label: 'Cantonese' }
 ]
 
-/** Provider brand glyph (lobehub mono base components — currentColor). */
-function ProviderGlyph({ provider }: { provider: ProviderId }) {
-  switch (provider) {
-    case 'groq':
-      return <Groq size={18} />
-    case 'openai':
-      return <OpenAI size={18} />
-    case 'openrouter':
-      return <OpenRouter size={18} />
-    default:
-      return null
-  }
-}
-
-/** Plain glass chip wrapping a provider glyph — engine/context affordance
- *  (no status dot). Grayscale-forced to stay strictly monochrome. */
-function ProviderChip({ provider }: { provider: ProviderId }) {
-  return (
-    <span className="flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
-      <ProviderGlyph provider={provider} />
-    </span>
-  )
-}
-
-// Groq LLM chat models for the dropdown. 'groq' is shared with STT, so
-// listModels('groq') returns the Whisper models — these LLM models are kept as
-// a static catalogue here (the authoritative runtime list + pricing live in
-// electron/providers/llm/groq.ts and electron/config.ts).
-const GROQ_LLM_MODELS: ProviderModel[] = [
-  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B (versatile)' },
-  { id: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (instant)' },
-  { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B' },
-  { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B' }
-]
-
 // Platform-aware dictation key choices.
 const DICTATION_KEY_OPTIONS: { value: DictationKey; label: string }[] = IS_MAC
   ? [
@@ -275,18 +230,10 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
 
   // ── Provider settings ──
   const [sttSettings, setSttSettings] = useState<STTSettings>({
-    provider: 'groq',
-    model: 'whisper-large-v3-turbo',
+    provider: 'proxy',
+    model: 'stt-standard',
     language: 'en'
   })
-  const [llmSettings, setLlmSettings] = useState<LLMSettings>({
-    provider: 'openai',
-    model: 'gpt-4o-mini',
-    baseUrl: ''
-  })
-  const [sttModels, setSttModels] = useState<ProviderModel[]>([])
-  const [openaiModels, setOpenaiModels] = useState<ProviderModel[]>([])
-  const [openrouterModels, setOpenrouterModels] = useState<ProviderModel[]>([])
 
   // ── Advanced disclosure ──
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -359,12 +306,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
       if (v === 'tap-toggle' || v === 'push-to-talk' || v === 'double-tap-push') setActivationMode(v)
     })
     window.electronAPI.getSTTSettings().then(setSttSettings).catch(() => {})
-    window.electronAPI.getLLMSettings().then(setLlmSettings).catch(() => {})
-
-    // Static model catalogues for the dropdowns.
-    window.electronAPI.listModels('groq').then(setSttModels).catch(() => {})
-    window.electronAPI.listModels('openai').then(setOpenaiModels).catch(() => {})
-    window.electronAPI.listModels('openrouter').then(setOpenrouterModels).catch(() => {})
   }, [])
 
   async function loadAudioDevices(savedDeviceId?: string) {
@@ -498,24 +439,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
     })
   }
 
-  function updateLlm(patch: Partial<LLMSettings>) {
-    setLlmSettings((prev) => {
-      const next = { ...prev, ...patch }
-      window.electronAPI.setLLMSettings(next)
-      return next
-    })
-  }
-
-  function handleLlmProviderChange(provider: LLMProviderId) {
-    // Switching provider resets the model to that provider's first advertised
-    // model so the dropdown never points at a foreign model id.
-    const models = provider === 'openai' ? openaiModels : provider === 'openrouter' ? openrouterModels : GROQ_LLM_MODELS
-    const model = models[0]?.id || llmSettings.model
-    updateLlm({ provider, model })
-  }
-
-  const llmModels =
-    llmSettings.provider === 'openai' ? openaiModels : llmSettings.provider === 'openrouter' ? openrouterModels : GROQ_LLM_MODELS
   const activationBlurb = ACTIVATION_MODES.find((a) => a.value === activationMode)?.blurb
 
   // Dictation picker derived state.
@@ -610,14 +533,7 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
         <SettingRow label="Activation mode" description={activationBlurb || ''}>
           <Segmented options={ACTIVATION_MODES} value={activationMode} onChange={handleActivationModeChange} />
         </SettingRow>
-        <div className="flex items-center justify-between px-5 py-4 gap-4">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <ProviderChip provider="groq" />
-            <div className="min-w-0">
-              <p className="text-[13px] font-medium text-mv-text-primary">Language</p>
-              <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug">Speech recognition hint · Groq Whisper</p>
-            </div>
-          </div>
+        <SettingRow label="Language" description="Speech recognition hint — auto-detect works for most cases" last>
           <select
             className="mv-select min-w-[160px] shrink-0"
             value={sttSettings.language}
@@ -628,17 +544,15 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
                 {l.label}
               </option>
             ))}
-            {/* Keep an unrecognized stored code selectable rather than silently
-                resetting it to the first option. */}
             {!STT_LANGUAGES.some((l) => l.value === sttSettings.language) && (
               <option value={sttSettings.language}>{sttSettings.language}</option>
             )}
           </select>
-        </div>
+        </SettingRow>
       </Section>
 
       {/* ═══ AI ═══ */}
-      <Section title="LLM" icon={<WandIcon />}>
+      <Section title="AI" icon={<WandIcon />}>
         <SettingRow
           label="AI auto-format"
           description="Clean up grammar, punctuation, and paragraphing of your dictation — meaning untouched."
@@ -646,75 +560,17 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           <Toggle checked={autoFormat} onChange={handleAutoFormatChange} />
         </SettingRow>
 
-        {/* Adapt to active app — only effective when Auto-Format is on (dimmed
-            otherwise). Aligned to the same px-5 grid as every other row. */}
-        <div className={`flex items-center justify-between px-5 py-4 gap-4 border-b border-mv-border ${autoFormat ? '' : 'opacity-50'}`}>
-          <div className="min-w-0">
-            <p className="text-[13px] font-medium text-mv-text-primary">Adapt to active app</p>
-            <p className="text-[11px] text-mv-text-muted mt-0.5 leading-snug">
-              Emails get paragraphs, IDE prompts get @file references, chats stay casual.
-            </p>
-          </div>
-          <div className="shrink-0">
-            <Toggle checked={appAwareFormatting} onChange={handleAppAwareFormattingChange} disabled={!autoFormat} />
-          </div>
-        </div>
-
-        {/* LLM provider + model — the engine that powers auto-format & edits. */}
-        <SettingRow label="LLM provider" description="Powers auto-format and voice edits">
-          <Segmented
-            options={[
-              { value: 'groq', label: 'Groq', icon: <ProviderGlyph provider="groq" /> },
-              { value: 'openai', label: 'OpenAI', icon: <ProviderGlyph provider="openai" /> },
-              { value: 'openrouter', label: 'OpenRouter', icon: <ProviderGlyph provider="openrouter" /> }
-            ]}
-            value={llmSettings.provider}
-            onChange={(v) => handleLlmProviderChange(v as LLMProviderId)}
-          />
-        </SettingRow>
-        <SettingRow label="Model" description="Chat model used for AI passes" last>
-          <select className="mv-select min-w-[200px]" value={llmSettings.model} onChange={(e) => updateLlm({ model: e.target.value })}>
-            {llmModels.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-            {/* allow a custom model id (escape hatch) to remain selected */}
-            {!llmModels.some((m) => m.id === llmSettings.model) && (
-              <option value={llmSettings.model}>{llmSettings.model} (custom)</option>
-            )}
-          </select>
-        </SettingRow>
-      </Section>
-
-      {/* ═══ Providers & keys (unified) ═══ */}
-      <Section title="Providers & keys" icon={<KeyIcon />}>
-        <ProviderKeyRow
-          provider="groq"
-          label="Groq"
-          sublabel="Speech-to-text · LLM"
-          tag="Required"
-          placeholder="gsk_..."
-          consoleUrl="https://console.groq.com/keys"
-        />
-        <Divider />
-        <ProviderKeyRow
-          provider="openai"
-          label="OpenAI"
-          sublabel="AI auto-format & edits"
-          placeholder="sk-..."
-          consoleUrl="https://platform.openai.com/api-keys"
-        />
-        <Divider />
-        <ProviderKeyRow
-          provider="openrouter"
-          label="OpenRouter"
-          sublabel="AI auto-format & edits"
-          placeholder="sk-or-..."
-          consoleUrl="https://openrouter.ai/keys"
+        <SettingRow
+          label="Adapt to active app"
+          description="Emails get paragraphs, IDE prompts get @file references, chats stay casual."
           last
-        />
+        >
+          <Toggle checked={appAwareFormatting} onChange={handleAppAwareFormattingChange} disabled={!autoFormat} />
+        </SettingRow>
       </Section>
+
+      {/* ═══ Account (Google SSO) ═══ */}
+      <SettingsAccountSection />
 
       {/* ═══ Advanced (collapsed) ═══ */}
       <div className="mv-section-label mb-2.5 mt-6">
@@ -773,20 +629,6 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
               description="Stream long recordings in VAD-split chunks"
             >
               <Toggle checked={chunkedTranscription} onChange={handleChunkedChange} />
-            </SettingRow>
-
-            {/* STT model (advanced — most users keep the default) */}
-            <SettingRow label="Transcription model" description="Groq Whisper variant for speech-to-text" last={!IS_MAC}>
-              <select className="mv-select min-w-[200px]" value={sttSettings.model} onChange={(e) => updateStt({ model: e.target.value })}>
-                {sttModels.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-                {!sttModels.some((m) => m.id === sttSettings.model) && (
-                  <option value={sttSettings.model}>{sttSettings.model}</option>
-                )}
-              </select>
             </SettingRow>
 
             {/* Permissions (macOS) */}
@@ -857,195 +699,10 @@ export default function Settings({ onDictationKeyChange }: SettingsProps = {}) {
           Privacy
         </div>
         <p className="text-[12px] text-mv-text-secondary leading-relaxed max-w-[560px]">
-          Maverick Voice is local-first and account-free. Your transcripts, history, and audio stay on your device. Your API
-          keys are encrypted via Electron safeStorage (Keychain on macOS, DPAPI on Windows). Audio is sent only to the
-          provider you configured — Groq for speech-to-text, OpenAI or OpenRouter for AI. There is no sign-up, no telemetry,
-          and no tracking; usage costs are estimated locally from public provider pricing.
+          Maverick Voice routes audio through a managed proxy — no API keys stored on your device. Your session token is
+          encrypted via Electron safeStorage (Keychain on macOS, DPAPI on Windows). Transcripts and history stay on your
+          device. There is no background telemetry or tracking.
         </p>
-      </div>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════════════════════════════════
-   Compact per-provider API key row — masked status, set / test / clear.
-════════════════════════════════════════════════════════════════════════ */
-function ProviderKeyRow({
-  provider,
-  label,
-  sublabel,
-  tag,
-  placeholder,
-  consoleUrl,
-  last
-}: {
-  provider: ProviderId
-  label: string
-  sublabel?: string
-  tag?: string
-  placeholder: string
-  consoleUrl: string
-  last?: boolean
-}) {
-  const [masked, setMasked] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
-  const [input, setInput] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null)
-
-  useEffect(() => {
-    window.electronAPI
-      .getProviderKeyStatus(provider)
-      .then((s) => setMasked(s.hasKey ? s.masked : null))
-      .catch(() => {})
-  }, [provider])
-
-  async function handleSave() {
-    const key = input.trim()
-    if (!key || busy) return
-    setBusy(true)
-    setMsg(null)
-    try {
-      const test = await window.electronAPI.testProviderKey(provider, key)
-      if (!test.ok) {
-        setMsg({ text: test.error || 'Invalid key', type: 'err' })
-        return
-      }
-      const res = await window.electronAPI.setProviderKey(provider, key)
-      if (res.success) {
-        setMasked(res.masked ?? null)
-        setInput('')
-        setEditing(false)
-        setMsg({ text: 'Key saved securely.', type: 'ok' })
-      } else {
-        setMsg({ text: res.error || 'Failed to save key', type: 'err' })
-      }
-    } catch {
-      setMsg({ text: 'Something went wrong', type: 'err' })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleTest() {
-    const key = input.trim() || ''
-    if (busy) return
-    setBusy(true)
-    setMsg(null)
-    try {
-      // Test the typed key if present, otherwise the stored key (sent as '' →
-      // main routes to the stored key for that provider).
-      const res = await window.electronAPI.testProviderKey(provider, key)
-      setMsg(res.ok ? { text: 'Key is valid.', type: 'ok' } : { text: res.error || KEY_TEST.SERVICE_ERROR, type: 'err' })
-    } catch {
-      setMsg({ text: KEY_TEST.NETWORK_ERROR, type: 'err' })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  function handleClear() {
-    window.electronAPI.clearProviderKey(provider)
-    setMasked(null)
-    setInput('')
-    setEditing(false)
-    setMsg(null)
-  }
-
-  return (
-    <div className="px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* Provider brand icon (lobehub, mono — forced grayscale to honor the
-              strict B&W system). A tiny status dot badges the saved state. */}
-          <span className="relative flex items-center justify-center w-8 h-8 rounded-mv-md bg-mv-white-04 border border-mv-border text-mv-text-primary shrink-0 [&_svg]:grayscale">
-            <ProviderGlyph provider={provider} />
-            <span className={`absolute -top-0.5 -right-0.5 mv-status-dot ${masked ? 'mv-status-dot--on' : 'mv-status-dot--off'}`} />
-          </span>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold text-mv-text-primary">{label}</span>
-              {tag && (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-mv-text-muted bg-mv-white-04 border border-mv-border rounded-mv-sm px-1.5 py-0.5 shrink-0">
-                  {tag}
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-mv-text-muted font-mono truncate mt-0.5">{masked || sublabel || 'Not set'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {!editing && (
-            <button
-              onClick={() => {
-                setEditing(true)
-                setMsg(null)
-              }}
-              className="btn-glass !px-3 !py-1.5 !text-[11px] whitespace-nowrap"
-            >
-              {masked ? 'Replace' : 'Set'}
-            </button>
-          )}
-          {!editing && masked && (
-            <>
-              <button onClick={handleTest} disabled={busy} className="btn-glass !px-3 !py-1.5 !text-[11px] whitespace-nowrap">
-                Test
-              </button>
-              <button
-                onClick={handleClear}
-                className="text-[11px] font-medium text-mv-text-secondary hover:text-mv-text-primary transition-colors px-2 py-1"
-              >
-                Clear
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {editing && (
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            type="password"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              setMsg(null)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave()
-              if (e.key === 'Escape') {
-                setEditing(false)
-                setInput('')
-                setMsg(null)
-              }
-            }}
-            placeholder={placeholder}
-            spellCheck={false}
-            autoComplete="off"
-            autoFocus
-            className="mv-input flex-1"
-          />
-          <button onClick={handleTest} disabled={busy} className="btn-glass !px-3.5 !py-2.5 !text-[12px] whitespace-nowrap">
-            Test
-          </button>
-          <button onClick={handleSave} disabled={!input.trim() || busy} className="btn-glass btn-glass--primary !px-4 !py-2.5 !text-[12px] whitespace-nowrap">
-            {busy ? 'Checking…' : 'Save'}
-          </button>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mt-2.5 gap-3">
-        <button
-          onClick={() => window.electronAPI.openExternal(consoleUrl)}
-          className="text-[11px] text-mv-text-muted hover:text-mv-text-primary transition-colors underline underline-offset-2"
-        >
-          Get an API key →
-        </button>
-        {msg && (
-          <span className={`text-[11px] font-medium ${msg.type === 'ok' ? 'text-mv-text-primary' : 'text-mv-text-secondary'}`}>
-            {msg.text}
-          </span>
-        )}
       </div>
     </div>
   )
@@ -1063,10 +720,6 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
       <div className="mv-glass-card overflow-hidden mb-3">{children}</div>
     </>
   )
-}
-
-function Divider() {
-  return <div className="h-px bg-mv-border" />
 }
 
 function SettingRow({
