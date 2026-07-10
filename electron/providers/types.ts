@@ -1,12 +1,10 @@
 // ════════════════════════════════════════════════════════════════════════
 // electron/providers/types.ts — PROVIDER-AGNOSTIC interfaces + registry types.
-//
-// The hard requirement: adding a provider = ONE new file implementing one of
-// these interfaces + ONE registry entry. Keys are injected by callers (read
-// from keyStore) — providers NEVER read or store keys themselves.
-//
-// Imported by: providers/registry.ts, providers/stt/groq.ts,
-// providers/llm/openai.ts, providers/llm/openrouter.ts, sessionManager.ts.
+// Ported VERBATIM from legacy/electron/providers/types.ts (INTERFACES.md
+// §providers). The hard requirement: adding a provider = ONE new file
+// implementing one of these interfaces + ONE registry entry. Keys are
+// injected by callers (read from store/keys.ts) — providers NEVER read or
+// store keys themselves.
 // ════════════════════════════════════════════════════════════════════════
 
 import type { ProviderModel, STTProviderId, LLMProviderId } from '../../shared/types'
@@ -28,6 +26,8 @@ export interface TranscribeOptions {
   prompt?: string
   /** MIME type of the audio buffer. Renderer MediaRecorder emits 'audio/webm'. */
   mimeType?: string
+  /** Per-provider base URL override (Local server). Empty => provider default. */
+  baseUrl?: string
 }
 
 export interface TranscribeResult {
@@ -35,7 +35,7 @@ export interface TranscribeResult {
   text: string
   /**
    * Billed audio seconds (Groq verbose_json reports `duration`). Fed to
-   * usageTracker.recordSttUsage. Omit if the provider cannot report it.
+   * store/usage.ts recordSttUsage. Omit if the provider cannot report it.
    */
   durationSeconds?: number
 }
@@ -48,6 +48,8 @@ export interface KeyTestResult {
 export interface TranscriptionProvider {
   readonly id: STTProviderId
   readonly label: string
+  /** false => provider works without an API key (Local server). Default true. */
+  readonly requiresKey?: boolean
   /** Default model used when STTSettings has no model yet. */
   readonly defaultModel: string
   /** Static models advertised for the Settings dropdown. */
@@ -57,12 +59,7 @@ export interface TranscriptionProvider {
    * caller. `signal` propagates session cancellation (AbortError must re-throw,
    * NOT be swallowed). Throws on missing key / network / API errors.
    */
-  transcribe(
-    audio: Buffer,
-    opts: TranscribeOptions,
-    key: string,
-    signal?: AbortSignal
-  ): Promise<TranscribeResult>
+  transcribe(audio: Buffer, opts: TranscribeOptions, key: string, signal?: AbortSignal): Promise<TranscribeResult>
   /** Validate a key against the provider (e.g. GET /models). */
   testKey(key: string): Promise<KeyTestResult>
 }
@@ -74,7 +71,7 @@ export interface CompleteOptions {
   model: string
   /** System prompt. */
   system: string
-  /** Fully-assembled user message content (from prompts.ts). */
+  /** Fully-assembled user message content (from prompts/prompts.ts). */
   user: string
   /** Sampling temperature (prompts.ts decides: dictation 0.1, instruction 0.3). */
   temperature?: number
@@ -85,14 +82,14 @@ export interface CompleteOptions {
    * OpenAI-compatible endpoint plug in (this is the provider-agnostic seam).
    */
   baseUrl?: string
-  /** Request timeout in ms (AppConfig.transform.timeout_ms). */
+  /** Request timeout in ms (TIMEOUTS.transform). */
   timeoutMs?: number
 }
 
 export interface CompleteResult {
   /** The model's text output. */
   text: string
-  /** Token usage, if the API reported it. Fed to usageTracker.recordLlmUsage. */
+  /** Token usage, if the API reported it. Fed to store/usage.ts recordLlmUsage. */
   usage?: {
     inputTokens: number
     outputTokens: number
@@ -116,6 +113,12 @@ export interface LLMProvider {
   complete(opts: CompleteOptions, key: string, signal?: AbortSignal): Promise<CompleteResult>
   /** Validate a key against the provider (e.g. GET {baseUrl}/models). */
   testKey(key: string, baseUrl?: string): Promise<KeyTestResult>
+  /**
+   * Live model list from GET {baseUrl}/models with the caller-injected key.
+   * MUST resolve (never reject): falls back to the static `models` list when
+   * the key is missing/invalid or the request fails.
+   */
+  listModels(key: string, baseUrl?: string): Promise<ProviderModel[]>
 }
 
 // ─── Registry ───────────────────────────────────────────────────────────────

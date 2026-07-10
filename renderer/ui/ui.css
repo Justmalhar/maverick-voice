@@ -1,0 +1,154 @@
+/*
+ * Shared UI component styles — tokens only (DESIGN.md §2), animations
+ * transform/opacity only (DESIGN.md §5). Imported by the components that
+ * need it; the bundler dedupes.
+ */
+
+/* ── Toggle ──────────────────────────────────────────────────────────── */
+
+.ui-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--surface-sunken);
+  cursor: pointer;
+}
+.ui-toggle[aria-checked='true'] {
+  background: var(--ink-strong);
+  border-color: var(--stroke-strong);
+}
+.ui-toggle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Knob: raised surface + raise shadow — visible on BOTH themes
+   (v1's hardcoded white knob vanished on the light track). */
+.ui-toggle__knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raise);
+  transition: transform 150ms ease;
+}
+.ui-toggle[aria-checked='true'] .ui-toggle__knob {
+  transform: translateX(18px);
+}
+.ui-toggle--sm {
+  width: 32px;
+  height: 18px;
+}
+.ui-toggle--sm .ui-toggle__knob {
+  width: 14px;
+  height: 14px;
+}
+.ui-toggle--sm[aria-checked='true'] .ui-toggle__knob {
+  transform: translateX(14px);
+}
+
+/* ── Segmented control ───────────────────────────────────────────────── */
+
+.ui-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: var(--surface-sunken);
+}
+.ui-segment__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ui-segment__btn:hover {
+  color: var(--ink);
+}
+.ui-segment__btn[aria-checked='true'] {
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  box-shadow: var(--shadow-raise);
+}
+.ui-segment__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Loading dots ────────────────────────────────────────────────────── */
+
+.ui-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ui-dots__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-faint);
+  animation: ui-dot-bounce 900ms ease-in-out infinite;
+}
+.ui-dots__dot:nth-child(2) {
+  animation-delay: 150ms;
+}
+.ui-dots__dot:nth-child(3) {
+  animation-delay: 300ms;
+}
+@keyframes ui-dot-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-dots__dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* ── Text input (KeyCard et al.) ─────────────────────────────────────── */
+
+.ui-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface-sunken);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+.ui-input::placeholder {
+  color: var(--ink-faint);
+}
+.ui-input:focus {
+  border-color: var(--stroke-strong);
+}

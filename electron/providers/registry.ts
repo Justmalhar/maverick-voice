@@ -1,57 +1,51 @@
-// ─── Provider registry ───
-// Maps provider ids → instances. The hard requirement: adding a provider is ONE
-// new file (implementing TranscriptionProvider / LLMProvider) + ONE `.set(...)`
-// line here. No keys here (callers inject), no IPC here.
+// ════════════════════════════════════════════════════════════════════════
+// electron/providers/registry.ts — Map-based provider registry.
+//
+// Adding a provider is ONE file + ONE `.set(...)` line below (SYSTEM-DESIGN
+// NFR5). Unknown id => throw a clear Error (never a silent undefined).
+// 'openai' and 'groq' exist in BOTH maps (STT + LLM roles, one shared key).
+// ════════════════════════════════════════════════════════════════════════
 
 import type { STTProviderId, LLMProviderId } from '../../shared/types'
-import type { TranscriptionProvider, LLMProvider, ProviderRegistry } from './types'
-import { groqProvider } from './stt/groq'
-import { groqLLMProvider } from './llm/groq'
+import type { TranscriptionProvider, LLMProvider } from './types'
+import { deepgramProvider } from './stt/deepgram'
+import { groqSttProvider } from './stt/groq'
+import { localSttProvider } from './stt/local'
+import { openaiSttProvider } from './stt/openai'
+import { customLlmProvider } from './llm/custom'
+import { groqLlmProvider } from './llm/groq'
 import { openaiProvider } from './llm/openai'
 import { openrouterProvider } from './llm/openrouter'
 
-// ─── Internal maps ───
 const sttProviders = new Map<STTProviderId, TranscriptionProvider>()
 const llmProviders = new Map<LLMProviderId, LLMProvider>()
 
-// Register providers (the single point of extension).
-sttProviders.set(groqProvider.id, groqProvider)
-llmProviders.set(groqLLMProvider.id, groqLLMProvider)
-llmProviders.set(openaiProvider.id, openaiProvider)
-llmProviders.set(openrouterProvider.id, openrouterProvider)
+// ── Registrations go here — one import + one `.set()` line per provider ──
+sttProviders.set('deepgram', deepgramProvider)
+sttProviders.set('openai', openaiSttProvider)
+sttProviders.set('groq', groqSttProvider)
+sttProviders.set('local', localSttProvider)
+llmProviders.set('openai', openaiProvider)
+llmProviders.set('groq', groqLlmProvider)
+llmProviders.set('openrouter', openrouterProvider)
+llmProviders.set('custom', customLlmProvider)
 
-/** Resolve an STT provider by id. Throws a clear error on an unknown id. */
 export function getTranscriptionProvider(id: STTProviderId): TranscriptionProvider {
   const provider = sttProviders.get(id)
-  if (!provider) {
-    throw new Error(`[registry] Unknown transcription provider: "${id}"`)
-  }
+  if (!provider) throw new Error(`Unknown transcription provider: "${id}"`)
   return provider
 }
 
-/** Resolve an LLM provider by id. Throws a clear error on an unknown id. */
 export function getLLMProvider(id: LLMProviderId): LLMProvider {
   const provider = llmProviders.get(id)
-  if (!provider) {
-    throw new Error(`[registry] Unknown LLM provider: "${id}"`)
-  }
+  if (!provider) throw new Error(`Unknown LLM provider: "${id}"`)
   return provider
 }
 
-/** All registered STT providers (for Settings enumeration). */
 export function listTranscriptionProviders(): TranscriptionProvider[] {
-  return Array.from(sttProviders.values())
+  return [...sttProviders.values()]
 }
 
-/** All registered LLM providers (for Settings enumeration). */
 export function listLLMProviders(): LLMProvider[] {
-  return Array.from(llmProviders.values())
-}
-
-/** The ProviderRegistry object (interface from providers/types.ts). */
-export const registry: ProviderRegistry = {
-  getTranscriptionProvider,
-  getLLMProvider,
-  listTranscriptionProviders,
-  listLLMProviders,
+  return [...llmProviders.values()]
 }

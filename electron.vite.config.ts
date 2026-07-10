@@ -6,7 +6,7 @@ export default defineConfig({
   main: {
     // electron-store and uuid are ESM-only (no CJS export) — they must be
     // BUNDLED into the CJS main bundle, not externalized, or require() throws
-    // "Store is not a constructor" at load. Native/CJS deps stay external.
+    // at load. Native/CJS deps stay external.
     plugins: [externalizeDepsPlugin({ exclude: ['electron-store', 'uuid'] })],
     build: {
       outDir: 'dist/electron',

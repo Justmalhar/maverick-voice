@@ -1,26 +1,24 @@
-import { useRef, useEffect } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 interface WaveformProps {
   analyserNode: AnalyserNode | null
-  color?: string
   width?: number
   height?: number
 }
 
 /**
- * Live frequency-bar visualizer for the HUD pill. DPR-scaled canvas, rAF loop,
- * center-weighted brightness so the bars feel alive. Monochrome by default —
- * pure white-alpha bars on the black glass pill.
+ * Live frequency-bar visualizer for the HUD pill — ported near-verbatim from
+ * v1 (DPR-scaled canvas, rAF loop, Float32Array smoothing, no per-frame React
+ * state). v2 change: the bar color is resolved at DRAW time from the canvas'
+ * computed `--ink` token — NOT an effect dependency — so a theme or mode
+ * switch never tears down and rebuilds the canvas/rAF loop (v1 bug C6).
  */
 export default function Waveform({
   analyserNode,
-  color = 'rgba(255, 255, 255, 0.75)',
-  width = 80,
-  height = 20
-}: WaveformProps) {
+  width = 84,
+  height = 22
+}: WaveformProps): ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animFrameRef = useRef<number>(0)
-  const smoothedRef = useRef<Float32Array | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -43,14 +41,15 @@ export default function Waveform({
     const barWidth = (width - (barCount - 1) * barGap) / barCount
     const minBarHeight = 1.5
     const smoothing = 0.7
+    const smoothed = new Float32Array(barCount)
 
-    if (!smoothedRef.current || smoothedRef.current.length !== barCount) {
-      smoothedRef.current = new Float32Array(barCount).fill(0)
-    }
-
-    function draw() {
-      animFrameRef.current = requestAnimationFrame(draw)
+    let raf = 0
+    function draw(): void {
+      raf = requestAnimationFrame(draw)
       analyserNode!.getByteFrequencyData(dataArray)
+
+      // Token read at draw time — tracks theme/mode changes without a rebuild.
+      const color = getComputedStyle(canvas!).getPropertyValue('--ink').trim() || 'currentColor'
 
       ctx!.clearRect(0, 0, width, height)
 
@@ -58,8 +57,8 @@ export default function Waveform({
         const binIndex = Math.floor(Math.pow(i / barCount, 1.3) * bufferLength)
         const rawValue = dataArray[binIndex] / 255
 
-        smoothedRef.current![i] = smoothedRef.current![i] * smoothing + rawValue * (1 - smoothing)
-        const value = smoothedRef.current![i]
+        smoothed[i] = smoothed[i] * smoothing + rawValue * (1 - smoothing)
+        const value = smoothed[i]
 
         const barHeight = Math.max(minBarHeight, value * height * 0.9)
         const x = i * (barWidth + barGap)
@@ -80,9 +79,9 @@ export default function Waveform({
     draw()
 
     return () => {
-      cancelAnimationFrame(animFrameRef.current)
+      cancelAnimationFrame(raf)
     }
-  }, [analyserNode, color, width, height])
+  }, [analyserNode, width, height])
 
-  return <canvas ref={canvasRef} style={{ width, height, display: 'block' }} />
+  return <canvas ref={canvasRef} style={{ width, height, display: 'block' }} aria-hidden="true" />
 }

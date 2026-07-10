@@ -1,30 +1,8 @@
-# Dependencies
-node_modules/
-
-# Build output
-dist/
-out/
-release/
-
-# resources/bin binaries ARE committed (Windows clones cannot compile them); macOS regenerates via compile:native
-
-# Environment — only .env is ignored; .env.example IS committed
 .env
-.env.local
-
-# Audio scratch files
-*.webm
-
-# OS
+.env.release
+node_modules/
+dist/
+release/
+out/
 .DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Packaged installers
-*.dmg
-*.exe
-*.AppImage
-.claude/
+.conductor/

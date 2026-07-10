@@ -1,283 +1,244 @@
-# Maverick Voice — Product Requirements Document (PRD)
+# Maverick Voice v2 — Product Requirements Document
 
 | | |
 |---|---|
 | **Product** | Maverick Voice |
 | **Owner** | Malhar Ujawane ([@justmalhar](https://github.com/justmalhar)) |
 | **App ID** | `com.justmalhar.maverickvoice` |
-| **Platforms** | macOS (Apple Silicon, arm64), Windows (x64) |
-| **Status** | v1 |
-| **Document date** | 2026 |
+| **Platforms** | macOS **universal** (Apple Silicon + Intel, macOS 12+), Windows (x64), **Linux** (x64, AppImage + deb) |
+| **Status** | v2 — full rewrite; `legacy/` is the v1 reference |
+| **Document date** | 2026-07-10 |
 
 ---
 
 ## 1. Summary
 
-Maverick Voice is a desktop app for **voice dictation** and **voice-driven text
-editing**. Users press a global hotkey to dictate text directly at their cursor
-in any application, and — with the opt-in **instruction mode** enabled — they
-can select existing text and *speak an instruction* to transform it in place.
-It is **bring-your-own-key (BYO)** and
-**provider-agnostic**: Groq for speech-to-text, OpenAI / OpenRouter / any
-OpenAI-compatible endpoint for transforms. There is no backend, no account, and
-no telemetry — keys are encrypted with the OS keychain and all history is local.
+Maverick Voice is a desktop app for **voice dictation** and **voice-driven
+text editing**. Press a global hotkey, speak, and clean text lands at your
+cursor in any app; with opt-in instruction mode, select text, tap Caps Lock,
+and speak a transform. It is **bring-your-own-key** and **provider-agnostic**
+(Groq Whisper for STT; OpenAI / OpenRouter / any OpenAI-compatible endpoint
+for transforms), with no backend, no accounts, and no telemetry.
 
-### 1.1 Problem
+**v2 is a rewrite, not a redesign.** The feature set, flows, and overall UI of
+v1 are preserved. What changes:
+
+1. **Universal platform support** — one universal macOS binary (arm64 + x64,
+   macOS 12+) with hotkey and permission flows that work on every Mac (v1
+   shipped arm64-only and failed silently on non-Apple keyboards and missing
+   TCC grants — see `LEGACY-ISSUES.md` §1), plus Windows 10/11 x64 and
+   **Linux x64** (new in v2; v1 had no Linux path at all).
+2. **Smoothness** — the choppiness of v1 is eliminated by design: compositor-
+   only animation, no blocking I/O on the hot path, event-driven session flow
+   (no polling/magic sleeps). See `LEGACY-ISSUES.md` §2.
+3. **A real light/dark theme system** — intent-named design tokens, light /
+   dark / system modes, consistent across dashboard and HUD (v1's light mode
+   existed but leaked hardcoded dark values everywhere).
+4. **Manageable codebase** — modular atomic files, no god classes, dead code
+   deleted, duplicated plumbing collapsed (see `SYSTEM-DESIGN.md`).
+
+### 1.1 Problem (unchanged from v1)
 
 Typing is the bottleneck between thought and text. Existing dictation tools
-either (a) lock users into one cloud vendor with an account and a subscription,
-(b) silently "auto-format" speech into something the user didn't say, or (c)
-cannot *edit* already-written text by voice. Power users want raw, accurate
-dictation by default, on-demand voice editing, and full control over which
-AI provider their audio and text are sent to.
+lock users into one cloud vendor, silently "auto-format" speech, or cannot
+edit existing text by voice. Power users want raw accurate dictation by
+default, on-demand voice editing, and control over which provider their audio
+and text reach.
 
-### 1.2 Solution & positioning
+### 1.2 Positioning
 
-A fast, private, monochrome-glass desktop app that:
-- pastes **raw** lightly-cleaned dictation by default (never rewrites silently),
-- transforms selected or dictated text **only** when explicitly instructed,
-- lets the user bring their own keys and **swap providers freely**,
-- keeps everything local except the audio/text sent to the chosen provider.
+Fast, private, BYO-key dictation sold as a **$9.99 one-time purchase** (never
+subscription). Monochrome glass aesthetic, now in both light and dark.
 
 ---
 
 ## 2. Goals & non-goals
 
-### 2.1 Goals (v1)
-- Sub-2-second pure dictation (STT only, no LLM round-trip).
-- Reliable paste-at-cursor in any focused app on macOS and Windows.
-- Opt-in voice instructions that transform selected text in place.
-- Dictation + instruction chaining in one flow (when instruction mode is on).
-- Optional AI auto-format pass for raw dictation (off by default).
-- User-defined Dictionary (spoken-word corrections, also bias STT) and Snippets
-  (spoken trigger → expansion).
-- Provider-agnostic STT/LLM via a registry; adding a provider = one file + one
-  registry line.
-- Encrypted BYO keys; zero accounts; zero telemetry.
-- Per-provider usage/cost visibility.
+### 2.1 Goals (v2)
 
-### 2.2 Non-goals (v1)
-- Local/offline models (whisper.cpp, local LLM) — see §9, future.
-- Real-time streaming captions / live subtitles.
-- Mobile, web, or Linux clients.
-- Multi-user / team / cloud sync.
-- Custom prompt authoring UI, macros, or scripting.
-- Auto-update / crash reporting / analytics.
+- **Universality:** one macOS build that installs and works on any Mac
+  (Apple Silicon or Intel, macOS 12+), plus Windows 10/11 x64 and Linux x64
+  (AppImage + deb; full support on X11, documented degradations on Wayland —
+  see §4.6).
+- **Reliability on every machine:** permission preflight that fails *loudly*
+  with guidance instead of dead hotkeys; hotkey defaults that adapt to the
+  keyboard actually present (Fn/Globe only when available).
+- Sub-2-second pure dictation (STT only), p50, short clips.
+- **Perceived smoothness:** HUD animations at 60 fps (compositor-only);
+  dictation start latency < 100 ms from keypress to recording; no main-thread
+  stalls > 16 ms from persistence or logging.
+- Feature parity with v1: dictation, opt-in instruction, chaining, cancel/undo,
+  three activation modes, Dictionary + Snippets, opt-in AI auto-format with
+  app-aware profiles, combo hotkeys, usage/cost tracking, onboarding, history
+  with retry, tray, sound feedback, widget positioning.
+- Light / dark / system theme, consistent everywhere.
+- Provider-agnostic registry (new provider = 1 file + 1 registry line).
+- Encrypted BYO keys; zero accounts; zero telemetry; transcripts never logged.
 
----
+### 2.2 Non-goals (v2)
 
-## 3. Personas
-
-### P1 — "The Builder" (primary)
-Staff/Senior engineer (e.g. Malhar). Lives in an editor, terminal, and PR
-descriptions. Wants to dictate commit messages, code comments, Slack replies,
-and design docs at speaking speed, then voice-edit them ("make this a bullet
-list", "tighten this paragraph"). Already has Groq + OpenAI keys; cares about
-privacy and provider choice; will point the base URL at a self-hosted gateway.
-
-### P2 — "The Writer"
-Long-form writer / knowledge worker. Drafts in Notion/Docs/Obsidian. Wants
-clean dictation without auto-mangling, and quick voice rewrites ("rephrase
-formally", "fix grammar"). Less technical; relies on onboarding to set up keys.
-
-### P3 — "The Accessibility-first user"
-Uses voice as a primary input due to RSI or motor constraints. Needs reliable
-global hotkeys, push-to-talk, and dependable paste across every app. Values the
-Escape-to-cancel and undo-cancel safety nets.
+- Local/offline models (whisper.cpp, local LLM) — architecture-ready, not built.
+- Real-time streaming captions; mobile/web clients; team/cloud sync.
+- Custom prompt-authoring UI, macros, scripting.
+- Windows arm64 and Linux arm64 (revisit on demand).
+- Native Wayland global-hotkey injection beyond the documented degradations
+  (§4.6) — the Wayland security model forbids most of it by design.
 
 ---
 
-## 4. User stories
+## 3. Personas (unchanged)
 
-**Dictation**
-- As P1, I press the dictation key, speak, and clean text appears at my cursor.
-- As P2, I want the pasted text to be what I said (lightly cleaned), not a
-  reworded "improved" version.
-- As P3, I want push-to-talk so recording stops the instant I release the key.
-
-**Instruction** (opt-in; enable in Settings → Advanced)
-- As P1, I select a paragraph, tap the instruction key (Caps Lock), say "make
-  this a bullet list", and the selection is replaced with the list.
-- As P2, I select a sentence and say "translate to French" and it is replaced.
-- As P1, when no LLM key is set or the LLM fails, I want the raw transcript
-  pasted with a clear notice rather than nothing.
-
-**Chaining**
-- As P1, I dictate a rough sentence, then within a short window speak an
-  instruction to shape it, and the shaped result is pasted — one fluid motion.
-
-**Control & safety**
-- As any user, I press Escape to cancel a recording or processing; if I cancel
-  by mistake I can undo within a few seconds.
-- As any user, a too-short/silent clip is discarded without an STT call.
-
-**Setup & privacy**
-- As P2, onboarding walks me through pasting and validating my keys and granting
-  permissions.
-- As P1, I can swap STT/LLM providers and models, and override the LLM base URL.
-- As any user, I can see estimated cost per provider for today/month/all-time.
-- As any user, I trust that my keys are encrypted and nothing is sent anywhere
-  except the provider I chose.
+- **P1 "The Builder"** — staff engineer; dictates commit messages, PR
+  descriptions, Slack replies; voice-edits them; points base URL at a
+  self-hosted gateway. Now possibly on an **Intel MacBook Pro** — must work.
+- **P2 "The Writer"** — long-form writer in Notion/Docs/Obsidian; wants clean
+  dictation without auto-mangling and quick voice rewrites; relies on
+  onboarding; may prefer **light mode**.
+- **P3 "Accessibility-first"** — voice as primary input (RSI/motor); needs
+  reliable global hotkeys, push-to-talk, dependable paste, Escape-to-cancel,
+  and now **reduced-motion support and screen-reader announcements** (v1 had
+  neither).
 
 ---
 
-## 5. Core flows
+## 4. Core flows (parity with v1, with fixes)
 
-### 5.1 Dictation (STT only — no LLM)
-1. User presses the dictation key (Fn/Globe or Right Option on macOS; Right Ctrl
-   or Right Alt on Windows).
-2. HUD pill appears; mic records (chunked with VAD for long clips).
-3. On stop, audio is transcribed by the STT provider (Groq Whisper). The user's
-   Dictionary `to` values are passed as a ~200-char vocabulary prompt hint to
-   bias recognition toward their spellings.
-4. Transcript is lightly cleaned in code (`cleanTranscript`: trims STT
-   hallucinations like "thanks for watching", "please subscribe").
-5. **Dictionary** replacements then **Snippet** expansions are applied in code.
-6. If **AI auto-format** is enabled, a mechanics-only LLM pass runs (grammar,
-   punctuation, capitalization, paragraphs); on any failure it falls back to the
-   unformatted text and never blocks the paste.
-7. Result is delivered to the cursor via clipboard + synthesized paste.
-8. HUD shows a brief success acknowledgment, then hides.
+### 4.1 Dictation
+1. Press the dictation key (default: Fn/Globe on Apple keyboards *when
+   available*, else Right Option; Right Ctrl on Windows and Linux; custom
+   modifier combos supported).
+2. HUD pill appears on the **display where the user is working** (v1: always
+   primary). Mic records; long clips chunk on VAD silence.
+3. On stop: STT (Groq Whisper, Dictionary vocabulary hint) → `cleanTranscript`
+   → Dictionary → Snippets → optional AI auto-format (app-aware profile) →
+   paste at cursor.
+4. Pure dictation never touches the LLM unless auto-format is on.
 
-> Pure dictation **never** hits the LLM **unless** AI auto-format is explicitly
-> enabled — that is the speed and "raw by default" guarantee.
+### 4.2 Instruction (opt-in, Caps Lock)
+Unchanged from v1, with two fixes: selection capture is bound to the session
+that requested it (no cross-session leakage), and clipboard save/restore
+preserves non-text clipboard content where the platform allows.
 
-### 5.2 Instruction (selection + voice command → LLM transform) — opt-in
-0. User enables **instruction mode** in Settings → Advanced (off by default;
-   while disabled, every instruction-key event is ignored).
-1. User selects text in any app.
-2. User taps the instruction key (**Caps Lock** on both platforms) and speaks a
-   command.
-3. App captures the selection (clipboard copy round-trip) **and** transcribes
-   the spoken instruction.
-4. `prompts.ts` assembles a system + user message for the appropriate flow
-   (context / transform / instruction).
-5. The LLM provider runs the transform; the output replaces the selection via
-   paste.
-6. If the LLM is unavailable / empty / refuses, the app falls back to the raw
-   transcript and shows a fallback notice.
+### 4.3 Chaining
+Unchanged (dictate → chain window → instruct), but the chain-expiry →
+processing handoff is **event-driven on audio arrival** — no grace polls.
 
-### 5.3 Chaining (dictate → instruct)
-1. User dictates content; on stop, a short **chain window** opens.
-2. Within the window the user presses the instruction key and speaks a command.
-3. The dictated content becomes the working text; the instruction transforms it;
-   the shaped result is pasted.
-4. If the chain window expires with no instruction, the dictation is processed
-   on its own.
+### 4.4 Flow typing
+`dictation | transform | context | instruction | quote` as in v1, with one
+behavior change: **a pre-existing selection no longer silently converts plain
+dictation into `quote` flow** (v1 issue #6). Quote flow requires explicit
+intent (instruction key with selection and no spoken command).
 
-### 5.4 Flow-type determination
-The session manager classifies each session into one of:
-`dictation` (raw, no LLM unless auto-format is on), `transform`, `context`,
-`instruction`, `quote` (selection wrapped as `> ...`, no LLM) — based on whether
-a selection was captured, whether an instruction was spoken, and the selection
-role (`quote` vs `context`).
+### 4.5 Dictionary / Snippets / Auto-format / App profiles
+Identical semantics to v1 (order: clean → Dictionary → Snippets → optional
+auto-format; longest-match-first; case-insensitive; STT bias hint capped
+~200 chars; profiles: email / chat-ai / code-editor / messaging / notes /
+default). Dictionary/Snippet edits persist immediately (v1 lost edits made
+within 400 ms of switching tabs).
 
-### 5.5 Dictionary & Snippets (deterministic text-replacement stage)
-Both lists are managed from their own sidebar pages and applied **in code**
-(no LLM) to every transcript after `cleanTranscript`, in order Dictionary →
-Snippets:
-- **Dictionary** — `from → to` corrections; case-insensitive, word-boundary
-  match tolerant of adjacent punctuation, regex specials escaped, longest `from`
-  applied first. The distinct `to` values are also joined (capped ~200 chars)
-  and fed to Groq Whisper as a `prompt` vocabulary hint.
-- **Snippets** — spoken `trigger → content` expansions; case-insensitive,
-  longest `trigger` first, punctuation-tolerant.
+### 4.6 Linux behavior (new)
 
-### 5.6 AI Auto-Format (opt-in)
-When enabled in Settings (off by default), raw dictation output runs through a
-mechanics-only LLM pass (`AUTO_FORMAT` prompt: grammar, punctuation,
-capitalization, sentence breaks, paragraphing — never changes meaning, never
-adds content). On any failure (no key, network, timeout, empty/refusal) it
-gracefully falls back to the unformatted transcript and fires `OUTPUT_FALLBACK`
-with a notice; tokens are tracked like any other LLM call.
+- **X11 (full support):** global hotkeys via uiohook, paste via clipboard +
+  synthesized Ctrl+V (`xdotool`), selection capture via the same round-trip.
+  Feature parity with Windows.
+- **Wayland (graceful degradation):** global key hooks and synthetic
+  keystrokes are blocked by the compositor security model. The app detects
+  Wayland at launch and (a) still offers hotkeys where the portal/compositor
+  allows, (b) defaults output mode to **copy-to-clipboard** with a clear
+  notice when paste injection is unavailable, and (c) explains the situation
+  in onboarding/Settings instead of failing silently (the v1 cardinal sin).
+- Key storage: `safeStorage` via libsecret (GNOME Keyring / KWallet); if no
+  secret service is available the app says so and asks before storing keys
+  with reduced protection.
+- No TCC-style permissions; mic comes from PipeWire/PulseAudio normally.
+
+### 4.7 Cancel / undo / retry
+- Escape cancels — registered **only while a session is active**, and v2 uses
+  the key listener (not `globalShortcut`) so other apps' Escape usage isn't
+  swallowed when our HUD isn't the concern.
+- Undo-cancel window ~3 s (unchanged).
+- **Retry never destroys data**: a failed retry keeps the original transcript
+  and output intact (v1 nulled them).
 
 ---
 
-## 6. Functional requirements (product-level)
+## 5. Functional requirements
+
+Parity requirements F1–F19 from the v1 PRD carry over verbatim (global
+hotkeys, activation modes, providers, keys, chunked VAD transcription, local
+history, usage/cost, onboarding, output modes, permissions, auto-format,
+Dictionary, Snippets), plus v1's later deltas (app-aware formatting profiles,
+combo dictation bindings). New/changed in v2:
 
 | ID | Requirement |
 |----|-------------|
-| F1 | Global dictation hotkey records mic and pastes transcript at cursor in any app. |
-| F2 | Opt-in (default off) global instruction hotkey (**Caps Lock**) captures the current selection + spoken command and replaces the selection with the transform. |
-| F3 | Dictation and instruction can be chained within a configurable chain window (when instruction mode is enabled). |
-| F4 | Escape cancels recording/processing; cancel is undo-able within ~3s. |
-| F5 | Three activation modes: tap-toggle, push-to-talk, double-tap-push. |
-| F6 | Configurable dictation key (platform-specific options); instruction key is Caps Lock on both platforms. |
-| F7 | STT via Groq (default `whisper-large-v3-turbo`); model + language selectable. |
-| F8 | LLM via OpenAI or OpenRouter; model + base URL configurable (any OpenAI-compatible endpoint). |
-| F9 | Per-provider keys entered in Settings, validated, and stored encrypted. |
-| F10 | Long recordings chunked on VAD silence and transcribed in parallel, stitched in order. |
-| F11 | Session history persisted locally; sessions can be copied and retried from saved audio. |
-| F12 | Per-provider usage/cost summary for today/month/all-time. |
-| F13 | Onboarding flow for keys, permissions, and shortcuts. |
-| F14 | Output mode: paste-at-cursor (default) or copy-to-clipboard. |
-| F15 | Sound feedback toggle; widget position (center/right); chunked-transcription toggle. |
-| F16 | macOS permissions flow (mic / accessibility / input-monitoring); auto-granted/no-op on Windows. |
-| F17 | Opt-in AI auto-format pass over raw dictation (default off), with graceful fallback to the unformatted transcript on any LLM failure. |
-| F18 | User-managed Dictionary (`from → to` corrections) applied to transcripts and fed to Groq Whisper as a vocabulary prompt hint. |
-| F19 | User-managed Snippets (spoken `trigger → content` expansion), case-insensitive and punctuation-tolerant. |
+| F20 | macOS build is a **universal binary** (arm64 + x64), minimum macOS 12, one DMG. |
+| F21 | **Permission preflight**: on launch and in Settings, detect mic / Accessibility / Input-Monitoring / Automation state via API checks (`AXIsProcessTrusted`, `IOHIDCheckAccess`, mic status) and surface a blocking, actionable banner when the hotkey pipeline cannot work. Never fail silently. |
+| F22 | **Hotkey capability detection**: default to Fn/Globe only when the hardware reports it; otherwise default Right Option and say so in onboarding. Detect "Globe key assigned to macOS dictation" conflict and link the correct System Settings pane (Ventura+ URLs). |
+| F23 | **Theme**: light / dark / system, persisted, applied to dashboard *and* HUD, all colors sourced from intent-named tokens; `prefers-reduced-motion` respected globally. |
+| F24 | HUD appears on the display containing the mouse cursor / focused window. |
+| F25 | Transcripts and outputs are **never written to logs**. |
+| F26 | All persistence (sessions, usage, settings, audio scratch) is async and off the recording/paste hot path. |
+| F27 | Session lifecycle is event-driven (acks/handshakes); no polling loops or load-bearing sleeps. |
+| F28 | Accessibility: HUD state changes announced via `aria-live`; all interactive controls labeled and keyboard-reachable (no hover-only reveals). |
+| F29 | Auto-update feed configured and working (R2 generic provider), with a version guard so republishing an old ref can't roll users back. |
+| F30 | Linux x64 support: AppImage + deb; full hotkey/paste parity on X11; Wayland detected with graceful copy-to-clipboard degradation and explicit UI messaging (never silent failure). |
+| F31 | **Pause media during dictation** (opt-in, default off): when dictation starts, pause currently-playing system media; when the session ends (output/cancel/error), resume only what we paused. macOS: scriptable players (Music, Spotify) via osascript; Linux: MPRIS via `playerctl`; Windows: WinRT media-session best-effort. Never blocks recording start — pause/resume run fire-and-forget. |
 
 ---
 
-## 7. Success metrics
+## 6. Success metrics
 
 | Metric | Target |
 |--------|--------|
-| Pure-dictation latency (speak-stop → paste) | < 2s p50 for short clips |
-| Dictation transcription accuracy (subjective) | "Pastes what I said" — no silent rewrites |
-| Paste reliability across apps | > 99% successful paste on supported OS |
-| Time-to-first-dictation (fresh install → first paste) | < 3 min including key + permissions |
-| Provider swap | Add a new OpenAI-compatible endpoint with **zero** code (base URL only) |
-| Crash-free sessions | Pipeline failures degrade gracefully (fallback paste), never hang the HUD |
-| Privacy | 0 bytes sent to any host other than the user-configured providers |
+| Installs & runs on Intel Mac + Apple Silicon | 100 % of macOS 12+ machines |
+| Installs & runs on Linux x64 | AppImage on mainstream distros; X11 full parity; Wayland degradations surfaced in UI |
+| Pure-dictation latency (speak-stop → paste) | < 2 s p50 short clips |
+| Keypress → recording start | < 100 ms |
+| HUD animation frame rate | 60 fps, no dropped frames during record/process/output |
+| Main-process stalls from persistence/logging | 0 > 16 ms on the hot path |
+| Paste reliability | > 99 % |
+| Hotkey dead-on-arrival rate | 0 (permission preflight surfaces every blocker) |
+| Time-to-first-dictation | < 3 min fresh install |
+| Privacy | 0 bytes to any host except configured providers; 0 transcripts in logs |
+| Largest source file | < 400 lines (see SYSTEM-DESIGN modularity rules) |
 
 ---
 
-## 8. UX & design requirements
+## 7. UX & design requirements
 
-- **Black & white 3D glassmorphism**, monochrome only. Pure blacks
-  (`#000`–`#0a0a0a`), whites, and white-alpha tiers. No color accents; semantic
-  states expressed as white-alpha intensities.
-- **Liquid-glass pill HUD** that floats over all apps (center or right of
-  screen), with recording pulse, processing shimmer, and output flash.
-- **3D raised glass buttons** (layered shadows: outer drop + inset top highlight
-  + inset bottom shade, subtle press translate).
-- **Springy animations** for state transitions; smooth HUD entry/exit (~200ms).
-- **Desktop-only** layout; windows resize gracefully (mobile responsiveness N/A).
-- Native fonts, native look-and-feel; no external font loads.
+Summarized here; authoritative in `DESIGN.md`.
 
----
-
-## 9. Scope: v1 vs future
-
-### v1 (in scope)
-- macOS + Windows.
-- STT: Groq. LLM: OpenAI + OpenRouter (+ any OpenAI-compatible endpoint).
-- Dictation; opt-in instruction, chaining, cancel/undo, activation modes.
-- Opt-in AI auto-format; user Dictionary + Snippets.
-- Encrypted BYO keys, local SQLite history, usage/cost, onboarding, tray,
-  permissions, sound feedback, widget positioning.
-
-### Future (explicitly out of v1, architecture-ready)
-- **Local / offline providers** — whisper.cpp / faster-whisper for STT and a
-  local LLM (e.g. llama.cpp) for transforms. The provider registry is designed
-  so these return as *just another provider file + registry entry*, with no
-  changes to the session pipeline.
-- Additional cloud providers (Anthropic-native, Deepgram, etc.) — same recipe.
-- Linux support.
-- Custom prompt / transform templates authored by the user.
-- Code-signing + notarization for distribution.
+- Monochrome glass language retained, expressed through **intent-named tokens**
+  (`--surface-*`, `--ink-*`, `--stroke-*`, `--glow-*`) with first-class light
+  and dark values — never palette-named (`--white-24`) tokens.
+- Liquid-glass pill HUD, bottom-anchored above the Dock (80 px clearance),
+  center or right. **One persistent pill that morphs** between recording /
+  processing / output states — no DOM swaps, no flicker.
+- All motion is `transform`/`opacity` only; every animation gated on
+  `prefers-reduced-motion`.
+- Desktop-only layout; windows resize gracefully; native fonts; no external
+  font loads.
 
 ---
 
-## 10. Constraints & assumptions
+## 8. Scope: v2 vs future
 
-- Users supply their own provider API keys; the app is free and unmonetized.
-- Global key capture requires OS permissions (macOS) or `uiohook` (Windows).
-- Paste is simulated via the clipboard, so the previous clipboard is saved and
-  restored during selection capture.
-- Pricing tables are hardcoded local constants and **will drift** from provider
-  pricing pages; cost figures are estimates, not invoices.
-- The instruction key is **Caps Lock** on both platforms; Right Shift was
-  removed entirely (system-shortcut and Shift+Enter conflicts). Instruction mode
-  itself is opt-in (off by default).
+**v2:** everything in §5 on macOS universal + Windows x64.
+
+**Future (architecture-ready, out of scope):** local/offline providers
+(whisper.cpp, llama.cpp) as registry entries; additional cloud providers;
+Linux; custom prompt templates; Windows code-signing.
+
+---
+
+## 9. Constraints & assumptions
+
+- Users supply their own provider keys; app is a one-time purchase, no backend.
+- Paste is simulated via clipboard + synthesized keystroke; previous clipboard
+  is saved and restored.
+- Pricing tables remain hardcoded local constants (estimates, will drift).
+- Instruction key is Caps Lock on both platforms; Right Shift stays removed.
+- Build: macOS DMG built on macOS (universal via lipo'd helpers + electron-builder
+  universal target); Windows NSIS on Windows; Linux AppImage + deb on Linux CI.
+  npm toolchain (electron-builder compatibility), single lockfile.

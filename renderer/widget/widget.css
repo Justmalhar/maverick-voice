@@ -1,0 +1,309 @@
+/*
+ * HUD pill — widget-scoped static styles (imported once by Widget.tsx).
+ * Tokens only (var(--ink*), var(--glow-*), var(--surface-*), var(--stroke*)).
+ * Every animation is transform/opacity only (DESIGN.md §5); nothing runs
+ * infinitely outside its state (ring/dot/shimmer exist only while their
+ * state's content is mounted). prefers-reduced-motion is handled globally
+ * in tokens.css.
+ */
+
+.hud-root {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+/* ── The ONE persistent pill ─────────────────────────────────────────── */
+
+.hud-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--ink);
+  /* Width morph on the same DOM node — animated max-width kept ≤120ms
+     (DESIGN.md §4); never per-state pill swaps. */
+  transition: max-width 120ms ease;
+  will-change: transform, opacity;
+}
+.hud-pill--enter {
+  animation: hud-enter 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.hud-pill--exit {
+  animation: hud-exit 200ms ease-in both;
+}
+
+/* Per-state width envelopes for the morph. */
+.hud-pill--recording { max-width: 400px; }
+.hud-pill--processing { max-width: 280px; }
+.hud-pill--output { max-width: 72px; }
+.hud-pill--fallback,
+.hud-pill--error { max-width: 440px; }
+.hud-pill--too-short { max-width: 220px; }
+.hud-pill--cancelled { max-width: 240px; }
+
+/* State content wrapper — crossfade on state change; shake for notices. */
+.hud-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  animation: hud-content-in 140ms ease both;
+}
+.hud-content--error,
+.hud-content--fallback,
+.hud-content--too-short {
+  animation: hud-content-in 140ms ease both, hud-shake 420ms ease-out 1;
+}
+
+/* ── Recording ───────────────────────────────────────────────────────── */
+
+.hud-dot-wrap {
+  position: relative;
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+.hud-dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--ink-strong);
+  animation: hud-dot-pulse 1.2s ease-in-out infinite; /* recording state only */
+}
+.hud-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--glow-dim);
+  animation: ring-radiate 1.2s ease-out infinite; /* recording state only */
+}
+.hud-ring--bright {
+  background: var(--glow-bright);
+}
+
+.hud-label {
+  flex: none;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink-strong);
+}
+.hud-chip {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.hud-timer {
+  flex: none;
+  min-width: 38px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  text-align: right;
+}
+.hud-timer--warn {
+  color: var(--ink-strong);
+}
+
+/* Stop button — small raised glass cap with red indicator. */
+.hud-stop {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--stroke);
+  border-radius: 9px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raise);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+.hud-stop:hover {
+  transform: translateY(-1px);
+}
+.hud-stop:active {
+  transform: translateY(1px);
+}
+.hud-stop-icon {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+/* Escape hint doubling as the cancel affordance. */
+.hud-esc {
+  flex: none;
+  padding: 3px 7px;
+  border: 1px solid var(--stroke);
+  border-radius: 6px;
+  background: transparent;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+.hud-esc:hover {
+  color: var(--ink-muted);
+  transform: translateY(-1px);
+}
+
+/* ── Processing ──────────────────────────────────────────────────────── */
+
+/* Shimmer sweep — a translating gradient element (transform only, never
+   background-position). Exists only while processing content is mounted. */
+.hud-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hud-shimmer-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  background: linear-gradient(100deg, transparent 15%, var(--surface-veil) 50%, transparent 85%);
+  animation: hud-shimmer-sweep 1.4s linear infinite; /* processing state only */
+}
+
+.hud-hint {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* ── Output / notices ────────────────────────────────────────────────── */
+
+.hud-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: var(--surface-veil);
+  animation: success-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.hud-glyph {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hud-notice {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+.hud-notice-text {
+  font-weight: 500;
+  color: var(--ink-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-notice-sub {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+}
+
+.hud-muted {
+  color: var(--ink-muted);
+}
+
+/* ── Cancelled / Undo ────────────────────────────────────────────────── */
+
+.hud-undo {
+  flex: none;
+  padding: 5px 14px;
+  border: 1px solid var(--stroke-strong);
+  border-radius: 9999px;
+  background: var(--ink-strong);
+  color: var(--surface-page);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-raise);
+  transition: transform 120ms ease;
+}
+.hud-undo:hover {
+  transform: translateY(-1px);
+}
+.hud-undo:active {
+  transform: translateY(1px);
+}
+
+/* ── Keyframes (transform/opacity only) ──────────────────────────────── */
+
+@keyframes hud-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hud-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes hud-shimmer-sweep {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+
+@keyframes hud-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-5px);
+  }
+  30% {
+    transform: translateX(4px);
+  }
+  45% {
+    transform: translateX(-3px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
