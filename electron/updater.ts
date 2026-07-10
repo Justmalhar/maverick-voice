@@ -5,7 +5,6 @@
 // (LEGACY-ISSUES M10 — v1 shipped a placeholder feed that never resolved).
 
 import { app } from 'electron'
-import { autoUpdater } from 'electron-updater'
 
 // CONFIRM before release: this must point at the real published R2 bucket
 // (SYSTEM-DESIGN §8 CI asserts the release manifest is uploaded here).
@@ -21,10 +20,13 @@ function logErrorOnce(err: unknown): void {
   console.warn('[updater] check failed (will keep retrying silently):', err instanceof Error ? err.message : err)
 }
 
-export function startUpdater(): void {
+export async function startUpdater(): Promise<void> {
   if (started || !app.isPackaged) return
   started = true
   try {
+    // ponytail: lazy import — electron-updater drags ajv/js-yaml/fs-extra/lodash/semver
+    // onto every boot even though this path only runs when packaged.
+    const { autoUpdater } = await import('electron-updater')
     autoUpdater.setFeedURL({ provider: 'generic', url: FEED_URL })
     autoUpdater.autoDownload = false
     autoUpdater.on('error', (err) => logErrorOnce(err))
