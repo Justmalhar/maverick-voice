@@ -32,6 +32,8 @@
   --glow-dim: rgba(255, 255, 255, 0.25);
   --glow-bright: rgba(255, 255, 255, 0.65);
   --focus-ring: rgba(255, 255, 255, 0.7);
+  /* Glass top-edge sheen — light catching the upper face of glass surfaces. */
+  --sheen: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme='light'] {
@@ -57,12 +59,14 @@
   --glow-dim: rgba(0, 0, 0, 0.2);
   --glow-bright: rgba(0, 0, 0, 0.5);
   --focus-ring: rgba(0, 0, 0, 0.65);
+  --sheen: rgba(255, 255, 255, 0.55);
 }
 
 /* ── Component recipes (consume tokens only) ─────────────────────────── */
 
 .glass-card {
-  background: var(--surface-glass);
+  /* Top-edge sheen layered over the glass fill — light falling on the pane. */
+  background: linear-gradient(180deg, var(--sheen), transparent 34%), var(--surface-glass);
   -webkit-backdrop-filter: blur(60px) saturate(180%);
   backdrop-filter: blur(60px) saturate(180%);
   border: 1px solid var(--stroke);
@@ -71,7 +75,7 @@
 }
 
 .glass-pill {
-  background: var(--surface-glass);
+  background: linear-gradient(180deg, var(--sheen), transparent 55%), var(--surface-glass);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid var(--stroke);
@@ -85,9 +89,14 @@
   border: 1px solid var(--stroke);
   border-radius: 10px;
   box-shadow: var(--shadow-raise);
-  transition: transform 120ms ease;
+  transition: transform 120ms ease, border-color 120ms ease;
 }
-.btn-raised:active {
+/* Hover strengthens the border (never the focus ring — that stays :focus-visible's). */
+.btn-raised:hover:not(:disabled) {
+  border-color: var(--stroke-strong);
+  transform: translateY(-1px);
+}
+.btn-raised:active:not(:disabled) {
   transform: translateY(1px);
 }
 
