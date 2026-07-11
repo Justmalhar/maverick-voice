@@ -10,7 +10,17 @@ Rule: source-changing tasks run in isolated worktrees on `cc-*` branches; test-o
 - **Design-debt fix** — banned `backdrop-filter` removed from glass recipes (DESIGN.md §3).
 - **Perf quick wins** (merged `cc-fix/perf-quick-wins`) — lazy-split renderer entry, dynamic-import electron-updater, HUD `backgroundThrottling:false`.
 - **UI polish v2** (merged `cc-ui/polish-pass-v2`) — glass top-edge sheen, btn-raised hover, themed chrome (backdrop-filter dropped in merge per DESIGN.md).
+- **History search + filters** (merged) — client-side search across transcripts/output, flow + status filters, no-matches empty state.
+- **Windows P0 fixes** (merged) — mic-permission remediation link (`ms-settings:privacy-microphone` + optional `micUnverifiable` flag), theme-aware win32 tray glyph via `nativeTheme`, documented Escape-leak limitation (uiohook-napi can't consume keys — needs a native hook dep to fix).
 - **Docs + CI** — README.md, AGENTS.md, `.github/workflows/{ci,release}.yml`.
+
+Final beta state: **1181 tests / 90 files green, typecheck clean, build + smoke-boot OK.** All `cc-*` orchestration worktrees pruned/consolidated.
+
+### 📋 Small follow-ups noted by test agents (not blocking; source cleanups)
+- `frontmostApp.ts` (Linux): window-title-blank fallback uses pre-lowercased `id` (name keeps original case) — minor inconsistency, test documents current behavior.
+- `bindings.ts`: `_chainPending`/`_chainMode`/`chainTimer` declared but never armed (ported-verbatim latent v1 code).
+- `Home.tsx`: unused `fmtSeconds`, unreachable `ProviderIcon` fallback — dead code.
+- `SYSTEM-DESIGN.md`/`INTERFACES.md`: describe key listener as one file; actual code splits into `listener.ts` + `listenerDarwin.ts` + `listenerHook.ts` (AGENTS.md documents the real layout).
 
 ### ⏳ Needs USER decision (morning)
 - **Updater feed**: `electron/updater.ts:11` FEED_URL `https://updates.getmaverick.sh/releases` — nothing publishes there yet; `package.json` has no `build.publish` block so electron-updater manifests may not generate. Confirm bucket + add publish config before any release.
