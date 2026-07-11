@@ -218,6 +218,13 @@ describe('Home', () => {
     expect(screen.getByText('Fn')).toBeInTheDocument()
   })
 
+  it('renders the hero hotkey and instructional copy once (not duplicated elsewhere)', () => {
+    const api = createElectronAPIMock()
+    renderHome(api)
+    expect(screen.getByText('Press this anywhere to dictate.')).toBeInTheDocument()
+    expect(screen.getAllByText('Fn')).toHaveLength(1)
+  })
+
   it('renders each activation mode label and the push-to-talk/dual-mode bindings', async () => {
     const api = createElectronAPIMock({
       getSettings: vi.fn().mockResolvedValue({
@@ -294,5 +301,69 @@ describe('Home', () => {
     renderHome(api)
     await waitFor(() => expect(screen.getByText('Home')).toBeInTheDocument())
     // No unhandled rejection / thrown error is the pass condition.
+  })
+
+  it('shows a read-only empty message in the Recent strip when there are no sessions', async () => {
+    const api = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue([]) })
+    renderHome(api)
+    await waitFor(() =>
+      expect(screen.getByText('Your recent dictations will show up here.')).toBeInTheDocument()
+    )
+  })
+
+  it('renders only the last 3 sessions in the Recent strip', async () => {
+    const sessions = [
+      makeSession({ id: 'r1', output: 'first recent' }),
+      makeSession({ id: 'r2', output: 'second recent' }),
+      makeSession({ id: 'r3', output: 'third recent' }),
+      makeSession({ id: 'r4', output: 'fourth recent, dropped' })
+    ]
+    const api = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(sessions) })
+    renderHome(api)
+    await waitFor(() => expect(screen.getByText('first recent')).toBeInTheDocument())
+    expect(screen.getByText('second recent')).toBeInTheDocument()
+    expect(screen.getByText('third recent')).toBeInTheDocument()
+    expect(screen.queryByText('fourth recent, dropped')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the error message, then "No output" when a recent session has no transcript', async () => {
+    const sessions = [
+      makeSession({ id: 'e1', status: 'error', errorMessage: 'STT failed' }),
+      makeSession({ id: 'e2', output: '', dictationTranscript: undefined })
+    ]
+    const api = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(sessions) })
+    renderHome(api)
+    await waitFor(() => expect(screen.getByText('STT failed')).toBeInTheDocument())
+    expect(screen.getByText('No output')).toBeInTheDocument()
+  })
+
+  it('toggles pause-media-during-dictation via its switch in the quick-toggles card', async () => {
+    const user = userEvent.setup()
+    const api = createElectronAPIMock({
+      getSettings: vi.fn().mockResolvedValue({ ...defaultSettings, pauseMediaDuringDictation: true })
+    })
+    renderHome(api)
+    const pauseSwitch = await screen.findByRole('switch', { name: 'Pause media while dictating' })
+    expect(pauseSwitch).toHaveAttribute('aria-checked', 'true')
+    await user.click(pauseSwitch)
+    expect(api.setPauseMediaDuringDictation).toHaveBeenCalledWith(false)
+  })
+
+  it('summarizes the usage stat card for screen readers via aria-label', async () => {
+    const sessions = [makeSession({ output: 'one two three', createdAt: Date.now() })]
+    const api = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(sessions) })
+    renderHome(api)
+    await waitFor(() =>
+      expect(screen.getByRole('group', { name: /This month: 3 words dictated, 2 minutes, \$1\.23 estimated cost/ })).toBeInTheDocument()
+    )
+  })
+
+  it('renders provider glyphs via the shared ProviderGlyph component', async () => {
+    const api = createElectronAPIMock()
+    const { container } = renderHome(api)
+    // @lobehub/icons' Groq mono glyph includes an svg <title>Groq</title>, so scope to the row label.
+    await waitFor(() => expect(screen.getAllByText('Groq').length).toBeGreaterThanOrEqual(1))
+    // ProviderGlyph renders an <svg> per row (Groq/OpenAI/OpenRouter) instead of the removed inline ProviderIcon.
+    expect(container.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3)
   })
 })
