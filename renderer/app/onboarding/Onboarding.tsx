@@ -105,7 +105,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }): 
         {stepIndex + 1} of {activeSteps.length}
       </p>
 
-      <div className="flex min-h-0 flex-1 justify-center overflow-y-auto overflow-x-hidden px-10 py-6">
+      <div className="flex min-h-[420px] flex-1 justify-center overflow-y-auto overflow-x-hidden px-10 py-6">
         {stepId === 'welcome' && <WelcomeStep />}
         {stepId === 'how-it-works' && <HowItWorksStep />}
         {stepId === 'privacy' && <PrivacyStep />}
@@ -127,17 +127,6 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }): 
           >
             Back
           </button>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2" aria-hidden="true">
-          {activeSteps.map((id, i) => (
-            <span
-              key={id}
-              className={`h-1.5 w-1.5 rounded-full transition-transform ${
-                i === stepIndex ? 'scale-125 bg-ink-strong' : 'bg-ink-faint'
-              }`}
-            />
-          ))}
         </div>
 
         <div className="flex flex-1 justify-end">

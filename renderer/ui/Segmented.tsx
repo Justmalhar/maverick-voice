@@ -27,6 +27,13 @@ export function Segmented<T extends string = string>({
   const refs = useRef<(HTMLButtonElement | null)[]>([])
   const activeIndex = options.findIndex((o) => o.value === value)
   const tabbableIndex = activeIndex === -1 ? 0 : activeIndex
+  // ponytail: read once per render instead of subscribing — OS motion prefs
+  // don't flip while the control is on screen, and any re-render (value
+  // change) already re-evaluates this.
+  const reducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   function handleKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
     let next: number
@@ -55,6 +62,16 @@ export function Segmented<T extends string = string>({
 
   return (
     <div role="radiogroup" aria-label={ariaLabel} className="ui-segment">
+      <div
+        aria-hidden="true"
+        className="ui-segment__thumb"
+        style={{
+          width: `calc((100% - 4px) / ${options.length})`,
+          transform: `translateX(${activeIndex < 0 ? 0 : activeIndex * 100}%)`,
+          opacity: activeIndex < 0 ? 0 : 1,
+          transition: reducedMotion ? 'none' : undefined
+        }}
+      />
       {options.map((opt, i) => (
         <button
           key={opt.value}

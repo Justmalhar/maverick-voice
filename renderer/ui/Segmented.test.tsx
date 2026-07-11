@@ -82,6 +82,44 @@ describe('Segmented', () => {
     fireArrow(screen.getByRole('radio', { name: 'B' }), 'Tab')
     expect(onChange).not.toHaveBeenCalled()
   })
+
+  it('slides the active thumb to the selected index via translateX', () => {
+    const { container, rerender } = render(
+      <Segmented options={options} value="a" onChange={() => {}} aria-label="Mode" />
+    )
+    const thumb = container.querySelector('.ui-segment__thumb') as HTMLElement
+    expect(thumb.style.transform).toBe('translateX(0%)')
+    expect(thumb.style.opacity).toBe('1')
+
+    rerender(<Segmented options={options} value="c" onChange={() => {}} aria-label="Mode" />)
+    expect(thumb.style.transform).toBe('translateX(200%)')
+  })
+
+  it('hides the thumb when value matches no option', () => {
+    const { container } = render(
+      <Segmented options={options} value={'zzz' as 'a'} onChange={() => {}} aria-label="Mode" />
+    )
+    const thumb = container.querySelector('.ui-segment__thumb') as HTMLElement
+    expect(thumb.style.opacity).toBe('0')
+  })
+
+  it('disables the thumb transition under prefers-reduced-motion', () => {
+    const matchMedia = vi.fn().mockReturnValue({ matches: true })
+    vi.stubGlobal('matchMedia', matchMedia)
+    const { container } = render(<Segmented options={options} value="a" onChange={() => {}} aria-label="Mode" />)
+    const thumb = container.querySelector('.ui-segment__thumb') as HTMLElement
+    expect(thumb.style.transition).toBe('none')
+    expect(matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
+    vi.unstubAllGlobals()
+  })
+
+  it('leaves the thumb transition to CSS when motion is not reduced', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
+    const { container } = render(<Segmented options={options} value="a" onChange={() => {}} aria-label="Mode" />)
+    const thumb = container.querySelector('.ui-segment__thumb') as HTMLElement
+    expect(thumb.style.transition).toBe('')
+    vi.unstubAllGlobals()
+  })
 })
 
 function fireArrow(el: Element, key: string) {

@@ -204,4 +204,22 @@ describe('Onboarding', () => {
     // moved back one) — whichever step it lands on must still render validly.
     expect(screen.queryByTestId('step-system-permissions')).not.toBeInTheDocument()
   })
+
+  it('shows a single progress indicator — top segmented bars only, no bottom dot row', async () => {
+    const { container } = render(<Onboarding onComplete={vi.fn()} />)
+    await screen.findByTestId('step-welcome')
+    // Top bars: one per step, aria-hidden.
+    const bars = container.querySelectorAll('.bg-surface-veil.rounded-full')
+    expect(bars.length).toBeGreaterThan(0)
+    // The old bottom dot row used h-1.5 w-1.5 rounded-full pips — must be gone.
+    expect(container.querySelectorAll('.h-1\\.5.w-1\\.5.rounded-full').length).toBe(0)
+  })
+
+  it('gives the step content region a fixed min-height so the footer does not shift', async () => {
+    const { container } = render(<Onboarding onComplete={vi.fn()} />)
+    await screen.findByTestId('step-welcome')
+    const contentRegion = screen.getByTestId('step-welcome').closest('.flex-1')
+    expect(contentRegion).toHaveClass('min-h-[420px]')
+    expect(container.querySelector('.border-t.border-stroke')).toBeInTheDocument()
+  })
 })
