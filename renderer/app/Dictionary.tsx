@@ -71,13 +71,14 @@ export default function Dictionary(): ReactNode {
             Add
           </button>
         </div>
-        <p className="mt-2 px-0.5 text-[11px] text-ink-faint">
+        <p className="mt-2 px-0.5 text-[11px] text-ink-muted">
           Single words only — separate several with spaces or commas. To rewrite phrases, use Replacements.
         </p>
       </div>
 
       {settings === null ? null : words.length === 0 ? (
         <EmptyState
+          icon={<BookGlyph size={28} />}
           heading="No words yet"
           body="Add names, brands, and technical terms so transcription spells them right."
         />
@@ -94,7 +95,7 @@ export default function Dictionary(): ReactNode {
                 onClick={() => deleteWord(entry.id)}
                 aria-label={`Remove ${entry.word}`}
                 title={`Remove ${entry.word}`}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-surface-veil hover:text-ink"
+                className="flex h-5 w-5 items-center justify-center rounded-full text-ink-faint opacity-0 transition-opacity hover:bg-surface-veil hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
               >
                 <CrossGlyph />
               </button>
@@ -103,6 +104,15 @@ export default function Dictionary(): ReactNode {
         </div>
       )}
     </div>
+  )
+}
+
+function BookGlyph({ size = 16 }: { size?: number }): ReactNode {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
   )
 }
 

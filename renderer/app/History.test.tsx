@@ -338,6 +338,23 @@ describe('History', () => {
     expect(screen.queryByLabelText('Retry from saved audio')).not.toBeInTheDocument()
   })
 
+  it('row-action buttons are individually focus-visible-revealable (opacity-0 by default, own focus-visible/group-focus-within reveal)', async () => {
+    const session = makeSession({ output: 'has output', audioRef: 'audio-1' })
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue([session]) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('has output')).toBeInTheDocument())
+    for (const button of [
+      screen.getByLabelText('Copy output'),
+      screen.getByLabelText('Retry from saved audio'),
+      screen.getByLabelText('Delete session')
+    ]) {
+      expect(button).toHaveClass('opacity-0')
+      expect(button).toHaveClass('focus-visible:opacity-100')
+      expect(button).toHaveClass('group-focus-within:opacity-100')
+      expect(button).toHaveClass('group-hover:opacity-100')
+    }
+  })
+
   it('optimistically removes a session on delete and calls deleteSession', async () => {
     const user = userEvent.setup()
     const session = makeSession({ output: 'delete me' })

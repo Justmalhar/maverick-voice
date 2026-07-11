@@ -105,6 +105,16 @@ describe('Dictionary', () => {
     expect(update).not.toHaveBeenCalled()
   })
 
+  it('reveals the chip remove button via hover/focus-within rather than keeping it always visible', () => {
+    mockSettings([{ id: '1', word: 'Maverick' }])
+    render(<Dictionary />)
+    const removeBtn = screen.getByRole('button', { name: 'Remove Maverick' })
+    expect(removeBtn).toHaveClass('opacity-0')
+    expect(removeBtn).toHaveClass('focus-visible:opacity-100')
+    expect(removeBtn).toHaveClass('group-hover:opacity-100')
+    expect(removeBtn).toHaveClass('group-focus-within:opacity-100')
+  })
+
   it('deletes a word', async () => {
     const update = mockSettings([{ id: '1', word: 'Maverick' }])
     render(<Dictionary />)
