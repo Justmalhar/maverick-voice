@@ -1,27 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { PermissionsReport } from '../../shared/types'
 import { LoadingDots } from '../ui'
-import Dictionary from './Dictionary'
 import History from './History'
 import Home from './Home'
 import Onboarding from './onboarding/Onboarding'
-import Replacements from './Replacements'
-import Rules from './Rules'
+import Personalization from './Personalization'
 import { isOnboardingComplete, resetOnboarding, setOnboardingComplete } from './onboardingState'
 import { SettingsProvider } from './settingsContext'
 import Settings from './settings/Settings'
-import Snippets from './Snippets'
 
-type Tab = 'home' | 'history' | 'dictionary' | 'replacements' | 'snippets' | 'rules' | 'settings'
+type Tab = 'home' | 'history' | 'personalization' | 'settings'
 type View = 'loading' | 'onboarding' | 'main'
 
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'home', label: 'Home', icon: <HomeIcon /> },
   { id: 'history', label: 'History', icon: <HistoryIcon /> },
-  { id: 'dictionary', label: 'Dictionary', icon: <DictionaryIcon /> },
-  { id: 'replacements', label: 'Replacements', icon: <ReplacementsIcon /> },
-  { id: 'snippets', label: 'Snippets', icon: <SnippetsIcon /> },
-  { id: 'rules', label: 'Rules', icon: <RulesIcon /> },
+  { id: 'personalization', label: 'Personalization', icon: <PersonalizationIcon /> },
   { id: 'settings', label: 'Settings', icon: <SettingsIcon /> }
 ]
 
@@ -129,17 +123,8 @@ function MainShell({ onReplayOnboarding }: { onReplayOnboarding: () => void }): 
           <section hidden={activeTab !== 'history'}>
             <History />
           </section>
-          <section hidden={activeTab !== 'dictionary'}>
-            <Dictionary />
-          </section>
-          <section hidden={activeTab !== 'replacements'}>
-            <Replacements />
-          </section>
-          <section hidden={activeTab !== 'snippets'}>
-            <Snippets />
-          </section>
-          <section hidden={activeTab !== 'rules'}>
-            <Rules />
+          <section hidden={activeTab !== 'personalization'}>
+            <Personalization />
           </section>
           <section hidden={activeTab !== 'settings'}>
             <Settings onReplayOnboarding={onReplayOnboarding} />
@@ -183,40 +168,15 @@ function HistoryIcon(): ReactNode {
   )
 }
 
-function DictionaryIcon(): ReactNode {
+function PersonalizationIcon(): ReactNode {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 13a1.5 1.5 0 0 1 1.5-1.5H13" />
-      <path d="M4.5 1.5H13v13H4.5A1.5 1.5 0 0 1 3 13V3a1.5 1.5 0 0 1 1.5-1.5z" />
-      <line x1="6" y1="4.75" x2="10.5" y2="4.75" />
-    </svg>
-  )
-}
-
-function ReplacementsIcon(): ReactNode {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 5.5h10.5l-2.5-2.5" />
-      <path d="M14 10.5H3.5l2.5 2.5" />
-    </svg>
-  )
-}
-
-function SnippetsIcon(): ReactNode {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polygon points="8.5 1.5 3 9 7.5 9 7 14.5 13 6.5 8 6.5 8.5 1.5" />
-    </svg>
-  )
-}
-
-function RulesIcon(): ReactNode {
-  return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 4.25l1.5 1.5 2.25-2.5" />
-      <path d="M2 10.75l1.5 1.5 2.25-2.5" />
-      <line x1="8.5" y1="4" x2="14" y2="4" />
-      <line x1="8.5" y1="11" x2="14" y2="11" />
+      <line x1="2" y1="4" x2="14" y2="4" />
+      <circle cx="6" cy="4" r="1.4" fill="currentColor" stroke="none" />
+      <line x1="2" y1="8" x2="14" y2="8" />
+      <circle cx="10" cy="8" r="1.4" fill="currentColor" stroke="none" />
+      <line x1="2" y1="12" x2="14" y2="12" />
+      <circle cx="7" cy="12" r="1.4" fill="currentColor" stroke="none" />
     </svg>
   )
 }

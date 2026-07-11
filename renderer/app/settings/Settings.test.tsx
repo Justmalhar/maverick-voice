@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import Settings from './Settings'
 
 afterEach(() => cleanup())
@@ -48,5 +48,31 @@ describe('Settings', () => {
 
     await user.click(screen.getByTestId('HelpSection'))
     expect(onReplayOnboarding).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders a keyboard-usable section nav with an anchor for every section id (SET-1/A11Y-2)', () => {
+    render(<Settings onReplayOnboarding={vi.fn()} />)
+
+    const nav = screen.getByRole('navigation', { name: 'Settings sections' })
+    const links = within(nav).getAllByRole('link')
+    const hrefs = links.map((link) => link.getAttribute('href'))
+
+    expect(hrefs).toEqual([
+      '#stt-provider',
+      '#llm-provider',
+      '#shortcuts',
+      '#audio',
+      '#behavior',
+      '#appearance',
+      '#permissions',
+      '#advanced',
+      '#privacy',
+      '#help'
+    ])
+    // Plain <a> elements are natively focusable/keyboard-activatable — no
+    // extra tabindex/keydown wiring needed.
+    for (const link of links) {
+      expect(link.tagName).toBe('A')
+    }
   })
 })

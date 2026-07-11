@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { PermissionsReport } from '../../shared/types'
 import App from './App'
@@ -29,12 +29,9 @@ vi.mock('react', async (importOriginal) => {
   }
 })
 
-vi.mock('./Dictionary', () => ({ default: () => <div data-testid="page-dictionary">dictionary</div> }))
 vi.mock('./History', () => ({ default: () => <div data-testid="page-history">history</div> }))
 vi.mock('./Home', () => ({ default: () => <div data-testid="page-home">home</div> }))
-vi.mock('./Replacements', () => ({ default: () => <div data-testid="page-replacements">replacements</div> }))
-vi.mock('./Rules', () => ({ default: () => <div data-testid="page-rules">rules</div> }))
-vi.mock('./Snippets', () => ({ default: () => <div data-testid="page-snippets">snippets</div> }))
+vi.mock('./Personalization', () => ({ default: () => <div data-testid="page-personalization">personalization</div> }))
 vi.mock('./settings/Settings', () => ({
   default: ({ onReplayOnboarding }: { onReplayOnboarding: () => void }) => (
     <div data-testid="page-settings">
@@ -123,16 +120,29 @@ describe('App', () => {
       await screen.findByTestId('page-home')
 
       const homeSection = screen.getByTestId('page-home').closest('section')!
-      const dictSection = screen.getByTestId('page-dictionary').closest('section')!
+      const personalizationSection = screen.getByTestId('page-personalization').closest('section')!
       expect(homeSection).not.toHaveAttribute('hidden')
-      expect(dictSection).toHaveAttribute('hidden')
+      expect(personalizationSection).toHaveAttribute('hidden')
 
-      await userEvent.click(screen.getByRole('button', { name: 'Dictionary' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Personalization' }))
 
       expect(homeSection).toHaveAttribute('hidden')
-      expect(dictSection).not.toHaveAttribute('hidden')
+      expect(personalizationSection).not.toHaveAttribute('hidden')
       // still mounted, just hidden
       expect(screen.getByTestId('page-home')).toBeInTheDocument()
+    })
+
+    it('renders exactly the 4 collapsed sidebar items, in order (IA-1)', async () => {
+      render(<App />)
+      await screen.findByTestId('page-home')
+      const nav = screen.getByRole('button', { name: 'Home' }).closest('nav')!
+      const tabButtons = within(nav).getAllByRole('button')
+      expect(tabButtons.map((b) => b.textContent)).toEqual(['Home', 'History', 'Personalization', 'Settings'])
+      // The old flat items no longer exist as top-level tabs.
+      expect(screen.queryByRole('button', { name: 'Dictionary' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Replacements' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Snippets' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Rules' })).not.toBeInTheDocument()
     })
 
     it('marks the active tab with aria-current', async () => {
