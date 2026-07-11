@@ -1,34 +1,46 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { existsSyncMock, showDashboardMock, appQuitMock, TrayMock, trayInstances, buildFromTemplateMock, createFromPathMock, createFromBufferMock } =
-  vi.hoisted(() => {
-    const trayInstances: any[] = []
-    class TrayMock {
-      setToolTip = vi.fn()
-      setContextMenu = vi.fn()
-      setImage = vi.fn()
-      private handlers = new Map<string, () => void>()
-      constructor(public icon: unknown) {
-        trayInstances.push(this)
-      }
-      on(event: string, cb: () => void) {
-        this.handlers.set(event, cb)
-      }
-      fire(event: string) {
-        this.handlers.get(event)?.()
-      }
+const {
+  existsSyncMock,
+  showDashboardMock,
+  appQuitMock,
+  TrayMock,
+  trayInstances,
+  buildFromTemplateMock,
+  createFromPathMock,
+  createFromBufferMock,
+  nativeThemeOnMock,
+  nativeThemeState
+} = vi.hoisted(() => {
+  const trayInstances: any[] = []
+  class TrayMock {
+    setToolTip = vi.fn()
+    setContextMenu = vi.fn()
+    setImage = vi.fn()
+    private handlers = new Map<string, () => void>()
+    constructor(public icon: unknown) {
+      trayInstances.push(this)
     }
-    return {
-      existsSyncMock: vi.fn(),
-      showDashboardMock: vi.fn(),
-      appQuitMock: vi.fn(),
-      TrayMock,
-      trayInstances,
-      buildFromTemplateMock: vi.fn((items: unknown) => items),
-      createFromPathMock: vi.fn(),
-      createFromBufferMock: vi.fn()
+    on(event: string, cb: () => void) {
+      this.handlers.set(event, cb)
     }
-  })
+    fire(event: string) {
+      this.handlers.get(event)?.()
+    }
+  }
+  return {
+    existsSyncMock: vi.fn(),
+    showDashboardMock: vi.fn(),
+    appQuitMock: vi.fn(),
+    TrayMock,
+    trayInstances,
+    buildFromTemplateMock: vi.fn((items: unknown) => items),
+    createFromPathMock: vi.fn(),
+    createFromBufferMock: vi.fn(),
+    nativeThemeOnMock: vi.fn(),
+    nativeThemeState: { shouldUseDarkColors: false }
+  }
+})
 
 vi.mock('node:fs', () => ({ existsSync: (...a: unknown[]) => existsSyncMock(...a) }))
 vi.mock('./dashboard', () => ({ showDashboard: showDashboardMock }))
@@ -39,6 +51,12 @@ vi.mock('electron', () => ({
   nativeImage: {
     createFromPath: (...a: unknown[]) => createFromPathMock(...a),
     createFromBuffer: (...a: unknown[]) => createFromBufferMock(...a)
+  },
+  nativeTheme: {
+    get shouldUseDarkColors() {
+      return nativeThemeState.shouldUseDarkColors
+    },
+    on: (...a: unknown[]) => nativeThemeOnMock(...a)
   }
 }))
 
@@ -88,6 +106,8 @@ describe('windows/tray', () => {
     buildFromTemplateMock.mockClear()
     createFromPathMock.mockReset().mockReturnValue(fakeImage(18, 18))
     createFromBufferMock.mockReset().mockReturnValue(fakeNativeImage())
+    nativeThemeOnMock.mockReset()
+    nativeThemeState.shouldUseDarkColors = false
     setPlatform('darwin')
   })
   afterEach(() => {
@@ -216,5 +236,88 @@ describe('windows/tray', () => {
     expect(getTray()).not.toBeNull()
     // @ts-expect-error restore
     process.resourcesPath = originalResourcesPath
+  })
+
+  describe('win32 theme-aware glyph coloring', () => {
+    function firstOpaquePixelRgb(buf: Buffer): number {
+      for (let p = 0; p < buf.length; p += 4) {
+        if (buf[p + 3] > 0) return buf[p]
+      }
+      throw new Error('no opaque pixel found in glyph buffer')
+    }
+
+    it('colors the glyph white on a dark taskbar', async () => {
+      setPlatform('win32')
+      existsSyncMock.mockReturnValue(true)
+      nativeThemeState.shouldUseDarkColors = true
+      const { createTray } = await import('./tray')
+      createTray()
+      const buf = createFromBufferMock.mock.calls[0][0] as Buffer
+      expect(firstOpaquePixelRgb(buf)).toBe(255)
+    })
+
+    it('colors the glyph dark on a light taskbar', async () => {
+      setPlatform('win32')
+      existsSyncMock.mockReturnValue(true)
+      nativeThemeState.shouldUseDarkColors = false
+      const { createTray } = await import('./tray')
+      createTray()
+      const buf = createFromBufferMock.mock.calls[0][0] as Buffer
+      expect(firstOpaquePixelRgb(buf)).toBe(0)
+    })
+
+    it('subscribes to nativeTheme "updated" and recolors + pushes the idle icon on change', async () => {
+      setPlatform('win32')
+      existsSyncMock.mockReturnValue(true)
+      nativeThemeState.shouldUseDarkColors = false
+      const { createTray, getTray } = await import('./tray')
+      createTray()
+      expect(nativeThemeOnMock).toHaveBeenCalledWith('updated', expect.any(Function))
+
+      const tray = asMock(getTray())
+      tray.setImage.mockClear()
+      createFromBufferMock.mockClear()
+      nativeThemeState.shouldUseDarkColors = true
+      const updatedHandler = nativeThemeOnMock.mock.calls[0][1] as () => void
+      updatedHandler()
+
+      expect(tray.setImage).toHaveBeenCalledTimes(1)
+      const buf = createFromBufferMock.mock.calls[0][0] as Buffer
+      expect(firstOpaquePixelRgb(buf)).toBe(255)
+    })
+
+    it('while the pulse animation is running, an "updated" event regenerates frames without an extra immediate setImage push', async () => {
+      setPlatform('win32')
+      existsSyncMock.mockReturnValue(true)
+      const { createTray, setTrayRecording, getTray } = await import('./tray')
+      createTray()
+      setTrayRecording('dictation')
+      await vi.advanceTimersByTimeAsync(120)
+
+      const tray = asMock(getTray())
+      tray.setImage.mockClear()
+      nativeThemeState.shouldUseDarkColors = true
+      const updatedHandler = nativeThemeOnMock.mock.calls[0][1] as () => void
+      updatedHandler()
+      expect(tray.setImage).not.toHaveBeenCalled() // animation loop owns pushes while running
+
+      await vi.advanceTimersByTimeAsync(120)
+      expect(tray.setImage).toHaveBeenCalled() // next tick picks up the regenerated frame set
+    })
+
+    it('does not subscribe to nativeTheme on darwin', async () => {
+      existsSyncMock.mockReturnValue(true) // platform defaults to darwin in beforeEach
+      const { createTray } = await import('./tray')
+      createTray()
+      expect(nativeThemeOnMock).not.toHaveBeenCalled()
+    })
+
+    it('does not subscribe to nativeTheme on linux', async () => {
+      setPlatform('linux')
+      existsSyncMock.mockReturnValue(true)
+      const { createTray } = await import('./tray')
+      createTray()
+      expect(nativeThemeOnMock).not.toHaveBeenCalled()
+    })
   })
 })

@@ -25,16 +25,31 @@ const PANE_URLS: Record<PermissionPane, string> = {
   keyboard: 'x-apple.systempreferences:com.apple.Keyboard-Settings.extension'
 }
 
+// win32 has no System Settings deep-link equivalent for most panes — only
+// the microphone privacy pane has a stable ms-settings: URI.
+const WIN32_PANE_URLS: Partial<Record<PermissionPane, string>> = {
+  mic: 'ms-settings:privacy-microphone'
+}
+
 export async function preflight(): Promise<PermissionsReport> {
   if (process.platform === 'darwin') return preflightDarwin()
   if (process.platform === 'linux') return preflightLinux()
-  // win32: no TCC equivalent — everything is grantable-by-default.
+  return preflightWin32()
+}
+
+// win32: no TCC equivalent and no programmatic mic-permission query API —
+// everything else is grantable-by-default. `mic` stays the optimistic
+// 'granted' default (matches requestMicPermission()'s no-op resolve below),
+// but `micUnverifiable` tells the renderer the status is unverified so it
+// can still surface a manual check via openSettingsPane('mic') below.
+function preflightWin32(): PermissionsReport {
   return {
     mic: 'granted',
     accessibility: true,
     inputMonitoring: true,
     automation: 'granted',
-    listenerAlive: keyListener.isRunning()
+    listenerAlive: keyListener.isRunning(),
+    micUnverifiable: true
   }
 }
 
@@ -109,7 +124,16 @@ export async function requestMicPermission(): Promise<boolean> {
 }
 
 export function openSettingsPane(pane: PermissionPane): void {
-  if (process.platform !== 'darwin') return // no-op: win32/linux have no pane deep links
+  if (process.platform === 'win32') {
+    const url = WIN32_PANE_URLS[pane]
+    if (!url) return // no deep link for this pane on win32
+    console.log('[permissions] Opening settings pane (win32):', pane)
+    shell.openExternal(url).catch((err) => {
+      console.log('[permissions] Failed to open pane:', err instanceof Error ? err.message : err)
+    })
+    return
+  }
+  if (process.platform !== 'darwin') return // no-op: linux has no pane deep links
   console.log('[permissions] Opening settings pane:', pane)
   shell.openExternal(PANE_URLS[pane]).catch((err) => {
     console.log('[permissions] Failed to open pane:', err instanceof Error ? err.message : err)

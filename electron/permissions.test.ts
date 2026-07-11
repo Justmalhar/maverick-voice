@@ -53,7 +53,7 @@ describe('electron/permissions', () => {
   })
 
   describe('preflight — win32', () => {
-    it('everything is granted-by-default', async () => {
+    it('everything is granted-by-default, with mic flagged unverifiable (no programmatic mic-permission API)', async () => {
       setPlatform('win32')
       const { preflight } = await import('./permissions')
       const report = await preflight()
@@ -62,7 +62,8 @@ describe('electron/permissions', () => {
         accessibility: true,
         inputMonitoring: true,
         automation: 'granted',
-        listenerAlive: true
+        listenerAlive: true,
+        micUnverifiable: true
       })
     })
   })
@@ -210,11 +211,35 @@ describe('electron/permissions', () => {
   })
 
   describe('openSettingsPane', () => {
-    it('is a no-op on non-darwin platforms', async () => {
-      setPlatform('win32')
+    it('is a no-op on linux (no pane deep links)', async () => {
+      setPlatform('linux')
       const { openSettingsPane } = await import('./permissions')
       openSettingsPane('mic')
       expect(openExternalMock).not.toHaveBeenCalled()
+    })
+
+    it('opens the Windows mic privacy pane on win32 for the mic pane', async () => {
+      setPlatform('win32')
+      const { openSettingsPane } = await import('./permissions')
+      openSettingsPane('mic')
+      expect(openExternalMock).toHaveBeenCalledWith('ms-settings:privacy-microphone')
+    })
+
+    it('is a no-op on win32 for panes without a deep link', async () => {
+      setPlatform('win32')
+      const { openSettingsPane } = await import('./permissions')
+      openSettingsPane('accessibility')
+      expect(openExternalMock).not.toHaveBeenCalled()
+    })
+
+    it('logs (does not throw) when shell.openExternal rejects on win32', async () => {
+      setPlatform('win32')
+      openExternalMock.mockRejectedValue(new Error('open failed'))
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const { openSettingsPane } = await import('./permissions')
+      openSettingsPane('mic')
+      await new Promise((r) => setTimeout(r, 0))
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to open pane'), 'open failed')
     })
 
     it('opens the Ventura+ deep link for each pane on darwin', async () => {

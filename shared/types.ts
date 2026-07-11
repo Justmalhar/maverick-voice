@@ -203,6 +203,12 @@ export interface PermissionsReport {
     xdotool: boolean
     secretService: boolean
   }
+  /** win32 only: there is no programmatic mic-permission query API, so `mic`
+   *  above is an optimistic default rather than a verified fact. When true,
+   *  the renderer may still offer a manual check via
+   *  openPermissionPane('mic'), which opens the Windows microphone privacy
+   *  pane (ms-settings:privacy-microphone). */
+  micUnverifiable?: boolean
 }
 
 // ── App config (main → renderer, read-only) ──────────────────────────────
