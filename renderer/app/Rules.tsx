@@ -79,9 +79,9 @@ export default function Rules(): ReactNode {
       </p>
 
       <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">Always-on rules</h2>
-      <div className="glass-card mb-6 divide-y divide-stroke px-4">
+      <div className="glass-card mb-6 divide-y divide-stroke px-5">
         {BUILT_INS.map((r) => (
-          <div key={r.key} className="flex items-start gap-3 py-3.5">
+          <div key={r.key} className="flex items-start gap-3 py-4">
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-ink-strong">{r.name}</p>
               <p className="mt-0.5 text-[12px] text-ink-muted">{r.description}</p>
@@ -101,7 +101,7 @@ export default function Rules(): ReactNode {
       </div>
 
       <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted">Custom rules</h2>
-      <div className="glass-card mb-5 flex flex-col gap-2.5 px-4 py-4">
+      <div className="glass-card mb-5 flex flex-col gap-2.5 px-4 py-3.5">
         <input
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
@@ -142,7 +142,7 @@ export default function Rules(): ReactNode {
       ) : (
         <div className="flex flex-col gap-2.5">
           {custom.map((rule) => (
-            <div key={rule.id} className="group glass-card relative flex items-start gap-3 px-3.5 py-3.5 pr-16">
+            <div key={rule.id} className="group glass-card relative flex items-start gap-3 px-5 py-4 pr-16">
               <Toggle
                 checked={rule.enabled}
                 onChange={(v) => updateCustom(rule.id, { enabled: v })}
@@ -172,7 +172,7 @@ export default function Rules(): ReactNode {
                 onClick={() => persist({ custom: custom.filter((r) => r.id !== rule.id) })}
                 aria-label="Delete rule"
                 title="Delete rule"
-                className="absolute right-4 top-3.5 flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
               >
                 <TrashGlyph size={14} />
               </button>

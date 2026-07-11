@@ -180,7 +180,7 @@ export function KeyCard({
           type="button"
           onClick={handleTest}
           disabled={busy || (!input.trim() && !hasKey)}
-          className="btn-raised whitespace-nowrap px-3 py-2 text-[12px] disabled:opacity-40"
+          className="btn-raised whitespace-nowrap px-3 py-2.5 text-[12px] disabled:opacity-40"
         >
           Test
         </button>
@@ -188,7 +188,7 @@ export function KeyCard({
           type="button"
           onClick={handleSave}
           disabled={busy || !input.trim()}
-          className="btn-raised whitespace-nowrap px-3.5 py-2 text-[12px] font-semibold text-ink-strong disabled:opacity-40"
+          className="btn-raised whitespace-nowrap px-3.5 py-2.5 text-[12px] font-semibold text-ink-strong disabled:opacity-40"
         >
           {busy ? 'Checking…' : 'Save'}
         </button>

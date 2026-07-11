@@ -61,7 +61,7 @@ export default function UsageSection(): ReactNode {
       <div className="flex items-center justify-between gap-4 border-b border-stroke px-5 py-4">
         <Segmented aria-label="Usage window" options={WINDOWS} value={win} onChange={(v: WindowKey) => setWin(v)} />
         <div className="text-right">
-          <span className="text-[24px] font-bold tabular-nums text-ink-strong">{fmtUsd(data?.costUsd)}</span>
+          <span className="text-[28px] font-bold tabular-nums text-ink-strong">{fmtUsd(data?.costUsd)}</span>
           <span className="ml-2 text-[11px] text-ink-muted">estimated</span>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function UsageSection(): ReactNode {
 
       {byModel.length > 0 && (
         <div className="border-b border-stroke px-5 py-3">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-muted">Per model</p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-ink-muted">Per model</p>
           <div className="flex flex-col gap-1.5">
             {byModel.map(([model, m]) => (
               <div key={model} className="flex items-center justify-between text-[11px]">
@@ -117,8 +117,8 @@ export default function UsageSection(): ReactNode {
 function Stat({ label, value }: { label: string; value: string }): ReactNode {
   return (
     <div className="bg-surface-raised px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
-      <p className="mt-1 text-[16px] font-bold tabular-nums text-ink-strong">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{label}</p>
+      <p className="mt-1 text-[14px] font-bold tabular-nums text-ink-strong">{value}</p>
     </div>
   )
 }

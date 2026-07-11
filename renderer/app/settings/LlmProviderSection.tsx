@@ -66,7 +66,7 @@ export default function LlmProviderSection(): ReactNode {
   return (
     <SectionCard title="AI model" id="llm-provider">
       <div className="flex flex-col gap-3 p-3">
-        <div className="glass-card flex items-center justify-between gap-4 px-4 py-3">
+        <div className="glass-card flex items-center justify-between gap-4 px-4 py-3.5">
           <p className="text-[12px] font-semibold text-ink-strong">Provider</p>
           <div className="w-48 shrink-0">
             <select
@@ -106,7 +106,7 @@ export default function LlmProviderSection(): ReactNode {
           }
         />
 
-        <div className="glass-card flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+        <div className="glass-card flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3.5">
           {models.length > 0 ? (
             <LabeledSelect
               label="Model"
