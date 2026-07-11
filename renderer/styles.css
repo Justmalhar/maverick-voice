@@ -18,6 +18,7 @@
   --color-glow-dim: var(--glow-dim);
   --color-glow-bright: var(--glow-bright);
   --color-focus-ring: var(--focus-ring);
+  --color-sheen: var(--sheen);
   --shadow-raise: var(--shadow-raise);
   --shadow-float: var(--shadow-float);
 }
@@ -27,7 +28,11 @@ body {
   margin: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, sans-serif;
-  background: var(--surface-page);
+  /* Faint light-from-above wash so the page isn't a flat slab (token-driven,
+     works on both themes; the widget override below resets it). */
+  background:
+    radial-gradient(1100px 420px at 50% -12%, var(--surface-veil), transparent 70%),
+    var(--surface-page);
   color: var(--ink);
 }
 
@@ -35,4 +40,48 @@ body {
 html.widget-body,
 body.widget-body {
   background: transparent;
+}
+
+/* Monochrome selection — the OS default blue breaks the ink system. */
+::selection {
+  background: var(--glow-dim);
+  color: var(--ink-strong);
+}
+
+/* Themed scrollbars — the Chromium defaults are raw grey slabs on
+   Windows/Linux and break both themes. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--stroke-strong);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Tab panes stay mounted and toggle via [hidden]; animate the reveal so a
+   tab switch settles instead of snapping. Direct-child scope keeps nested
+   <section>s (settings cards) out. Reduced motion collapses this globally. */
+@keyframes pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+main > div > section:not([hidden]) {
+  animation: pane-in 180ms ease both;
 }

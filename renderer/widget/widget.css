@@ -130,9 +130,10 @@
   background: var(--surface-raised);
   box-shadow: var(--shadow-raise);
   cursor: pointer;
-  transition: transform 120ms ease;
+  transition: transform 120ms ease, border-color 120ms ease;
 }
 .hud-stop:hover {
+  border-color: var(--stroke-strong);
   transform: translateY(-1px);
 }
 .hud-stop:active {
@@ -157,10 +158,11 @@
   font-size: 10px;
   color: var(--ink-faint);
   cursor: pointer;
-  transition: transform 120ms ease, opacity 120ms ease;
+  transition: transform 120ms ease, opacity 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 .hud-esc:hover {
   color: var(--ink-muted);
+  border-color: var(--stroke-strong);
   transform: translateY(-1px);
 }
 

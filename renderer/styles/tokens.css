@@ -32,6 +32,8 @@
   --glow-dim: rgba(255, 255, 255, 0.25);
   --glow-bright: rgba(255, 255, 255, 0.65);
   --focus-ring: rgba(255, 255, 255, 0.7);
+  /* Glass top-edge sheen — light catching the upper face of glass surfaces. */
+  --sheen: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme='light'] {
@@ -57,14 +59,16 @@
   --glow-dim: rgba(0, 0, 0, 0.2);
   --glow-bright: rgba(0, 0, 0, 0.5);
   --focus-ring: rgba(0, 0, 0, 0.65);
+  --sheen: rgba(255, 255, 255, 0.55);
 }
 
 /* ── Component recipes (consume tokens only) ─────────────────────────── */
 
 .glass-card {
-  /* No backdrop-filter (DESIGN.md §3) — --surface-glass is 88-90% opaque
-     and shadow-raise's inset highlight/shade carries the layered look. */
-  background: var(--surface-glass);
+  /* No backdrop-filter (DESIGN.md §3) — --surface-glass is 88-90% opaque and
+     shadow-raise's inset highlight/shade carries the layered look. Top-edge
+     sheen (light falling on the pane) is layered over the opaque fill. */
+  background: linear-gradient(180deg, var(--sheen), transparent 34%), var(--surface-glass);
   border: 1px solid var(--stroke);
   border-radius: 16px;
   box-shadow: var(--shadow-raise);
@@ -72,7 +76,7 @@
 
 .glass-pill {
   /* No backdrop-filter (DESIGN.md §3) — same rationale as .glass-card. */
-  background: var(--surface-glass);
+  background: linear-gradient(180deg, var(--sheen), transparent 55%), var(--surface-glass);
   border: 1px solid var(--stroke);
   border-radius: 999px;
   box-shadow: var(--shadow-float), inset 0 1px 0 var(--stroke);
@@ -84,9 +88,14 @@
   border: 1px solid var(--stroke);
   border-radius: 10px;
   box-shadow: var(--shadow-raise);
-  transition: transform 120ms ease;
+  transition: transform 120ms ease, border-color 120ms ease;
 }
-.btn-raised:active {
+/* Hover strengthens the border (never the focus ring — that stays :focus-visible's). */
+.btn-raised:hover:not(:disabled) {
+  border-color: var(--stroke-strong);
+  transform: translateY(-1px);
+}
+.btn-raised:active:not(:disabled) {
   transform: translateY(1px);
 }
 

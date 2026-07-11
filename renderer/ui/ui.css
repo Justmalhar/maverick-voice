@@ -19,6 +19,7 @@
   border: 1px solid var(--stroke);
   background: var(--surface-sunken);
   cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 .ui-toggle[aria-checked='true'] {
   background: var(--ink-strong);
@@ -43,6 +44,15 @@
 }
 .ui-toggle[aria-checked='true'] .ui-toggle__knob {
   transform: translateX(18px);
+}
+/* Held-down stretch (transform only) — the knob leans toward its destination. */
+.ui-toggle:active:not(:disabled) .ui-toggle__knob {
+  transform: scaleX(1.15);
+  transform-origin: left center;
+}
+.ui-toggle[aria-checked='true']:active:not(:disabled) .ui-toggle__knob {
+  transform: translateX(18px) scaleX(1.15);
+  transform-origin: right center;
 }
 .ui-toggle--sm {
   width: 32px;
@@ -82,8 +92,14 @@
   white-space: nowrap;
   cursor: pointer;
 }
+.ui-segment__btn {
+  transition: color 120ms ease;
+}
 .ui-segment__btn:hover {
   color: var(--ink);
+}
+.ui-segment__btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .ui-segment__btn[aria-checked='true'] {
   background: var(--surface-raised);
@@ -145,10 +161,18 @@
   background: var(--surface-sunken);
   border: 1px solid var(--stroke);
   border-radius: 8px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 .ui-input::placeholder {
   color: var(--ink-faint);
 }
+/* Hover invites; focus commits — border for pointer intent, soft halo +
+   strong border for the caret. The keyboard :focus-visible outline from
+   tokens.css is separate and untouched. */
+.ui-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--stroke-strong);
+}
 .ui-input:focus {
   border-color: var(--stroke-strong);
+  box-shadow: 0 0 0 3px var(--surface-veil);
 }
