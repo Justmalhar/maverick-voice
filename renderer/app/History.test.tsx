@@ -187,7 +187,8 @@ describe('History', () => {
     const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue([session]) })
     renderHistory(api)
     await waitFor(() => expect(screen.getByText('Hello there')).toBeInTheDocument())
-    expect(screen.getByText('Dictation')).toBeInTheDocument()
+    // { selector: 'span' } — the flow-filter <select> also has a same-named <option>.
+    expect(screen.getByText('Dictation', { selector: 'span' })).toBeInTheDocument()
   })
 
   it.each([
@@ -200,7 +201,7 @@ describe('History', () => {
       getSessions: vi.fn().mockResolvedValue([makeSession({ flowType, output: 'x' })])
     })
     renderHistory(api)
-    await waitFor(() => expect(screen.getByText(label)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(label, { selector: 'span' })).toBeInTheDocument())
   })
 
   it('falls back to the dictation flow config for an unrecognized flowType', async () => {
@@ -208,7 +209,7 @@ describe('History', () => {
       getSessions: vi.fn().mockResolvedValue([makeSession({ flowType: 'bogus' as Session['flowType'], output: 'x' })])
     })
     renderHistory(api)
-    await waitFor(() => expect(screen.getByText('Dictation')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Dictation', { selector: 'span' })).toBeInTheDocument())
   })
 
   it('shows a Failed badge and errorMessage preview for an errored session', async () => {
@@ -430,5 +431,106 @@ describe('History', () => {
     unmount()
     expect(clearSpy).toHaveBeenCalled()
     clearSpy.mockRestore()
+  })
+})
+
+describe('History search + filters', () => {
+  function multiSessions(): Session[] {
+    return [
+      makeSession({ id: 'a', flowType: 'dictation', status: 'done', output: 'buy milk and eggs' }),
+      makeSession({
+        id: 'b',
+        flowType: 'instruction',
+        status: 'done',
+        output: 'rewrite this paragraph',
+        instructionTranscript: 'make it formal'
+      }),
+      makeSession({
+        id: 'c',
+        flowType: 'transform',
+        status: 'error',
+        output: undefined,
+        dictationTranscript: 'quarterly revenue summary',
+        errorMessage: 'failed'
+      })
+    ]
+  }
+
+  it('filters by a case-insensitive substring match across dictation transcript, instruction transcript, and output', async () => {
+    const user = userEvent.setup()
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
+    await user.type(screen.getByLabelText('Search history'), 'FORMAL')
+    await waitFor(() => {
+      expect(screen.getByText('rewrite this paragraph')).toBeInTheDocument()
+      expect(screen.queryByText('buy milk and eggs')).not.toBeInTheDocument()
+      expect(screen.queryByText('quarterly revenue summary')).not.toBeInTheDocument()
+    })
+  })
+
+  it('filters by flow type', async () => {
+    const user = userEvent.setup()
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'instruction')
+    await waitFor(() => {
+      expect(screen.getByText('rewrite this paragraph')).toBeInTheDocument()
+      expect(screen.queryByText('buy milk and eggs')).not.toBeInTheDocument()
+      expect(screen.queryByText('quarterly revenue summary')).not.toBeInTheDocument()
+    })
+  })
+
+  it('filters by status', async () => {
+    const user = userEvent.setup()
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText('Filter by status'), 'error')
+    await waitFor(() => {
+      expect(screen.getByText('quarterly revenue summary')).toBeInTheDocument()
+      expect(screen.queryByText('buy milk and eggs')).not.toBeInTheDocument()
+    })
+  })
+
+  it('combines search and the flow filter with AND semantics', async () => {
+    const user = userEvent.setup()
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'transform')
+    await user.type(screen.getByLabelText('Search history'), 'revenue')
+    await waitFor(() => expect(screen.getByText('quarterly revenue summary')).toBeInTheDocument())
+    // Same search term, but narrowing the flow to one that can't match it — AND, not OR.
+    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'dictation')
+    await waitFor(() => expect(screen.getByText('No matching sessions')).toBeInTheDocument())
+  })
+
+  it('shows a "no matching sessions" empty state with a Clear filters affordance, distinct from the zero-session empty state', async () => {
+    const user = userEvent.setup()
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
+    await user.type(screen.getByLabelText('Search history'), 'nonexistent-term-xyz')
+    await waitFor(() => expect(screen.getByText('No matching sessions')).toBeInTheDocument())
+    expect(screen.queryByText('No dictations yet')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
+  })
+
+  it('restores the full session list when Clear filters is clicked', async () => {
+    const user = userEvent.setup()
+    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
+    renderHistory(api)
+    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
+    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'instruction')
+    await user.type(screen.getByLabelText('Search history'), 'nonexistent-term-xyz')
+    await waitFor(() => expect(screen.getByText('No matching sessions')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }))
+    await waitFor(() => {
+      expect(screen.getByText('buy milk and eggs')).toBeInTheDocument()
+      expect(screen.getByText('rewrite this paragraph')).toBeInTheDocument()
+      expect(screen.getByText('quarterly revenue summary')).toBeInTheDocument()
+    })
   })
 })

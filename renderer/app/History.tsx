@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { FlowType, Session } from '../../shared/types'
 import {
   CheckGlyph,
@@ -24,8 +24,65 @@ const FLOW_CONFIG: Record<FlowType, { label: string; className: string }> = {
   quote: { label: 'Quote', className: 'border-stroke text-ink-muted' }
 }
 
+type FlowFilter = 'all' | 'dictation' | 'instruction' | 'transform' | 'context'
+type StatusFilter = 'all' | 'done' | 'error'
+
+const FLOW_FILTERS: FlowFilter[] = ['all', 'dictation', 'instruction', 'transform', 'context']
+const STATUS_FILTERS: StatusFilter[] = ['all', 'done', 'error']
+// One label map covers both selects — the values never collide.
+const FILTER_LABELS: Record<FlowFilter | StatusFilter, string> = {
+  all: 'All',
+  dictation: 'Dictation',
+  instruction: 'Instruction',
+  transform: 'Transform',
+  context: 'Context',
+  done: 'Done',
+  error: 'Error'
+}
+
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Case-insensitive substring match across every transcript/output field. */
+function matchesSearch(session: Session, term: string): boolean {
+  if (!term) return true
+  const haystack = [session.dictationTranscript, session.instructionTranscript, session.output]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase()
+  return haystack.includes(term.toLowerCase())
+}
+
+function filterSessions(sessions: Session[], search: string, flow: FlowFilter, status: StatusFilter): Session[] {
+  return sessions.filter((s) => {
+    if (flow !== 'all' && s.flowType !== flow) return false
+    if (status !== 'all' && s.status !== status) return false
+    return matchesSearch(s, search)
+  })
+}
+
+/** Shared select chrome for the flow/status filter pair — same options shape, same styling. */
+function FilterSelect<T extends keyof typeof FILTER_LABELS>(props: {
+  value: T
+  options: readonly T[]
+  onChange: (v: T) => void
+  label: string
+}): ReactNode {
+  return (
+    <select
+      value={props.value}
+      onChange={(e) => props.onChange(e.target.value as T)}
+      aria-label={props.label}
+      className="ui-input sm:w-36"
+    >
+      {props.options.map((o) => (
+        <option key={o} value={o}>
+          {FILTER_LABELS[o]}
+        </option>
+      ))}
+    </select>
+  )
 }
 
 export default function History(): ReactNode {
@@ -35,7 +92,22 @@ export default function History(): ReactNode {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set())
   const [confirmClear, setConfirmClear] = useState(false)
+  const [search, setSearch] = useState('')
+  const [flowFilter, setFlowFilter] = useState<FlowFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Session list is small enough that filtering on every keystroke is cheap — no debounce needed.
+  const filteredSessions = useMemo(
+    () => filterSessions(sessions, search, flowFilter, statusFilter),
+    [sessions, search, flowFilter, statusFilter]
+  )
+
+  function clearFilters(): void {
+    setSearch('')
+    setFlowFilter('all')
+    setStatusFilter('all')
+  }
 
   function load(): void {
     window.electronAPI
@@ -145,86 +217,111 @@ export default function History(): ReactNode {
         }
       />
 
-      <div className="flex flex-col gap-2.5">
-        {sessions.map((session) => {
-          const flow = FLOW_CONFIG[session.flowType] ?? FLOW_CONFIG.dictation
-          const isCopied = copiedId === session.id
-          const isRetrying = retryingIds.has(session.id)
-          const isError = session.status === 'error'
-          const preview = session.output || session.dictationTranscript || session.errorMessage || 'No output'
+      <div className="glass-card mb-4 flex flex-col gap-2.5 p-3 sm:flex-row sm:items-center">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search transcripts and output…"
+          aria-label="Search history"
+          className="ui-input flex-1"
+        />
+        <FilterSelect value={flowFilter} options={FLOW_FILTERS} onChange={setFlowFilter} label="Filter by flow" />
+        <FilterSelect value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} label="Filter by status" />
+      </div>
 
-          return (
-            <div
-              key={session.id}
-              className={`group glass-card px-4 py-3.5 ${isError ? 'border-stroke-strong' : ''}`}
-            >
-              <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="text-[11px] font-medium tabular-nums text-ink-muted">
-                    {formatTime(session.createdAt)}
-                  </span>
-                  <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold ${flow.className}`}>
-                    {flow.label}
-                  </span>
-                  {isRetrying && (
-                    <span className="whitespace-nowrap rounded-full border border-stroke bg-surface-veil px-2 py-0.5 text-[10px] font-semibold text-ink-strong">
-                      Retrying…
+      {filteredSessions.length === 0 ? (
+        <EmptyState
+          heading="No matching sessions"
+          body="Try a different search term or filter."
+          hint={
+            <button type="button" onClick={clearFilters} className="btn-raised px-3 py-1.5 text-[12px] font-semibold text-ink-strong">
+              Clear filters
+            </button>
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {filteredSessions.map((session) => {
+            const flow = FLOW_CONFIG[session.flowType] ?? FLOW_CONFIG.dictation
+            const isCopied = copiedId === session.id
+            const isRetrying = retryingIds.has(session.id)
+            const isError = session.status === 'error'
+            const preview = session.output || session.dictationTranscript || session.errorMessage || 'No output'
+
+            return (
+              <div
+                key={session.id}
+                className={`group glass-card px-4 py-3.5 ${isError ? 'border-stroke-strong' : ''}`}
+              >
+                <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="text-[11px] font-medium tabular-nums text-ink-muted">
+                      {formatTime(session.createdAt)}
                     </span>
-                  )}
-                  {!isRetrying && isError && (
-                    <span className="whitespace-nowrap rounded-full border border-stroke px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
-                      Failed
+                    <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold ${flow.className}`}>
+                      {flow.label}
                     </span>
+                    {isRetrying && (
+                      <span className="whitespace-nowrap rounded-full border border-stroke bg-surface-veil px-2 py-0.5 text-[10px] font-semibold text-ink-strong">
+                        Retrying…
+                      </span>
+                    )}
+                    {!isRetrying && isError && (
+                      <span className="whitespace-nowrap rounded-full border border-stroke px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+                        Failed
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Row actions: visible on hover AND :focus-within — never keyboard-invisible (DESIGN §7). */}
+                  {!isRetrying && (
+                    <div className="flex shrink-0 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      {session.output && (
+                        <button
+                          type="button"
+                          onClick={() => copyOutput(session.output!, session.id)}
+                          aria-label="Copy output"
+                          title="Copy output"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
+                        >
+                          {isCopied ? <CheckGlyph size={14} strokeWidth={3} /> : <CopyGlyph size={14} />}
+                        </button>
+                      )}
+                      {session.audioRef && (
+                        <button
+                          type="button"
+                          onClick={() => retry(session.id)}
+                          aria-label="Retry from saved audio"
+                          title="Retry from saved audio"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
+                        >
+                          <RetryGlyph />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => deleteOne(session.id)}
+                        aria-label="Delete session"
+                        title="Delete session"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
+                      >
+                        <TrashGlyph size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {/* Row actions: visible on hover AND :focus-within — never keyboard-invisible (DESIGN §7). */}
-                {!isRetrying && (
-                  <div className="flex shrink-0 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                    {session.output && (
-                      <button
-                        type="button"
-                        onClick={() => copyOutput(session.output!, session.id)}
-                        aria-label="Copy output"
-                        title="Copy output"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
-                      >
-                        {isCopied ? <CheckGlyph size={14} strokeWidth={3} /> : <CopyGlyph size={14} />}
-                      </button>
-                    )}
-                    {session.audioRef && (
-                      <button
-                        type="button"
-                        onClick={() => retry(session.id)}
-                        aria-label="Retry from saved audio"
-                        title="Retry from saved audio"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
-                      >
-                        <RetryGlyph />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => deleteOne(session.id)}
-                      aria-label="Delete session"
-                      title="Delete session"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
-                    >
-                      <TrashGlyph size={14} />
-                    </button>
-                  </div>
+                {isRetrying ? (
+                  <p className="text-[13px] font-medium text-ink-muted">Re-processing audio…</p>
+                ) : (
+                  <p className="line-clamp-2 text-[13px] leading-relaxed text-ink">{preview}</p>
                 )}
               </div>
-
-              {isRetrying ? (
-                <p className="text-[13px] font-medium text-ink-muted">Re-processing audio…</p>
-              ) : (
-                <p className="line-clamp-2 text-[13px] leading-relaxed text-ink">{preview}</p>
-              )}
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
