@@ -16,6 +16,23 @@ Rule: source-changing tasks run in isolated worktrees on `cc-*` branches; test-o
 
 Final beta state: **1181 tests / 90 files green, typecheck clean, build + smoke-boot OK.** All `cc-*` orchestration worktrees pruned/consolidated.
 
+## 🎨 UI overhaul (UI-OVERHAUL-PLAN.md) — merged to `beta`, 1205 tests green
+
+- **DESIGN-DEBT** ✅ backdrop-filter removed (earlier).
+- **IA-1/IA-3** ✅ sidebar 7→4; **Personalization** cluster (Words/Swaps/Snippets/AI Rules segmented sub-nav, no-remount preserved).
+- **SET-1/A11Y-2** ✅ Settings sticky section-nav (10 anchors).
+- **PG-2/PG-4/PG-5/A11Y-4** ✅ Home is now a dashboard: hotkey hero, recent strip, shared PageHeader/ProviderGlyph, pause-media quick toggle, stat aria-label.
+- **PG-1/PG-3/PG-6/A11Y-1/CS-3/A11Y-3** ✅ Rules auto-format notice, empty-state icons, consistent hover/focus row-action reveal, ink-faint→ink-muted contrast.
+- **MI-1/MI-2/MI-3** ✅ animated Segmented thumb, nav/card hover-lift, success-pop on save/copy — all transform/opacity, reduced-motion gated.
+- **OB-1/OB-2/OB-3** ✅ single onboarding progress indicator, fixed-height step region, shared KeyCard confirmed.
+- **CS-1/CS-2/CS-4** ✅ 6-step type scale (half-pixel sizes gone), two padding conventions, 36px icon buttons.
+
+### ⏳ UI remainder (optional, deferred for your visual review)
+- **Eyeball first**: type-scale made Replacements/Snippets/Rules list rows roomier (`px-5 py-4`) — check both themes.
+- **PG-7** shared `ListEditor` refactor (code-quality, ~200 lines saved; not user-visible).
+- **SET-3** collapsible provider sections once keys set.
+- **CS-5** full light-mode sweep; **A11Y-5** onboarding aria-live step announcement.
+
 ### 📋 Small follow-ups noted by test agents (not blocking; source cleanups)
 - `frontmostApp.ts` (Linux): window-title-blank fallback uses pre-lowercased `id` (name keeps original case) — minor inconsistency, test documents current behavior.
 - `bindings.ts`: `_chainPending`/`_chainMode`/`chainTimer` declared but never armed (ported-verbatim latent v1 code).
