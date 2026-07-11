@@ -1,9 +1,10 @@
-import { StrictMode } from 'react'
+import { lazy, StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './app/App'
 import { ThemeProvider } from './theme/ThemeProvider'
-import WidgetApp from './widget/WidgetApp'
 import './styles.css'
+
+const App = lazy(() => import('./app/App'))
+const WidgetApp = lazy(() => import('./widget/WidgetApp'))
 
 const isWidget = window.location.hash.startsWith('#/widget')
 if (isWidget) {
@@ -24,6 +25,8 @@ window.addEventListener('unhandledrejection', (e) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>{isWidget ? <WidgetApp /> : <App />}</ThemeProvider>
+    <ThemeProvider>
+      <Suspense fallback={null}>{isWidget ? <WidgetApp /> : <App />}</Suspense>
+    </ThemeProvider>
   </StrictMode>
 )

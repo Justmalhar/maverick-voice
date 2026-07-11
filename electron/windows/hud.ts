@@ -42,7 +42,8 @@ export function createHUD(): BrowserWindow {
     ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
-      contextIsolation: true
+      contextIsolation: true,
+      backgroundThrottling: false
     }
   })
   if (process.platform === 'darwin') {
