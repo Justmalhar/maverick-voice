@@ -3,6 +3,22 @@
 Status board for overnight multi-agent work. Owner: orchestrator session (Claude Code).
 Rule: source-changing tasks run in isolated worktrees on `cc-*` branches; test-only and read-only tasks run in the main checkout.
 
+## ✅ Consolidated to `beta` (verified green: 1166 tests, typecheck clean, build + smoke-boot OK)
+
+- **Unit tests** — 90 files, 1166 tests. Coverage 99.38% lines / 98.94% stmts / 97.04% branches. Residual = documented-unreachable defensive guards only.
+- **File logging** — `electron/logger.ts`: daily `~/.maverick-voice/logs/yyyy-mm-dd.log`, 30-day retention, console hook, crash capture, renderer error forwarding.
+- **Design-debt fix** — banned `backdrop-filter` removed from glass recipes (DESIGN.md §3).
+- **Perf quick wins** (merged `cc-fix/perf-quick-wins`) — lazy-split renderer entry, dynamic-import electron-updater, HUD `backgroundThrottling:false`.
+- **UI polish v2** (merged `cc-ui/polish-pass-v2`) — glass top-edge sheen, btn-raised hover, themed chrome (backdrop-filter dropped in merge per DESIGN.md).
+- **Docs + CI** — README.md, AGENTS.md, `.github/workflows/{ci,release}.yml`.
+
+### ⏳ Needs USER decision (morning)
+- **Updater feed**: `electron/updater.ts:11` FEED_URL `https://updates.getmaverick.sh/releases` — nothing publishes there yet; `package.json` has no `build.publish` block so electron-updater manifests may not generate. Confirm bucket + add publish config before any release.
+- **UI overhaul phases 1b–3**: component refactors + sidebar IA regroup + micro-interactions. Plan in `UI-OVERHAUL-PLAN.md`. Left for collaborative work per your call.
+- **Stale worktree branches** (NOT merged): `cc-ui/polish-pass` + `cc-feature/history-search` were branched pre-v2 (carry the whole legacy-move diff) — need porting, not merging. `cc-fix/windows-p0` committed nothing.
+
+---
+
 ## In flight
 
 | # | Task | Scope | Where | Branch |
