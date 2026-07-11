@@ -52,6 +52,7 @@ export default function Rules(): ReactNode {
   }
 
   const canAdd = draftName.trim().length > 0 && draftInstruction.trim().length > 0
+  const autoFormatOff = settings !== null && !settings.autoFormat
 
   return (
     <div>
@@ -59,6 +60,19 @@ export default function Rules(): ReactNode {
         title="Rules"
         subtitle="Automatic cleanup applied to every transcription before it's typed."
       />
+
+      {autoFormatOff && (
+        <div className="glass-card mb-5 flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+          <p className="text-[12px] text-ink">Rules apply only while AI auto-format is on</p>
+          <button
+            type="button"
+            onClick={() => update({ autoFormat: true })}
+            className="btn-raised whitespace-nowrap px-3 py-1.5 text-[12px] font-semibold text-ink-strong"
+          >
+            Enable
+          </button>
+        </div>
+      )}
 
       <p className="mb-5 text-[12px] leading-relaxed text-ink-muted">
         Rules combine — enabling several applies all of them. They take effect when AI auto-format is on.
@@ -71,10 +85,10 @@ export default function Rules(): ReactNode {
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-ink-strong">{r.name}</p>
               <p className="mt-0.5 text-[12px] text-ink-muted">{r.description}</p>
-              <p className="mt-1 text-[11px] text-ink-faint">
-                <span className="line-through opacity-70">{r.before}</span>
+              <p className="mt-1 text-[11px] text-ink-muted">
+                <span className="line-through">{r.before}</span>
                 {' → '}
-                <span className="text-ink-muted">{r.after}</span>
+                <span>{r.after}</span>
               </p>
             </div>
             <Toggle
@@ -121,6 +135,7 @@ export default function Rules(): ReactNode {
 
       {settings === null ? null : custom.length === 0 ? (
         <EmptyState
+          icon={<ChecklistGlyph size={28} />}
           heading="No custom rules yet"
           body="Add your own instructions to shape every transcription."
         />
@@ -166,5 +181,16 @@ export default function Rules(): ReactNode {
         </div>
       )}
     </div>
+  )
+}
+
+function ChecklistGlyph({ size = 16 }: { size?: number }): ReactNode {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m3 7 2 2 4-4" />
+      <path d="m3 17 2 2 4-4" />
+      <line x1="13" y1="6" x2="21" y2="6" />
+      <line x1="13" y1="18" x2="21" y2="18" />
+    </svg>
   )
 }

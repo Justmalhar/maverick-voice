@@ -274,16 +274,19 @@ export default function History(): ReactNode {
                     )}
                   </div>
 
-                  {/* Row actions: visible on hover AND :focus-within — never keyboard-invisible (DESIGN §7). */}
+                  {/* Row actions: visible on hover AND :focus-within — never keyboard-invisible (DESIGN §7).
+                      Each button carries its own opacity-0/focus-visible/group-* reveal (majority
+                      pattern shared with Replacements/Snippets/Rules) rather than a wrapper div, so a
+                      button remains individually revealable even if it's ever moved out of this group. */}
                   {!isRetrying && (
-                    <div className="flex shrink-0 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       {session.output && (
                         <button
                           type="button"
                           onClick={() => copyOutput(session.output!, session.id)}
                           aria-label="Copy output"
                           title="Copy output"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                         >
                           {isCopied ? <CheckGlyph size={14} strokeWidth={3} /> : <CopyGlyph size={14} />}
                         </button>
@@ -294,7 +297,7 @@ export default function History(): ReactNode {
                           onClick={() => retry(session.id)}
                           aria-label="Retry from saved audio"
                           title="Retry from saved audio"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                         >
                           <RetryGlyph />
                         </button>
@@ -304,7 +307,7 @@ export default function History(): ReactNode {
                         onClick={() => deleteOne(session.id)}
                         aria-label="Delete session"
                         title="Delete session"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted hover:text-ink focus-visible:text-ink"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                       >
                         <TrashGlyph size={14} />
                       </button>

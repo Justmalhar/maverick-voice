@@ -11,7 +11,7 @@ vi.mock('./settingsContext', () => ({ useSettings: vi.fn() }))
 
 afterEach(() => cleanup())
 
-function mockSettings(settings: { rules?: RulesSettings } | null, update = vi.fn()) {
+function mockSettings(settings: { rules?: RulesSettings; autoFormat?: boolean } | null, update = vi.fn()) {
   ;(useSettings as Mock).mockReturnValue({ settings, update })
   return update
 }
@@ -222,6 +222,41 @@ describe('Rules', () => {
         ]
       }
     })
+  })
+
+  it('shows the auto-format notice when autoFormat is off', () => {
+    mockSettings({
+      autoFormat: false,
+      rules: { fixGrammar: false, removeFillers: false, smartPunctuation: false, professionalTone: false, custom: [] }
+    })
+    render(<Rules />)
+    expect(screen.getByText('Rules apply only while AI auto-format is on')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument()
+  })
+
+  it('hides the auto-format notice when autoFormat is on', () => {
+    mockSettings({
+      autoFormat: true,
+      rules: { fixGrammar: false, removeFillers: false, smartPunctuation: false, professionalTone: false, custom: [] }
+    })
+    render(<Rules />)
+    expect(screen.queryByText('Rules apply only while AI auto-format is on')).not.toBeInTheDocument()
+  })
+
+  it('hides the auto-format notice while settings are still loading (null)', () => {
+    mockSettings(null)
+    render(<Rules />)
+    expect(screen.queryByText('Rules apply only while AI auto-format is on')).not.toBeInTheDocument()
+  })
+
+  it('enabling the notice calls update({ autoFormat: true })', async () => {
+    const update = mockSettings({
+      autoFormat: false,
+      rules: { fixGrammar: false, removeFillers: false, smartPunctuation: false, professionalTone: false, custom: [] }
+    })
+    render(<Rules />)
+    await userEvent.click(screen.getByRole('button', { name: 'Enable' }))
+    expect(update).toHaveBeenCalledWith({ autoFormat: true })
   })
 
   it('deletes a custom rule', async () => {
