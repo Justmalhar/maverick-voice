@@ -3,14 +3,18 @@
 // fixing LEGACY-ISSUES §2 C13: pulse frames are generated ONCE and reused for
 // both dictation and instruction modes (v1 generated the identical 8-frame
 // set twice). darwin ships a template image (OS tints for light/dark menu
-// bars); win32/linux get a plain white-on-transparent bitmap.
+// bars); linux gets a plain white-on-transparent bitmap (unchanged). win32
+// has no template-image equivalent, so the glyph is recolored procedurally
+// from nativeTheme.shouldUseDarkColors (white on a dark taskbar, dark on a
+// light taskbar) and refreshed whenever nativeTheme fires 'updated'.
 
-import { app, Menu, nativeImage, Tray, type NativeImage } from 'electron'
+import { app, Menu, nativeImage, nativeTheme, Tray, type NativeImage } from 'electron'
 import path from 'node:path'
 import { existsSync } from 'node:fs'
 import { showDashboard } from './dashboard'
 
 const isDarwin = process.platform === 'darwin'
+const isWin32 = process.platform === 'win32'
 
 const ICON_SIZE = 18
 const FRAME_COUNT = 8
@@ -23,6 +27,16 @@ let animFrame = 0
 let idleIcon: NativeImage | null = null
 let pulseFrames: NativeImage[] = []
 let baseGlyph: { buf: Buffer; w: number; h: number } | null = null
+let win32ThemeListenerAttached = false
+
+/** Glyph fill color per platform. darwin's is irrelevant (alpha-only
+ *  template image, OS does the tinting). linux stays hardcoded white —
+ *  unchanged. win32 has no template-image equivalent, so it's colored from
+ *  the live taskbar theme: white on dark, near-black on light. */
+function glyphRgb(): number {
+  if (isWin32) return nativeTheme.shouldUseDarkColors ? 255 : 0
+  return isDarwin ? 0 : 255
+}
 
 function iconSourcePath(): string | null {
   const candidates = [
@@ -89,7 +103,7 @@ function buildBaseGlyph(): void {
       const sy = minY + Math.min(cropH - 1, Math.floor(y / k))
       const a = alpha[sy * sw + sx]
       const di = ((offY + y) * target + (offX + x)) * 4
-      const rgb = isDarwin ? 0 : 255
+      const rgb = glyphRgb()
       out[di] = rgb
       out[di + 1] = rgb
       out[di + 2] = rgb
@@ -105,7 +119,7 @@ function glyphAt(alpha: number): NativeImage {
       b = Buffer.alloc(s * s * 4),
       c = s / 2,
       rad = s * 0.28
-    const rgb = isDarwin ? 0 : 255
+    const rgb = glyphRgb()
     for (let y = 0; y < s; y++) {
       for (let x = 0; x < s; x++) {
         const dx = x - c + 0.5,
@@ -140,6 +154,23 @@ function generatePulseFrames(): NativeImage[] {
   return frames
 }
 
+/** win32 only: taskbar theme can flip at runtime (Settings > Colors, or a
+ *  scheduled light/dark switch) — regenerate the glyph + pulse frames from
+ *  the new nativeTheme.shouldUseDarkColors and push the idle icon so the
+ *  tray never gets stuck showing the wrong contrast. Mid-animation frames
+ *  pick up the new set on their next interval tick automatically, since the
+ *  timer callback reads the (module-level) `pulseFrames` array each time. */
+function attachWin32ThemeListener(): void {
+  if (!isWin32 || win32ThemeListenerAttached) return
+  win32ThemeListenerAttached = true
+  nativeTheme.on('updated', () => {
+    buildBaseGlyph()
+    idleIcon = glyphAt(1)
+    pulseFrames = generatePulseFrames()
+    if (tray && !animTimer) tray.setImage(idleIcon)
+  })
+}
+
 export function createTray(): void {
   buildBaseGlyph()
   idleIcon = glyphAt(1)
@@ -155,6 +186,7 @@ export function createTray(): void {
     ])
   )
   tray.on('click', () => showDashboard())
+  attachWin32ThemeListener()
 }
 
 function stopAnimation(): void {

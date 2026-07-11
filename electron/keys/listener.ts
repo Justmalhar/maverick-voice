@@ -144,7 +144,13 @@ class KeyListener extends EventEmitter {
    * always-on registration that stole Escape from every app during idle/
    * processing-adjacent states; here registration exists strictly inside the
    * enableEscape(true)…enableEscape(false) window. win32/linux deliver Escape
-   * from the passive uiohook feed (nothing is stolen), gated by the same flag.
+   * from the passive uiohook feed (nothing is stolen while idle), gated by
+   * the same flag. NOTE: unlike darwin's globalShortcut (which the OS
+   * delivers exclusively to us), uiohook-napi cannot consume/suppress the
+   * keystroke — so on win32/linux, cancelling a session via Escape still
+   * lets that same keypress reach the OS-focused window. See the ESCAPE IS
+   * OBSERVATION-ONLY note in keys/listenerHook.ts for why this can't be
+   * fixed without a native low-level keyboard hook.
    */
   enableEscape(enabled: boolean): void {
     this.escapeEnabled = enabled

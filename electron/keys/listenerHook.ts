@@ -7,6 +7,19 @@
 // suppressed with per-key down flags so each physical press emits exactly one
 // down — matching darwin's flagsChanged semantics. No instruction-up is ever
 // reported (parity with the darwin LED-pair collapse).
+//
+// ESCAPE IS OBSERVATION-ONLY, NOT SUPPRESSED (win32/linux): uiohook-napi is a
+// read-only global hook — it reports key transitions but exposes no API to
+// consume/block the underlying event (unlike darwin's session-scoped
+// globalShortcut('Escape') registration in keys/listener.ts, which the OS
+// delivers exclusively to the registering app). So cancelling a session with
+// Escape on win32/linux still delivers that same physical Escape keystroke to
+// whatever window has OS focus (e.g. it may also close a dropdown or exit a
+// dialog there). This is a real, currently-unfixable limitation of the
+// library, not a bug introduced here — do not fabricate a "swallow" call that
+// uiohook-napi doesn't provide. A true fix would require shipping a native
+// low-level keyboard hook (Windows WH_KEYBOARD_LL) capable of returning
+// non-zero to consume the event, which is out of scope (no new dependencies).
 // ════════════════════════════════════════════════════════════════════════
 
 import type { DictationKey, ModifierKey } from '../../shared/types'
