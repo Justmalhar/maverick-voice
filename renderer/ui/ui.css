@@ -69,17 +69,36 @@
 /* ── Segmented control ───────────────────────────────────────────────── */
 
 .ui-segment {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
   padding: 2px;
   border-radius: 10px;
   border: 1px solid var(--stroke);
   background: var(--surface-sunken);
 }
+/* Active thumb — one absolutely-positioned layer that slides behind the
+   labels via translateX(index * 100%). No layout read/ResizeObserver: width
+   is 1/count of the track, so the transform's own-box percentage lines up
+   with equal-width (flex: 1) buttons below. Compositor-only (DESIGN.md §5). */
+.ui-segment__thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raise);
+  transition: transform 200ms cubic-bezier(0.32, 1.45, 0.62, 1);
+  will-change: transform;
+}
 .ui-segment__btn {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
+  flex: 1 1 0;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 4px 12px;
   border: none;
@@ -102,9 +121,7 @@
   transform: scale(0.97);
 }
 .ui-segment__btn[aria-checked='true'] {
-  background: var(--surface-raised);
   color: var(--ink-strong);
-  box-shadow: var(--shadow-raise);
 }
 .ui-segment__btn:disabled {
   opacity: 0.4;
