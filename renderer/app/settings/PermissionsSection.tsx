@@ -164,7 +164,7 @@ function PermRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[13px] font-semibold text-ink-strong">{title}</p>
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${granted ? 'text-ink-strong' : 'text-ink-muted'}`}>
+          <span className={`text-[11px] font-bold uppercase tracking-wider ${granted ? 'text-ink-strong' : 'text-ink-muted'}`}>
             {statusText}
           </span>
         </div>

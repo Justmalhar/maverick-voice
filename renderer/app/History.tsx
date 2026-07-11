@@ -259,16 +259,16 @@ export default function History(): ReactNode {
                     <span className="text-[11px] font-medium tabular-nums text-ink-muted">
                       {formatTime(session.createdAt)}
                     </span>
-                    <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold ${flow.className}`}>
+                    <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${flow.className}`}>
                       {flow.label}
                     </span>
                     {isRetrying && (
-                      <span className="whitespace-nowrap rounded-full border border-stroke bg-surface-veil px-2 py-0.5 text-[10px] font-semibold text-ink-strong">
+                      <span className="whitespace-nowrap rounded-full border border-stroke bg-surface-veil px-2 py-0.5 text-[11px] font-semibold text-ink-strong">
                         Retrying…
                       </span>
                     )}
                     {!isRetrying && isError && (
-                      <span className="whitespace-nowrap rounded-full border border-stroke px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+                      <span className="whitespace-nowrap rounded-full border border-stroke px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
                         Failed
                       </span>
                     )}
@@ -286,7 +286,7 @@ export default function History(): ReactNode {
                           onClick={() => copyOutput(session.output!, session.id)}
                           aria-label="Copy output"
                           title="Copy output"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                         >
                           {isCopied ? (
                             <span className="inline-flex success-pop">
@@ -303,7 +303,7 @@ export default function History(): ReactNode {
                           onClick={() => retry(session.id)}
                           aria-label="Retry from saved audio"
                           title="Retry from saved audio"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                         >
                           <RetryGlyph />
                         </button>
@@ -313,7 +313,7 @@ export default function History(): ReactNode {
                         onClick={() => deleteOne(session.id)}
                         aria-label="Delete session"
                         title="Delete session"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                       >
                         <TrashGlyph size={14} />
                       </button>

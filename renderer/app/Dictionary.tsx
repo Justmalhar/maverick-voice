@@ -87,7 +87,7 @@ export default function Dictionary(): ReactNode {
           {words.map((entry) => (
             <span
               key={entry.id}
-              className="group glass-card inline-flex items-center gap-1.5 rounded-full py-1.5 pr-1.5 pl-3 text-[12.5px] font-medium text-ink"
+              className="group glass-card inline-flex items-center gap-1.5 rounded-full py-1.5 pr-1.5 pl-3 text-[13px] font-medium text-ink"
             >
               {entry.word}
               <button

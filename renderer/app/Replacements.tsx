@@ -99,7 +99,7 @@ export default function Replacements(): ReactNode {
       ) : (
         <div className="flex flex-col gap-2.5">
           {entries.map((entry) => (
-            <div key={entry.id} className="group glass-card flex items-center gap-2.5 px-3 py-2.5">
+            <div key={entry.id} className="group glass-card flex items-center gap-2.5 px-5 py-4">
               <input
                 value={entry.from}
                 onChange={(e) => updateLocal(entry.id, { from: e.target.value })}

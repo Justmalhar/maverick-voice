@@ -23,8 +23,8 @@ export function StepShell({
   return (
     <div className="flex w-full max-w-[660px] flex-col items-center text-center">
       <div className="mb-4 flex h-[68px] shrink-0 items-center justify-center">{icon}</div>
-      <h2 className="mb-2 text-[24px] font-extrabold leading-tight tracking-tight text-ink-strong">{title}</h2>
-      {subtitle && <p className={`text-[13.5px] leading-relaxed text-ink ${children ? 'mb-6' : ''} mx-auto max-w-sm`}>{subtitle}</p>}
+      <h2 className="mb-2 text-[22px] font-extrabold leading-tight tracking-tight text-ink-strong">{title}</h2>
+      {subtitle && <p className={`text-[13px] leading-relaxed text-ink ${children ? 'mb-6' : ''} mx-auto max-w-sm`}>{subtitle}</p>}
       {children && <div className={`mx-auto w-full ${BODY_MAX[bodyWidth]}`}>{children}</div>}
     </div>
   )
@@ -45,7 +45,7 @@ function FeatureCard({ icon, title, description }: { icon: ReactNode; title: str
         {icon}
       </span>
       <div>
-        <p className="text-[13.5px] font-semibold text-ink-strong">{title}</p>
+        <p className="text-[13px] font-semibold text-ink-strong">{title}</p>
         <p className="mt-1 text-[12px] leading-relaxed text-ink-muted">{description}</p>
       </div>
     </div>
@@ -109,7 +109,7 @@ export function PrivacyStep(): ReactNode {
 
 function PrivacyBullet({ text }: { text: string }): ReactNode {
   return (
-    <div className="glass-card flex items-start gap-2.5 px-4 py-3">
+    <div className="glass-card flex items-start gap-2.5 px-4 py-3.5">
       <CheckGlyph size={14} strokeWidth={2.5} className="mt-0.5 shrink-0 text-ink-strong" />
       <span className="text-[12px] leading-relaxed text-ink-muted">{text}</span>
     </div>
@@ -250,7 +250,7 @@ export function SystemPermissionsStep({ report, onChange }: { report: Permission
   if (!IS_MAC) {
     return (
       <StepShell icon={<IconBadge>{ICONS.gear}</IconBadge>} title="Wayland detected" subtitle="Global paste on Wayland is limited — Maverick Voice will copy your result to the clipboard and show a 'press Ctrl+V' hint instead of pasting automatically.">
-        <div className="glass-card px-5 py-3.5 text-left text-[12px] leading-relaxed text-ink-muted">
+        <div className="glass-card px-4 py-3.5 text-left text-[12px] leading-relaxed text-ink-muted">
           Install <span className="font-mono text-ink">xdotool</span> and use an X11 session for direct paste support.
         </div>
       </StepShell>
@@ -314,13 +314,13 @@ export function ShortcutsStep({ capability }: { capability: KeyCapability }): Re
           </div>
         </div>
         {capability.globeConflict && (
-          <div className="glass-card px-5 py-3.5 text-left text-[12px] leading-relaxed text-ink-muted">
+          <div className="glass-card px-4 py-3.5 text-left text-[12px] leading-relaxed text-ink-muted">
             <span className="font-semibold text-ink-strong">Heads up:</span> macOS also uses this key for emoji / dictation.
             Set <span className="font-semibold text-ink">Keyboard → &quot;Press 🌐 key to&quot; → Do Nothing</span> to free it up, or
             switch to a custom combo later in Settings.
           </div>
         )}
-        <div className="glass-card px-5 py-3.5 text-left text-[12px] leading-relaxed text-ink-muted">
+        <div className="glass-card px-4 py-3.5 text-left text-[12px] leading-relaxed text-ink-muted">
           Turn on AI auto-format in Settings to clean up grammar as you dictate. Voice editing of selected text lives there too.
         </div>
       </div>

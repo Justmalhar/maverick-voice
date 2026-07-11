@@ -116,8 +116,8 @@ export default function Home(): ReactNode {
         </div>
 
         {/* Recent sessions */}
-        <div className="glass-card px-5 py-3.5">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-muted">Recent</p>
+        <div className="glass-card px-4 py-3.5">
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-muted">Recent</p>
           {recentSessions.length === 0 ? (
             <p className="py-2 text-[12px] text-ink-muted">Your recent dictations will show up here.</p>
           ) : (
@@ -130,8 +130,8 @@ export default function Home(): ReactNode {
         </div>
 
         {/* Usage this month */}
-        <div className="glass-card px-5 py-3.5" role="group" aria-label={statAriaLabel}>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-muted">This month</p>
+        <div className="glass-card px-4 py-3.5" role="group" aria-label={statAriaLabel}>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-muted">This month</p>
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
               <span className="text-[28px] font-bold leading-none tabular-nums text-ink-strong">{wordsText}</span>
@@ -145,7 +145,7 @@ export default function Home(): ReactNode {
         </div>
 
         {/* Quick toggles */}
-        <div className="glass-card px-5 divide-y divide-stroke">
+        <div className="glass-card px-4 divide-y divide-stroke">
           <ToggleRow
             label="AI auto-format"
             checked={settings?.autoFormat ?? false}
@@ -165,8 +165,8 @@ export default function Home(): ReactNode {
         </div>
 
         {/* Providers */}
-        <div className="glass-card px-5 pt-3 pb-1">
-          <p className="mb-1 px-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-muted">
+        <div className="glass-card px-4 pt-3 pb-1">
+          <p className="mb-1 px-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-muted">
             Providers · your keys
           </p>
           <div className="divide-y divide-stroke">
@@ -195,7 +195,7 @@ function RecentRow({ session }: { session: Session }): ReactNode {
 function Stat({ value, unit }: { value: string; unit: string }): ReactNode {
   return (
     <div className="text-right">
-      <span className="text-[20px] font-bold leading-none tabular-nums text-ink-strong">{value}</span>
+      <span className="text-[22px] font-bold leading-none tabular-nums text-ink-strong">{value}</span>
       <span className="ml-1.5 text-[11px] text-ink-muted">{unit}</span>
     </div>
   )
@@ -240,7 +240,7 @@ function ProviderRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-semibold text-ink-strong">{label}</p>
-        <p className="mt-0.5 text-[10.5px] text-ink-muted">{sub}</p>
+        <p className="mt-0.5 text-[11px] text-ink-muted">{sub}</p>
       </div>
       <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium">
         <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-ink-strong' : 'bg-surface-veil'}`} />

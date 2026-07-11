@@ -81,7 +81,7 @@ function MainShell({ onReplayOnboarding }: { onReplayOnboarding: () => void }): 
           <BrandMark />
           <div className="leading-none">
             <p className="text-[14px] font-bold tracking-tight text-ink-strong">Maverick Voice</p>
-            <p className="mt-1 text-[10px] font-medium text-ink-muted">Speak. It appears.</p>
+            <p className="mt-1 text-[11px] font-medium text-ink-muted">Speak. It appears.</p>
           </div>
         </div>
 

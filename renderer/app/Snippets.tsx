@@ -45,7 +45,7 @@ export default function Snippets(): ReactNode {
     <div>
       <PageHeader title="Snippets" subtitle="Short phrases that expand into longer text as you dictate." />
 
-      <div className="glass-card mb-5 flex flex-col gap-2.5 px-4 py-4">
+      <div className="glass-card mb-5 flex flex-col gap-2.5 px-4 py-3.5">
         <Field label="Say">
           <input
             value={draftTrigger}
@@ -91,13 +91,13 @@ export default function Snippets(): ReactNode {
       ) : (
         <div className="flex flex-col gap-2.5">
           {snippets.map((snippet) => (
-            <div key={snippet.id} className="group glass-card relative flex flex-col gap-2.5 px-3.5 py-3.5 pr-16">
+            <div key={snippet.id} className="group glass-card relative flex flex-col gap-2.5 px-5 py-4 pr-16">
               <button
                 type="button"
                 onClick={() => deleteSnippet(snippet.id)}
                 aria-label="Delete snippet"
                 title="Delete snippet"
-                className="absolute right-4 top-3.5 flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
               >
                 <TrashGlyph size={14} />
               </button>
@@ -147,7 +147,7 @@ function ExpandGlyph({ size = 16 }: { size?: number }): ReactNode {
 function Field({ label, alignTop, children }: { label: string; alignTop?: boolean; children: ReactNode }): ReactNode {
   return (
     <div className={`flex ${alignTop ? 'items-start' : 'items-center'} gap-2.5`}>
-      <span className={`w-14 shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-muted ${alignTop ? 'mt-3' : ''}`}>
+      <span className={`w-14 shrink-0 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-muted ${alignTop ? 'mt-3' : ''}`}>
         {label}
       </span>
       {children}
