@@ -4,5 +4,7 @@ node_modules/
 dist/
 release/
 out/
+coverage/
 .DS_Store
 .conductor/
+.claude/

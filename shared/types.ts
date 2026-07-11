@@ -300,6 +300,9 @@ export interface ElectronAPI {
   setReplacements(entries: ReplacementEntry[]): Promise<void>
   setSnippets(snippets: Snippet[]): Promise<void>
   setRules(rules: RulesSettings): Promise<void>
+
+  // Logging (renderer → daily log file; message only, never transcript text)
+  writeLog(level: 'log' | 'warn' | 'error', message: string): void
   setSTTSettings(settings: STTSettings): void
   setLLMSettings(settings: LLMSettings): void
 

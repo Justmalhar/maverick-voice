@@ -71,6 +71,7 @@ const api: ElectronAPI = {
   setReplacements: (entries) => ipcRenderer.invoke(IPC.SET_REPLACEMENTS, entries),
   setSnippets: (snippets) => ipcRenderer.invoke(IPC.SET_SNIPPETS, snippets),
   setRules: (rules) => ipcRenderer.invoke(IPC.SET_RULES, rules),
+  writeLog: (level, message) => ipcRenderer.send(IPC.LOG_WRITE, level, message),
   setSTTSettings: (settings) => ipcRenderer.send(IPC.STT_SETTINGS_SET, settings),
   setLLMSettings: (settings) => ipcRenderer.send(IPC.LLM_SETTINGS_SET, settings),
 

@@ -110,6 +110,7 @@ class SessionFsm extends EventEmitter {
     }
     this.session = session
     this.emit('phase', session)
+    console.log(`[fsm] session ${session.id} started (${mode})`)
 
     void showHUD()
     sendToHud(IPC.RECORDING_START, mode, session.id)
@@ -308,6 +309,7 @@ class SessionFsm extends EventEmitter {
 
   /** Terminal transition. `status` null = too-short (no persistence, matches v1); 'done'/'error' persists via 'complete'. */
   private finish(session: SessionState, status: 'done' | 'error' | null, delayMs: number): void {
+    console.log(`[fsm] session ${session.id} finished (${status ?? 'too-short'}, ${Date.now() - session.startedAt}ms)`)
     this.emit('phase', session)
     this.teardown()
     this.session = null

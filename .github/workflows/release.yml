@@ -1,0 +1,188 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── macOS (universal DMG, signed + notarized) ─────────────────────────
+  # GitHub-hosted runners are ephemeral — unlike legacy's self-hosted Mac
+  # (cert already in Keychain), electron-builder needs the Developer ID
+  # Application cert supplied via CSC_LINK/CSC_KEY_PASSWORD, plus the
+  # notarization credentials, since build.mac.notarize is true.
+  release-macos:
+    name: Release (macOS universal)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fail loudly here rather than let electron-builder silently emit an
+      # unsigned/unnotarized app — shipping that would fail Gatekeeper on
+      # every user's machine anyway.
+      - name: Require signing + notarization secrets
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=()
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            eval "val=\${$v}"
+            [ -z "$val" ] && missing+=("$v")
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Missing required secrets for signed/notarized release: ${missing[*]}"
+            echo "::error::Refusing to build — an unsigned mac release would fail Gatekeeper for every user."
+            exit 1
+          fi
+
+      - name: Build, sign + notarize (universal)
+        run: npm run dist:mac
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      # build-mac-helper.js already asserts the *helper* binary is universal
+      # (arm64+x86_64) during `predist`. This step asserts the main app
+      # binary that electron-builder packaged is universal too, checking the
+      # unpacked .app that electron-builder builds the DMG from (equivalent
+      # to what ends up inside the DMG, without needing to mount it).
+      - name: Verify app binary is universal
+        run: |
+          app_path=$(find release -maxdepth 2 -name "*.app" -print -quit)
+          if [ -z "$app_path" ]; then
+            echo "::error::No .app bundle found under release/ — build did not produce expected output"
+            exit 1
+          fi
+          bin_name=$(basename "$app_path" .app)
+          bin_path="$app_path/Contents/MacOS/$bin_name"
+          archs=$(lipo -archs "$bin_path")
+          echo "Main binary ($bin_path) archs: $archs"
+          echo "$archs" | grep -q "arm64" && echo "$archs" | grep -q "x86_64" || {
+            echo "::error::App binary is not universal (archs: $archs)"
+            exit 1
+          }
+
+      # ── R2 upload (out of scope for now) ─────────────────────────────
+      # Legacy uploaded release artifacts straight to R2 (scripts/upload-r2.mjs,
+      # R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT / R2_BUCKET_NAME /
+      # R2_PUBLIC_URL secrets — see legacy/.github/workflows/release.yml).
+      # v2 doesn't have that script yet, and electron/updater.ts's FEED_URL
+      # (https://updates.getmaverick.sh/releases) needs owner confirmation
+      # before wiring an upload target to it. Once confirmed, re-add here:
+      #
+      # - name: Upload artifacts to R2
+      #   env:
+      #     R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      #     R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      #     R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      #     R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+      #     R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+      #   run: node scripts/upload-r2.mjs
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.blockmap
+            release/latest-mac.yml
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ── Windows (x64 NSIS installer) ──────────────────────────────────────
+  release-windows:
+    name: Release (Windows x64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build + package
+        run: npm run dist:win
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ── Linux (x64 AppImage + deb) ─────────────────────────────────────────
+  release-linux:
+    name: Release (Linux x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build + package
+        run: npm run dist:linux
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/latest-linux.yml
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ── Publish a single GitHub Release from all three platform artifacts ──
+  publish:
+    name: Publish GitHub Release
+    needs: [release-macos, release-windows, release-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-artifacts/**
+          fail_on_unmatched_files: false
+          draft: false
+          generate_release_notes: true

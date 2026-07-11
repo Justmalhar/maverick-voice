@@ -63,6 +63,9 @@ export const IPC = {
   STT_SETTINGS_SET: 'settings:set-stt',
   LLM_SETTINGS_SET: 'settings:set-llm',
 
+  // ── Logging ───────────────────────────────────────────────────────────
+  LOG_WRITE: 'log:write', // R→M (renderer errors into the daily log file)
+
   // ── Theme ─────────────────────────────────────────────────────────────
   THEME_GET: 'theme:get',
   THEME_SET: 'theme:set',

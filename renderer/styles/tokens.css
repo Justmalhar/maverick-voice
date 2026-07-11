@@ -62,18 +62,17 @@
 /* ── Component recipes (consume tokens only) ─────────────────────────── */
 
 .glass-card {
+  /* No backdrop-filter (DESIGN.md §3) — --surface-glass is 88-90% opaque
+     and shadow-raise's inset highlight/shade carries the layered look. */
   background: var(--surface-glass);
-  -webkit-backdrop-filter: blur(60px) saturate(180%);
-  backdrop-filter: blur(60px) saturate(180%);
   border: 1px solid var(--stroke);
   border-radius: 16px;
   box-shadow: var(--shadow-raise);
 }
 
 .glass-pill {
+  /* No backdrop-filter (DESIGN.md §3) — same rationale as .glass-card. */
   background: var(--surface-glass);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid var(--stroke);
   border-radius: 999px;
   box-shadow: var(--shadow-float), inset 0 1px 0 var(--stroke);

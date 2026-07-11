@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # typecheck + unit tests only — no need to invoke `npm run build`/`dist:*`
+  # here, so the `predist`/`prebuild` -> `compile:native` hook never fires.
+  # (It's darwin-only and no-ops elsewhere anyway — see build-mac-helper.js —
+  # but staying off it keeps this job fast and dependency-free.)
+  test:
+    name: Typecheck + Test (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test (with coverage)
+        run: npx vitest run --coverage
+
+  # Exercises the real `npm run build` path: electron-vite build + the
+  # `prebuild` hook's universal Swift helper compile + lipo verification.
+  # Needs a macOS runner with Xcode CLT (swiftc) for scripts/build-mac-helper.js.
+  build-macos:
+    name: Build (macOS universal helper)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (electron-vite + universal mac-helper)
+        run: npm run build

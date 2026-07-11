@@ -12,6 +12,7 @@ process.stderr.on?.('error', (err: NodeJS.ErrnoException) => {
 })
 
 import { app } from 'electron'
+import { closeLogger, initLogger } from './logger'
 import { initStores, flushStores } from './store/index'
 import { getSetting, setSetting } from './store/settings'
 import { createDashboard, showDashboard } from './windows/dashboard'
@@ -90,6 +91,8 @@ if (!gotLock) {
   }
 
   app.whenReady().then(async () => {
+    initLogger()
+    console.log(`[main] Maverick Voice ${app.getVersion()} starting | ${process.platform}/${process.arch} | electron ${process.versions.electron}`)
     await initStores()
 
     createDashboard()
@@ -122,7 +125,9 @@ if (!gotLock) {
   })
 
   app.on('before-quit', () => {
+    console.log('[main] quitting')
     keyListener.stop()
     void flushStores()
+    closeLogger()
   })
 }
