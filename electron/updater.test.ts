@@ -41,14 +41,14 @@ describe('electron/updater', () => {
   it('is a no-op when not packaged (dev mode)', async () => {
     isPackagedRef.value = false
     const { startUpdater } = await import('./updater')
-    startUpdater()
+    await startUpdater()
     expect(setFeedURLMock).not.toHaveBeenCalled()
     expect(checkForUpdatesMock).not.toHaveBeenCalled()
   })
 
   it('configures the feed, disables autoDownload, and checks immediately when packaged', async () => {
     const { startUpdater } = await import('./updater')
-    startUpdater()
+    await startUpdater()
     expect(setFeedURLMock).toHaveBeenCalledWith({ provider: 'generic', url: expect.stringContaining('https://') })
     expect(checkForUpdatesMock).toHaveBeenCalledTimes(1)
     expect(autoUpdaterOnMock).toHaveBeenCalledWith('error', expect.any(Function))
@@ -56,15 +56,15 @@ describe('electron/updater', () => {
 
   it('is idempotent — a second call does not re-register or re-check', async () => {
     const { startUpdater } = await import('./updater')
-    startUpdater()
-    startUpdater()
+    await startUpdater()
+    await startUpdater()
     expect(setFeedURLMock).toHaveBeenCalledTimes(1)
     expect(checkForUpdatesMock).toHaveBeenCalledTimes(1)
   })
 
   it('re-checks on the 24h interval', async () => {
     const { startUpdater } = await import('./updater')
-    startUpdater()
+    await startUpdater()
     checkForUpdatesMock.mockClear()
     await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000)
     expect(checkForUpdatesMock).toHaveBeenCalledTimes(1)
@@ -74,7 +74,7 @@ describe('electron/updater', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     checkForUpdatesMock.mockRejectedValue(new Error('network down'))
     const { startUpdater } = await import('./updater')
-    startUpdater()
+    await startUpdater()
     await Promise.resolve()
     await Promise.resolve()
     expect(warnSpy).toHaveBeenCalledTimes(1)
@@ -87,7 +87,7 @@ describe('electron/updater', () => {
   it('logs an autoUpdater "error" event once via the same guard', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { startUpdater } = await import('./updater')
-    startUpdater()
+    await startUpdater()
     const errorHandler = autoUpdaterOnMock.mock.calls.find((c) => c[0] === 'error')?.[1] as (e: unknown) => void
     errorHandler(new Error('update corrupt'))
     errorHandler(new Error('second error'))
@@ -101,7 +101,9 @@ describe('electron/updater', () => {
       throw new Error('bad feed config')
     })
     const { startUpdater } = await import('./updater')
-    expect(() => startUpdater()).not.toThrow()
+    // startUpdater is async; a setFeedURL throw is caught internally, so the
+    // promise resolves (never rejects) and the error is logged once.
+    await expect(startUpdater()).resolves.toBeUndefined()
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('check failed'), 'bad feed config')
   })
 
@@ -109,7 +111,7 @@ describe('electron/updater', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     checkForUpdatesMock.mockRejectedValue('plain string failure')
     const { startUpdater } = await import('./updater')
-    startUpdater()
+    await startUpdater()
     await Promise.resolve()
     await Promise.resolve()
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('check failed'), 'plain string failure')
