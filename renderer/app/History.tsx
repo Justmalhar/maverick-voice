@@ -25,19 +25,14 @@ const FLOW_CONFIG: Record<FlowType, { label: string; className: string }> = {
 }
 
 type FlowFilter = 'all' | 'dictation' | 'instruction' | 'transform' | 'context'
-type StatusFilter = 'all' | 'done' | 'error'
 
 const FLOW_FILTERS: FlowFilter[] = ['all', 'dictation', 'instruction', 'transform', 'context']
-const STATUS_FILTERS: StatusFilter[] = ['all', 'done', 'error']
-// One label map covers both selects — the values never collide.
-const FILTER_LABELS: Record<FlowFilter | StatusFilter, string> = {
-  all: 'All',
+const FILTER_LABELS: Record<FlowFilter, string> = {
+  all: 'All types',
   dictation: 'Dictation',
   instruction: 'Instruction',
   transform: 'Transform',
-  context: 'Context',
-  done: 'Done',
-  error: 'Error'
+  context: 'Context'
 }
 
 function formatTime(timestamp: number): string {
@@ -54,35 +49,11 @@ function matchesSearch(session: Session, term: string): boolean {
   return haystack.includes(term.toLowerCase())
 }
 
-function filterSessions(sessions: Session[], search: string, flow: FlowFilter, status: StatusFilter): Session[] {
+function filterSessions(sessions: Session[], search: string, flow: FlowFilter): Session[] {
   return sessions.filter((s) => {
     if (flow !== 'all' && s.flowType !== flow) return false
-    if (status !== 'all' && s.status !== status) return false
     return matchesSearch(s, search)
   })
-}
-
-/** Shared select chrome for the flow/status filter pair — same options shape, same styling. */
-function FilterSelect<T extends keyof typeof FILTER_LABELS>(props: {
-  value: T
-  options: readonly T[]
-  onChange: (v: T) => void
-  label: string
-}): ReactNode {
-  return (
-    <select
-      value={props.value}
-      onChange={(e) => props.onChange(e.target.value as T)}
-      aria-label={props.label}
-      className="ui-input sm:w-36"
-    >
-      {props.options.map((o) => (
-        <option key={o} value={o}>
-          {FILTER_LABELS[o]}
-        </option>
-      ))}
-    </select>
-  )
 }
 
 export default function History(): ReactNode {
@@ -94,19 +65,17 @@ export default function History(): ReactNode {
   const [confirmClear, setConfirmClear] = useState(false)
   const [search, setSearch] = useState('')
   const [flowFilter, setFlowFilter] = useState<FlowFilter>('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Session list is small enough that filtering on every keystroke is cheap — no debounce needed.
   const filteredSessions = useMemo(
-    () => filterSessions(sessions, search, flowFilter, statusFilter),
-    [sessions, search, flowFilter, statusFilter]
+    () => filterSessions(sessions, search, flowFilter),
+    [sessions, search, flowFilter]
   )
 
   function clearFilters(): void {
     setSearch('')
     setFlowFilter('all')
-    setStatusFilter('all')
   }
 
   function load(): void {
@@ -224,10 +193,20 @@ export default function History(): ReactNode {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search transcripts and output…"
           aria-label="Search history"
-          className="ui-input flex-1"
+          className="ui-input min-w-0 flex-1"
         />
-        <FilterSelect value={flowFilter} options={FLOW_FILTERS} onChange={setFlowFilter} label="Filter by flow" />
-        <FilterSelect value={statusFilter} options={STATUS_FILTERS} onChange={setStatusFilter} label="Filter by status" />
+        <select
+          value={flowFilter}
+          onChange={(e) => setFlowFilter(e.target.value as FlowFilter)}
+          aria-label="Filter by type"
+          className="ui-input shrink-0 sm:w-40"
+        >
+          {FLOW_FILTERS.map((o) => (
+            <option key={o} value={o}>
+              {FILTER_LABELS[o]}
+            </option>
+          ))}
+        </select>
       </div>
 
       {filteredSessions.length === 0 ? (

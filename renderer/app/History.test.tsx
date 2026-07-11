@@ -491,23 +491,11 @@ describe('History search + filters', () => {
     const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
     renderHistory(api)
     await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'instruction')
+    await user.selectOptions(screen.getByLabelText('Filter by type'), 'instruction')
     await waitFor(() => {
       expect(screen.getByText('rewrite this paragraph')).toBeInTheDocument()
       expect(screen.queryByText('buy milk and eggs')).not.toBeInTheDocument()
       expect(screen.queryByText('quarterly revenue summary')).not.toBeInTheDocument()
-    })
-  })
-
-  it('filters by status', async () => {
-    const user = userEvent.setup()
-    const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
-    renderHistory(api)
-    await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText('Filter by status'), 'error')
-    await waitFor(() => {
-      expect(screen.getByText('quarterly revenue summary')).toBeInTheDocument()
-      expect(screen.queryByText('buy milk and eggs')).not.toBeInTheDocument()
     })
   })
 
@@ -516,11 +504,11 @@ describe('History search + filters', () => {
     const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
     renderHistory(api)
     await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'transform')
+    await user.selectOptions(screen.getByLabelText('Filter by type'), 'transform')
     await user.type(screen.getByLabelText('Search history'), 'revenue')
     await waitFor(() => expect(screen.getByText('quarterly revenue summary')).toBeInTheDocument())
     // Same search term, but narrowing the flow to one that can't match it — AND, not OR.
-    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'dictation')
+    await user.selectOptions(screen.getByLabelText('Filter by type'), 'dictation')
     await waitFor(() => expect(screen.getByText('No matching sessions')).toBeInTheDocument())
   })
 
@@ -540,7 +528,7 @@ describe('History search + filters', () => {
     const { api } = createElectronAPIMock({ getSessions: vi.fn().mockResolvedValue(multiSessions()) })
     renderHistory(api)
     await waitFor(() => expect(screen.getByText('buy milk and eggs')).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText('Filter by flow'), 'instruction')
+    await user.selectOptions(screen.getByLabelText('Filter by type'), 'instruction')
     await user.type(screen.getByLabelText('Search history'), 'nonexistent-term-xyz')
     await waitFor(() => expect(screen.getByText('No matching sessions')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Clear filters' }))
