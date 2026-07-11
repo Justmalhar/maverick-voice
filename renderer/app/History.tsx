@@ -252,7 +252,7 @@ export default function History(): ReactNode {
             return (
               <div
                 key={session.id}
-                className={`group glass-card px-4 py-3.5 ${isError ? 'border-stroke-strong' : ''}`}
+                className={`group glass-card card-interactive px-4 py-3.5 ${isError ? 'border-stroke-strong' : ''}`}
               >
                 <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
@@ -288,7 +288,13 @@ export default function History(): ReactNode {
                           title="Copy output"
                           className="flex h-8 w-8 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 focus-visible:text-ink group-hover:opacity-100 group-focus-within:opacity-100"
                         >
-                          {isCopied ? <CheckGlyph size={14} strokeWidth={3} /> : <CopyGlyph size={14} />}
+                          {isCopied ? (
+                            <span className="inline-flex success-pop">
+                              <CheckGlyph size={14} strokeWidth={3} />
+                            </span>
+                          ) : (
+                            <CopyGlyph size={14} />
+                          )}
                         </button>
                       )}
                       {session.audioRef && (

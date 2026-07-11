@@ -43,6 +43,9 @@ export function KeyCard({
   const [input, setInput] = useState('')
   const [reveal, setReveal] = useState(false)
   const [flow, setFlow] = useState<Flow>({ phase: 'idle' })
+  // Drives a one-shot success-pop on the Saved checkmark (MI-3); cleared on
+  // the next edit so a later save can pop again.
+  const [justSaved, setJustSaved] = useState(false)
 
   // Reset local state when the card is re-pointed at another provider.
   useEffect(() => {
@@ -50,6 +53,7 @@ export function KeyCard({
     setInput('')
     setReveal(false)
     setFlow({ phase: 'idle' })
+    setJustSaved(false)
   }, [provider])
 
   const hasKey = status?.hasKey ?? false
@@ -82,6 +86,7 @@ export function KeyCard({
       setInput('')
       setEditing(false)
       setFlow({ phase: 'ok', message: 'Key saved securely.' })
+      setJustSaved(true)
     } catch (err) {
       setFlow({
         phase: 'error',
@@ -104,7 +109,7 @@ export function KeyCard({
   }
 
   return (
-    <div className="glass-card px-4 py-3.5">
+    <div className="glass-card card-interactive px-4 py-3.5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-stroke bg-surface-veil text-ink-strong">
@@ -124,7 +129,9 @@ export function KeyCard({
         <div className="flex h-6 shrink-0 items-center gap-2">
           {hasKey && (
             <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink">
-              <CheckGlyph size={12} strokeWidth={3} />
+              <span className={`inline-flex ${justSaved ? 'success-pop' : ''}`}>
+                <CheckGlyph size={12} strokeWidth={3} />
+              </span>
               Saved
             </span>
           )}
@@ -139,6 +146,7 @@ export function KeyCard({
             onChange={(e) => {
               setInput(e.target.value)
               setFlow({ phase: 'idle' })
+              setJustSaved(false)
             }}
             onFocus={() => setEditing(true)}
             onBlur={() => {

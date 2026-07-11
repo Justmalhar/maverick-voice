@@ -166,6 +166,38 @@
   }
 }
 
+/* ── Sidebar nav item (App.tsx) ──────────────────────────────────────── */
+/* Hover lift + press feedback, transform-only (DESIGN.md §5). The global
+   prefers-reduced-motion rule in tokens.css zeroes this transition's
+   duration app-wide, so no separate guard is needed here. */
+.nav-item {
+  transition: transform 120ms ease;
+}
+.nav-item:hover {
+  transform: translateY(-1px);
+}
+.nav-item:active {
+  transform: translateY(1px);
+}
+
+/* ── Interactive glass card hover (History rows, KeyCard) ────────────── */
+/* Hover-only lift — these cards contain their own buttons, so no :active
+   press state (it would fire from clicks on nested buttons too). */
+.card-interactive {
+  transition: transform 120ms ease;
+}
+.card-interactive:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Success confirmation pop ─────────────────────────────────────────── */
+/* Plays the shared success-pop keyframe (tokens.css) once on mount/re-add.
+   Reduced-motion is handled by tokens.css's global media rule (zeroes
+   animation-duration app-wide), so no separate guard is needed here. */
+.success-pop {
+  animation: success-pop 220ms cubic-bezier(0.32, 1.45, 0.62, 1);
+}
+
 /* ── Text input (KeyCard et al.) ─────────────────────────────────────── */
 
 .ui-input {
